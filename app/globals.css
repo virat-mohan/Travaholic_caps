@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
+/*
+  Travaholic Design Tokens
+  Source: 04_DESIGN_SYSTEM.md
+
+  Spacing scale (4/8/12/16/24/32/40/48/64/80/96/120/160/240) is not
+  redefined here — Tailwind v4's default spacing is algorithmic
+  (N * 0.25rem), so p-1..p-24, p-30, p-40, p-60 already produce
+  exactly those pixel values without any override.
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Foundation colours */
+  --color-warm-white: #f7f6f3;
+  --color-charcoal: #181818;
+  --color-secondary-text: #555555;
+  --color-divider: #eaeaea;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f2f2ef;
+  --color-overlay: rgba(0, 0, 0, 0.45);
+
+  /* Accent palette — sourced from photography, used sparingly in UI */
+  --color-forest: #3f4a3d;
+  --color-ocean: #40607a;
+  --color-clay: #b36a4e;
+  --color-stone: #8c8577;
+  --color-sand: #d8cbb5;
+  --color-olive: #6b6a4f;
+  --color-mist: #c7cdc9;
+
+  /* Watercolor World palette — sourced from the Explore-by-Terrain map & cap embroidery.
+     Editorial/illustrative use only (maps, patches, art moments) — never UI chrome. */
+  --color-paint-red: #d62828;
+  --color-paint-amber: #f3a712;
+  --color-paint-teal: #2a9d8f;
+  --color-paint-indigo: #1d3557;
+  --color-paint-violet: #8e44ad;
+  --color-paint-orange: #e8590c;
+  --color-paint-plum: #6a4c93;
+  --color-parchment: #ddc9a3;
+
+  /* Motion */
+  --duration-default: 300ms;
+  --duration-large: 500ms;
+  --duration-hero: 900ms;
+  --duration-page: 700ms;
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-background: var(--color-warm-white);
+  --color-foreground: var(--color-charcoal);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-warm-white: var(--color-warm-white);
+  --color-charcoal: var(--color-charcoal);
+  --color-secondary-text: var(--color-secondary-text);
+  --color-divider: var(--color-divider);
+  --color-surface: var(--color-surface);
+  --color-surface-alt: var(--color-surface-alt);
+  --color-overlay: var(--color-overlay);
+
+  --color-forest: var(--color-forest);
+  --color-ocean: var(--color-ocean);
+  --color-clay: var(--color-clay);
+  --color-stone: var(--color-stone);
+  --color-sand: var(--color-sand);
+  --color-olive: var(--color-olive);
+  --color-mist: var(--color-mist);
+
+  --color-paint-red: var(--color-paint-red);
+  --color-paint-amber: var(--color-paint-amber);
+  --color-paint-teal: var(--color-paint-teal);
+  --color-paint-indigo: var(--color-paint-indigo);
+  --color-paint-violet: var(--color-paint-violet);
+  --color-paint-orange: var(--color-paint-orange);
+  --color-paint-plum: var(--color-paint-plum);
+  --color-parchment: var(--color-parchment);
+
+  --font-sans: var(--font-inter-tight);
+  --font-display: var(--font-anton);
+
+  /* Type scale */
+  --text-display-xl: 4.5rem; /* 72px */
+  --text-display-xl--line-height: 1.1;
+  --text-display-l: 3.75rem; /* 60px */
+  --text-display-l--line-height: 1.1;
+  --text-display-m: 3rem; /* 48px */
+  --text-display-m--line-height: 1.15;
+
+  --text-heading-xl: 2.5rem; /* 40px */
+  --text-heading-xl--line-height: 1.2;
+  --text-heading-l: 2rem; /* 32px */
+  --text-heading-l--line-height: 1.2;
+  --text-heading-m: 1.75rem; /* 28px */
+  --text-heading-m--line-height: 1.2;
+  --text-heading-s: 1.5rem; /* 24px */
+  --text-heading-s--line-height: 1.2;
+
+  --text-body-l: 1.25rem; /* 20px */
+  --text-body-l--line-height: 1.5;
+  --text-body: 1.125rem; /* 18px */
+  --text-body--line-height: 1.5;
+  --text-body-s: 1rem; /* 16px */
+  --text-body-s--line-height: 1.5;
+  --text-caption: 0.875rem; /* 14px */
+  --text-caption--line-height: 1.5;
+  --text-micro: 0.75rem; /* 12px */
+  --text-micro--line-height: 1.4;
+
+  /* Radius */
+  --radius-sm: 0.5rem; /* 8px */
+  --radius-md: 1rem; /* 16px */
+  --radius-lg: 1.5rem; /* 24px */
+  --radius-hero: 2rem; /* 32px */
+  --radius-pill: 999px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
 }

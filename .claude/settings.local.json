@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(npx --version)",
+      "Bash(npx --yes create-next-app@latest . --typescript --tailwind --app --eslint --import-alias \"@/*\" --use-npm --no-src-dir)",
+      "Bash(rm -rf /tmp/travaholic-scaffold)",
+      "Bash(npx --yes create-next-app@latest /tmp/travaholic-scaffold --typescript --tailwind --app --eslint --import-alias \"@/*\" --use-npm --no-src-dir)",
+      "Bash(cp -a /tmp/travaholic-scaffold/. \"/Users/viratmohan/Desktop/Travaholic Caps/\")",
+      "Bash(mv \"sendgb-GQn3iWhkS2T\"/*.jpg \"Dunes Yellow\"/)",
+      "Bash(rmdir \"sendgb-GQn3iWhkS2T\")",
+      "Bash(rm -rf \"Tropical Pink\")",
+      "Bash(mv \"Tropical Pink new\" \"Tropical Pink\")",
+      "Bash(mv \"Travaholic Orange \" \"Travaholic Orange\")",
+      "Read(//Users/viratmohan/**)",
+      "Read(//Users/viratmohan/.Trash/**)",
+      "Bash(grep '\\\\$$')",
+      "Bash(npm install *)",
+      "Bash(mkdir -p \"/Users/viratmohan/Desktop/Travaholic Caps/app/series/[slug]\")",
+      "Bash(pkill -f \"navigate.*goorin\")"
+    ]
+  }
+}

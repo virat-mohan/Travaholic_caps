@@ -1,69 +1,85 @@
-import Image from "next/image";
+import { WorldScroller } from "@/components/hero/WorldScroller";
+import { ChapterCard } from "@/components/chapter/ChapterCard";
+import { SeriesCard } from "@/components/series/SeriesCard";
+import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
+import { FooterEditorial } from "@/components/footer/FooterEditorial";
+import { chapters } from "@/lib/chapters";
+import { seriesOrder, seriesChapters } from "@/lib/series";
+
+const pillars = [
+  { title: "Premium Materials", copy: "Chosen for how they age, not just how they photograph." },
+  { title: "Designed To Last", copy: "Built for the trip after this one, and the one after that." },
+  { title: "Comfort First", copy: "A cap you forget you're wearing, until someone asks about it." },
+  { title: "Inspired By Stories", copy: "Every Chapter starts with a place, not a spreadsheet." },
+];
 
 export default function Home() {
+  const featured = chapters.slice(0, 8);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <>
+      <WorldScroller />
+
+      <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
+        <section className="pt-24 md:pt-30">
+          <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
+            Story Series
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {seriesOrder.map((s, i) => {
+              const rep = seriesChapters(s.name)[0];
+              if (!rep) return null;
+              return (
+                <SeriesCard
+                  key={s.slug}
+                  name={s.name}
+                  slug={s.slug}
+                  blurb={s.blurb}
+                  representative={rep}
+                  index={i}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-[760px] py-24 text-center md:py-30">
+          <p className="font-display text-heading-l text-charcoal md:text-heading-xl">
+            My love for caps was inspired by an outdoorsy childhood in Durban — surfing, hiking,
+            hanging by the beach, seldom without a cap on my head.
+          </p>
+          <p className="mt-6 text-body text-secondary-text">
+            Every Chapter starts as a sketch, old-school charcoal and paper, before it's
+            digitised and sampled until the colours carry the memory of the place that inspired
+            it. A cap has got to be your favourite travel companion — not a product you bought,
+            a moment you're still wearing.
+          </p>
+          <p className="mt-4 text-caption text-secondary-text">— Ishan Seth, Founder</p>
+        </section>
+
+        <section className="pb-24 md:pb-30">
+          <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
+            Featured Chapters
+          </p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
+            {featured.map((chapter, i) => (
+              <ChapterCard key={chapter.slug} chapter={chapter} index={i} />
+            ))}
+          </div>
+        </section>
+
+        <section className="grid grid-cols-2 gap-8 border-t border-divider py-24 md:grid-cols-4 md:py-30">
+          {pillars.map((p) => (
+            <div key={p.title}>
+              <p className="text-body-s text-charcoal">{p.title}</p>
+              <p className="mt-2 text-caption text-secondary-text">{p.copy}</p>
+            </div>
+          ))}
+        </section>
       </main>
-    </div>
+
+      <NewsletterBlock />
+      <FooterEditorial />
+    </>
   );
 }
