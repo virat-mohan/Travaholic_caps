@@ -17,7 +17,17 @@
       "Bash(grep '\\\\$$')",
       "Bash(npm install *)",
       "Bash(mkdir -p \"/Users/viratmohan/Desktop/Travaholic Caps/app/series/[slug]\")",
-      "Bash(pkill -f \"navigate.*goorin\")"
+      "Bash(pkill -f \"navigate.*goorin\")",
+      "Bash(git rm *)",
+      "Bash(rmdir components/craft)",
+      "Bash(rm components/craft/WatercolorPreview.tsx)",
+      "Bash(git add *)",
+      "Bash(curl -sI --max-time 10 -A \"Mozilla/5.0 \\(Macintosh; Intel Mac OS X 10_15_7\\) AppleWebKit/537.36 \\(KHTML, like Gecko\\) Chrome/120.0.0.0 Safari/537.36\" https://travaholic.in)",
+      "Bash(find /private/tmp/claude-501 -newer \"/Users/viratmohan/Desktop/Travaholic Caps/public/images/globe/earth.jpg\" -iname \"*.png\" -o -newer \"/Users/viratmohan/Desktop/Travaholic Caps/public/images/globe/earth.jpg\" -iname \"*.jpg\" 2>/dev/null | grep -v node_modules | head -20)",
+      "Bash(grep -viE \"\\\\.output$|bgremove-venv|patch_test\")",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(echo \"exit:$?\")"
     ]
   }
 }

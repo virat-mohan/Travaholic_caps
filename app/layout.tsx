@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { Anton, Inter_Tight } from "next/font/google";
+import { Archivo_Black, IBM_Plex_Mono } from "next/font/google";
 import { Navbar } from "@/components/navigation/Navbar";
 import "./globals.css";
 
-const interTight = Inter_Tight({
-  variable: "--font-inter-tight",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const anton = Anton({
-  variable: "--font-anton",
+const archivoBlack = Archivo_Black({
+  variable: "--font-archivo-black",
   subsets: ["latin"],
   weight: ["400"],
 });
@@ -23,7 +23,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${interTight.variable} ${anton.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${plexMono.variable} ${archivoBlack.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col font-sans">
         <Navbar />
         {children}

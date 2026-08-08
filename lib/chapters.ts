@@ -2,6 +2,9 @@ import type { Chapter } from "@/types/chapter";
 
 /**
  * Static Chapter catalogue sourced from public/images/chapters.
+ * Pricing/specs per travaholic-build-brief.md: flat ₹1,399, no discount gimmicks.
+ * Peaking, Sunshine and Travaholic Orange were not found live on travaholic.in at
+ * brief time (verifiedOnSite: false) — flagged for confirmation, not guessed.
  * Temporary — Phase 6 replaces this with Sanity-driven content.
  */
 export const chapters: Chapter[] = [
@@ -20,6 +23,8 @@ export const chapters: Chapter[] = [
     primary: "_MG_0161 final.jpg",
     story:
       "The one cap that goes with literally everything you own. No print, no gimmick — just certified drip for whatever the day throws at you. Main character energy, monochrome edition.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "travaholic-ocean",
@@ -30,6 +35,8 @@ export const chapters: Chapter[] = [
     primary: "IMG_0206.JPG",
     story:
       "For the ones who are low-key obsessed with that ocean-meets-sky blue. Put this on and you're instantly built different — beach brain, boat hair, zero notes.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "travaholic-sky",
@@ -46,6 +53,8 @@ export const chapters: Chapter[] = [
     primary: "_MG_0168 final.jpg",
     story:
       "Head in the clouds, energy immaculate. Sky's for staring out of plane windows and pretending you're the main character of your own travel montage. Somewhere above the noise, literally.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "beachn",
@@ -62,6 +71,8 @@ export const chapters: Chapter[] = [
     primary: "_MG_0130 final.jpg",
     story:
       "Sun's down, vibes up. Beach'n is golden-hour main-character energy and zero plans for tomorrow. Certified beach brain, no cap.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "sunshine",
@@ -78,6 +89,8 @@ export const chapters: Chapter[] = [
     primary: "IMG_0272-final-1024x1024.jpg.webp",
     story:
       "No itinerary, no overthinking, just sun on your face and a main-character walk to nowhere in particular. Sunshine is the whole vibe.",
+    price: 1399,
+    verifiedOnSite: false,
   },
   {
     slug: "tropical-blue",
@@ -94,6 +107,8 @@ export const chapters: Chapter[] = [
     primary: "_MG_0156 final.jpg",
     story:
       "Too warm, too green, too good to be real — that's the energy. Put this on and unlock instant vacation brain, wherever you actually are.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "tropical-pink",
@@ -104,6 +119,8 @@ export const chapters: Chapter[] = [
     primary: "IMG_0197.JPG",
     story:
       "Same tropical energy, dialled up. This one's giving sunset-that-lived-in-your-head-rent-free. Wear it like you mean it.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "dunes-maroon",
@@ -120,6 +137,8 @@ export const chapters: Chapter[] = [
     primary: "_MG_0147 final.jpg",
     story:
       "Golden hour, but make it desert. Dunes Maroon is for the ones who go quiet when the sand turns the colour of rust — moody, main character, a little mysterious.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "dunes-yellow",
@@ -136,6 +155,8 @@ export const chapters: Chapter[] = [
     primary: "_MG_0151 final.jpg",
     story:
       "Same dunes, earlier in the day, when the sand is still throwing gold light back at you and the heat hasn't won yet. I wanted a cap that felt like the last good hour before noon in the desert.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "peaking",
@@ -152,6 +173,8 @@ export const chapters: Chapter[] = [
     primary: "_MG_0175 final.jpg",
     story:
       "There's a moment on every mountain trail where you stop complaining about your legs because the view finally shuts you up. Peaking is that moment, sketched from a summit I definitely should have trained more for.",
+    price: 1399,
+    verifiedOnSite: false,
   },
   {
     slug: "travaholic-snow",
@@ -162,6 +185,8 @@ export const chapters: Chapter[] = [
     primary: "IMG_8855.JPG",
     story:
       "White on white, because at altitude everything else disappears and it's just you, the cold, and the quiet. This one's for the mornings your breath shows before your coffee does.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "wildling",
@@ -172,6 +197,8 @@ export const chapters: Chapter[] = [
     primary: "IMG_1814.jpg",
     story:
       "A wolf on a rock, mountains behind, the last bit of light before the forest goes properly dark. Wildling's for the part of a trip when your phone has no signal and you stop checking it anyway.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "junglee",
@@ -182,12 +209,14 @@ export const chapters: Chapter[] = [
     primary: "IMG_1821.jpg",
     story:
       "Junglee means wild in a way that doesn't quite translate — a little feral, a little free. This one came from a trek where we got properly, gloriously lost for an afternoon and didn't mind at all.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "city-slicker",
     name: "City Slicker",
     series: "Urban Nomad",
-    folder: "City Slicker",
+    folder: "City Slicker Black Grey",
     images: [
       "_MG_0139 final.jpg",
       "_MG_0141 final.jpg",
@@ -198,6 +227,8 @@ export const chapters: Chapter[] = [
     primary: "_MG_0141 final.jpg",
     story:
       "Not every trip needs a mountain. Some of the best ones are just a new skyline and a coffee you haven't tried yet. City Slicker is for the traveller who's just as at home lost in a new city as lost on a trail.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "city-slicker-black",
@@ -208,6 +239,8 @@ export const chapters: Chapter[] = [
     primary: "IMG_7230.jpg",
     story:
       "Same city, later at night. Black, because that's what the skyline turns into once the sun's fully down and the lights take over the sketch instead.",
+    price: 1399,
+    verifiedOnSite: true,
   },
   {
     slug: "travaholic-orange",
@@ -224,9 +257,28 @@ export const chapters: Chapter[] = [
     primary: "_MG_0134 final.jpg",
     story:
       "Every trail has those little markers that tell you you're still going the right way. Orange is that — a small, stubborn flash of colour that says keep going, you're close.",
+    price: 1399,
+    verifiedOnSite: false,
   },
 ];
 
+/** Shared spec line for every Chapter, per travaholic-build-brief.md. */
+export const SHARED_SPECS = [
+  "Poly blend / cotton twill",
+  "One size fits all — 52cm to 60cm",
+  "Snap backstrap",
+  "Made in India",
+];
+
+/**
+ * Original photography was replaced in place by transparent cutouts named
+ * "<original stem>_no_bg.png" (e.g. "IMG_1812.jpg" -> "IMG_1812_no_bg.png").
+ * Chapter data still stores the original filenames as stable identifiers —
+ * this resolves them to the actual file on disk.
+ */
 export function chapterImageSrc(folder: string, file: string) {
-  return `/images/chapters/${encodeURIComponent(folder)}/${encodeURIComponent(file)}`;
+  const dot = file.lastIndexOf(".");
+  const stem = dot === -1 ? file : file.slice(0, dot);
+  const resolved = `${stem}_no_bg.png`;
+  return `/images/chapters/${encodeURIComponent(folder)}/${encodeURIComponent(resolved)}`;
 }

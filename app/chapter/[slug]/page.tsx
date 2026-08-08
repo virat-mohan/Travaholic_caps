@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { chapters } from "@/lib/chapters";
+import { chapters, SHARED_SPECS } from "@/lib/chapters";
 import { seriesChapters } from "@/lib/series";
-import { ChapterGallery } from "@/components/chapter/ChapterGallery";
+import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
@@ -22,29 +22,39 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
     <>
       <main className="mx-auto w-full max-w-[1440px] px-6 pt-28 md:px-12 md:pt-36">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
-          <ChapterGallery folder={chapter.folder} images={chapter.images} name={chapter.name} />
+          <Product360Viewer folder={chapter.folder} images={chapter.images} name={chapter.name} />
 
           <div className="md:pt-4">
             <Link
               href={`/series/${chapter.series.toLowerCase().replace(/\s+/g, "-")}`}
-              className="text-caption uppercase tracking-[0.08em] text-secondary-text"
+              className="font-sans text-caption uppercase tracking-[0.15em] text-secondary-text"
             >
               {chapter.series}
             </Link>
-            <h1 className="mt-2 font-display text-heading-xl text-charcoal">{chapter.name}</h1>
-            <p className="mt-6 max-w-md text-body text-secondary-text">{chapter.story}</p>
+            <h1 className="mt-2 font-display text-heading-xl uppercase text-ink">{chapter.name}</h1>
+            <p className="mt-3 font-sans text-body-l text-ink">
+              ₹{chapter.price.toLocaleString("en-IN")}
+            </p>
+            <p className="mt-6 max-w-md font-sans text-body text-secondary-text">{chapter.story}</p>
+
+            {!chapter.verifiedOnSite && (
+              <p className="mt-4 max-w-md font-sans text-caption text-paint-orange">
+                Not yet confirmed live on travaholic.in — verify pricing and description before
+                publishing.
+              </p>
+            )}
 
             <div className="mt-10 flex items-center gap-4">
-              <button className="rounded-pill bg-charcoal px-8 py-3 text-body-s text-white transition-transform duration-300 hover:scale-[1.02]">
+              <button className="border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink">
                 Add to Cart
               </button>
-              <span className="text-caption text-secondary-text">One size · 52–60cm</span>
+              <span className="font-sans text-caption text-secondary-text">One size · 52–60cm</span>
             </div>
 
-            <div className="mt-10 space-y-2 border-t border-divider pt-6 text-caption text-secondary-text">
-              <p>Free delivery on prepaid orders</p>
-              <p>Easy 5 day returns</p>
-              <p>Premium packaging</p>
+            <div className="mt-10 space-y-2 border-t border-divider pt-6 font-sans text-caption uppercase tracking-[0.03em] text-secondary-text">
+              {SHARED_SPECS.map((spec) => (
+                <p key={spec}>{spec}</p>
+              ))}
             </div>
           </div>
         </div>

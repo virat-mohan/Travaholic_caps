@@ -20,4 +20,8 @@ export type Chapter = {
   primary: string;
   /** Short founder-voice story for this Chapter. */
   story: string;
+  /** Price in INR. Flat pricing per travaholic-build-brief.md — no discount gimmicks. */
+  price: number;
+  /** False for Chapters not found live on travaholic.in at brief time — flagged, not guessed. */
+  verifiedOnSite: boolean;
 };
