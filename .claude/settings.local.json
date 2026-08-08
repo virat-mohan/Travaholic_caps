@@ -27,7 +27,17 @@
       "Bash(grep -viE \"\\\\.output$|bgremove-venv|patch_test\")",
       "Bash(gh --version)",
       "Bash(gh auth *)",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "Bash(git push *)",
+      "Bash(git config *)",
+      "Bash(pkill -f \"git push\")",
+      "Bash(brew install *)",
+      "Bash(git fetch *)",
+      "Bash(git ls-remote *)",
+      "Bash(GIT_CURL_VERBOSE=0 git push -u origin main --progress)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(git commit -q -m ' *)"
     ]
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { seriesOrder } from "@/lib/series";
@@ -12,7 +13,7 @@ import {
   DunesGlyph,
 } from "@/components/globe/TerrainGlyph";
 
-const GLYPHS: Record<string, (props: { className?: string }) => JSX.Element> = {
+const GLYPHS: Record<string, (props: { className?: string }) => ReactElement> = {
   "Summer Escape": SunsetGlyph,
   "Into The Wild": WildlingGlyph,
   "Blue Horizon": HorizonGlyph,
