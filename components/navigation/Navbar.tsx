@@ -5,7 +5,7 @@ import { Search, ShoppingBag, Menu } from "lucide-react";
 const links = [
   { label: "Series", href: "/series" },
   { label: "Journal", href: "/journal" },
-  { label: "Community", href: "/community" },
+  { label: "Explorers", href: "/community" },
   { label: "About", href: "/about" },
 ];
 
@@ -27,10 +27,10 @@ export function Navbar() {
 
         <Link
           href="/"
-          className="absolute left-1/2 top-full z-10 -translate-x-1/2 -translate-y-1/2"
+          className="absolute left-1/2 top-full z-10 -translate-x-1/2 -translate-y-[62%]"
         >
           <Image
-            src="/images/brand/travaholic-logo-color.png"
+            src="/images/brand/travaholic-logo-color-v2.png"
             alt="Travaholic"
             width={340}
             height={340}

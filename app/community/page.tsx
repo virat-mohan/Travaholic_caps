@@ -1,49 +1,53 @@
-import fs from "node:fs";
-import path from "node:path";
 import Image from "next/image";
+import Link from "next/link";
+import { getExplorerPosts } from "@/lib/community";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
-function getCommunityPhotos() {
-  const communityDir = path.join(process.cwd(), "public/images/community");
-  const lifestyleDir = path.join(process.cwd(), "public/images/lifestyle");
-
-  const fromDir = (dir: string, urlBase: string) =>
-    fs.existsSync(dir)
-      ? fs
-          .readdirSync(dir)
-          .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
-          .map((f) => `${urlBase}/${encodeURIComponent(f)}`)
-      : [];
-
-  return [
-    ...fromDir(communityDir, "/images/community"),
-    ...fromDir(lifestyleDir, "/images/lifestyle"),
-  ];
-}
-
 export default function CommunityPage() {
-  const photos = getCommunityPhotos();
+  const posts = getExplorerPosts();
 
   return (
     <>
       <main className="mx-auto w-full max-w-[1440px] px-6 pt-32 pb-24 md:px-12 md:pt-40">
-        <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
-          Explorers
-        </p>
-        <h1 className="mt-2 font-display text-heading-xl uppercase text-ink md:text-display-m">
-          Real People. Real Journeys.
-        </h1>
-        <p className="mt-4 max-w-md text-body text-secondary-text">
-          Travaholic is built by Explorers — real adventures, real photography. No manufactured
-          influencer culture, just people wearing a story.
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
+              Explorers
+            </p>
+            <h1 className="mt-2 font-display text-heading-xl uppercase text-ink md:text-display-m">
+              Real People. Real Journeys.
+            </h1>
+            <p className="mt-4 max-w-md text-body text-secondary-text">
+              Travaholic is built by Explorers — real adventures, real photography. No
+              manufactured influencer culture, just people wearing a story.
+            </p>
+          </div>
 
-        {photos.length > 0 ? (
-          <div className="mt-16 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {photos.map((src) => (
-              <div key={src} className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
-                <Image src={src} alt="" fill sizes="(min-width: 768px) 25vw, 50vw" className="object-cover" />
+          <Link
+            href="/community/add-your-chapter"
+            className="whitespace-nowrap border border-ink bg-ink px-6 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink"
+          >
+            Add Your Chapter
+          </Link>
+        </div>
+
+        {posts.length > 0 ? (
+          <div className="mt-16 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+            {posts.map((post) => (
+              <div key={post.file}>
+                <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
+                  <Image
+                    src={post.src}
+                    alt={post.testimonial}
+                    fill
+                    sizes="(min-width: 768px) 25vw, 50vw"
+                    className="object-cover"
+                  />
+                </div>
+                <p className="mt-3 text-caption text-secondary-text">
+                  &ldquo;{post.testimonial}&rdquo;
+                </p>
               </div>
             ))}
           </div>

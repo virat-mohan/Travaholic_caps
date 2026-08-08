@@ -76,8 +76,8 @@ export function SplashIntro() {
         onClick={triggerExit}
         className="fixed inset-0 z-[999] flex cursor-pointer flex-col items-center justify-center bg-black"
       >
-        <div className="relative aspect-square h-[98vmin] w-[98vmin] max-h-[960px] max-w-[960px]">
-          <div className="grid h-full w-full grid-cols-4 grid-rows-4 gap-[3px]">
+        <div className="relative aspect-square h-[112vmin] w-[112vmin] max-h-[1240px] max-w-[1240px]">
+          <div className="grid h-full w-full grid-cols-4 grid-rows-4 gap-[10px] md:gap-[14px]">
             {CELLS.map((src, i) => {
               const row = Math.floor(i / GRID_SIZE);
               const col = i % GRID_SIZE;

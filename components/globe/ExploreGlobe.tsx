@@ -46,31 +46,15 @@ export function ExploreGlobe() {
       </div>
 
       <div
-        className="relative mx-auto mt-14 w-full max-w-[900px] overflow-hidden rounded-lg shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)]"
-        style={{ aspectRatio: "4 / 3", backgroundColor: "#ddc9a3" }}
+        className="relative mx-auto mt-14 w-full max-w-[900px]"
+        style={{ aspectRatio: "4 / 3" }}
       >
-        {/* parchment grain */}
-        <div
-          className="absolute inset-0 opacity-[0.18] mix-blend-multiply"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(90,66,38,0.35) 100%)",
-          }}
-        />
-
         <Image
           src="/images/globe/world-map-clay.png"
           alt="World map"
           fill
           sizes="(min-width: 900px) 900px, 100vw"
-          className="object-contain p-6"
+          className="object-contain"
         />
 
         {seriesOrder.map((s, i) => {
