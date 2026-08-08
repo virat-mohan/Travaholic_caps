@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const GRID_SIZE = 4; // 4x4 = 16 cells, one per Chapter, no empty center needed
 const CELL_COUNT = GRID_SIZE * GRID_SIZE;
-const SWEEP_MS = 900;
+const SWEEP_MS = 1800;
 const MAX_DIAGONAL = (GRID_SIZE - 1) * 2;
-const CELL_TRANSITION_MS = 550;
+const CELL_TRANSITION_MS = 900;
 const HOLD_MS = 5000;
 const EXIT_MS = 700;
 const SESSION_KEY = "travaholic-splash-shown";
@@ -107,11 +107,12 @@ export function SplashIntro() {
             style={{ width: "52%", maxWidth: "300px" }}
           >
             <Image
-              src="/images/brand/travaholic-logo-color.png"
+              src="/images/brand/Travaholic logo.png"
               alt="Travaholic"
               width={300}
               height={300}
               className="w-full drop-shadow-[0_6px_24px_rgba(0,0,0,0.6)]"
+              style={{ filter: "invert(1)" }}
               priority
             />
           </div>
@@ -123,7 +124,7 @@ export function SplashIntro() {
           transition={{ duration: 0.6, delay: revealed ? 0.5 : 0 }}
           className="mt-8 font-sans text-body-s uppercase tracking-[0.2em] text-cream/85"
         >
-          Premium Caps, Made To Last
+          Premium Truckers, Made In India
         </motion.p>
 
         <motion.p

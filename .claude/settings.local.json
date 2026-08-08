@@ -51,7 +51,11 @@
       "Bash(lsof -nP -iTCP:3000 -sTCP:LISTEN)",
       "Bash(ps -p 16909 -o pid,ppid,command)",
       "Bash(kill -9 16909)",
-      "Bash(python3 -c \"import PIL; print\\(PIL.__version__\\)\")"
+      "Bash(python3 -c \"import PIL; print\\(PIL.__version__\\)\")",
+      "Bash(git merge *)",
+      "Bash(pkill -f cutout_map.py)",
+      "Bash(mkdir -p \"/Users/viratmohan/Desktop/Travaholic Caps/public/images/team\" && cp \"/Users/viratmohan/Desktop/Screenshot 2026-08-07 at 9.03.09 PM.png\" \"/Users/viratmohan/Desktop/Travaholic Caps/public/images/team/ishan-seth.png\" && ls -la \"/Users/viratmohan/Desktop/Travaholic Caps/public/images/team/\")",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

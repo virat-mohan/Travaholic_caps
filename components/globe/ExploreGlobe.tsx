@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { seriesOrder } from "@/lib/series";
@@ -46,7 +47,7 @@ export function ExploreGlobe() {
 
       <div
         className="relative mx-auto mt-14 w-full max-w-[900px] overflow-hidden rounded-lg shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)]"
-        style={{ aspectRatio: "2 / 1", backgroundColor: "#ddc9a3" }}
+        style={{ aspectRatio: "4 / 3", backgroundColor: "#ddc9a3" }}
       >
         {/* parchment grain */}
         <div
@@ -64,21 +65,12 @@ export function ExploreGlobe() {
           }}
         />
 
-        {/* paint-splash landmasses, masked by the real Earth map's land shapes */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "conic-gradient(from 200deg at 50% 50%, #d62828, #f3a712, #2a9d8f, #1d3557, #8e44ad, #e8590c, #6a4c93, #d62828)",
-            maskImage: "url(/images/globe/earth.jpg)",
-            WebkitMaskImage: "url(/images/globe/earth.jpg)",
-            maskMode: "luminance",
-            WebkitMaskSize: "cover",
-            maskSize: "cover",
-            maskRepeat: "no-repeat",
-            maskPosition: "center",
-            filter: "saturate(1.6) contrast(1.2)",
-          }}
+        <Image
+          src="/images/globe/world-map-clay.png"
+          alt="World map"
+          fill
+          sizes="(min-width: 900px) 900px, 100vw"
+          className="object-contain p-6"
         />
 
         {seriesOrder.map((s, i) => {
