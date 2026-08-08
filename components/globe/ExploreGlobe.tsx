@@ -34,7 +34,7 @@ const PIN_POSITION: Record<string, { x: number; y: number }> = {
 
 export function ExploreGlobe() {
   return (
-    <section className="py-24 md:py-30">
+    <section id="pick-your-world" className="scroll-mt-24 py-24 md:py-30">
       <div className="mx-auto max-w-[560px] text-center">
         <p className="text-caption uppercase tracking-[0.08em] text-secondary-text">
           Explore by Terrain

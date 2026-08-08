@@ -11,7 +11,7 @@ const links = [
 export function Navbar() {
   return (
     <header className="sticky inset-x-0 top-0 z-50 border-b border-[var(--color-divider)] bg-near-black">
-      <nav className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between px-6 md:h-20 md:px-12">
+      <nav className="relative mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-6 md:h-28 md:px-12">
         <div className="hidden items-center gap-8 md:flex">
           {links.map((link) => (
             <Link
@@ -26,16 +26,16 @@ export function Navbar() {
 
         <Link
           href="/"
-          className="flex items-center gap-2 md:absolute md:left-1/2 md:-translate-x-1/2"
+          className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2"
         >
           <Image
             src="/images/brand/Travaholic logo.png"
-            alt=""
-            width={20}
-            height={20}
-            style={{ filter: "invert(1)" }}
+            alt="Travaholic"
+            width={220}
+            height={66}
+            style={{ filter: "invert(1)", height: "64px", width: "auto" }}
+            priority
           />
-          <span className="font-display text-body-l uppercase text-cream">Travaholic</span>
         </Link>
 
         <div className="flex items-center gap-5">

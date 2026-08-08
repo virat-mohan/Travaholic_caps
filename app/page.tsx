@@ -1,5 +1,3 @@
-import { SplashHero } from "@/components/hero/SplashHero";
-import { WorldScroller } from "@/components/hero/WorldScroller";
 import { ExploreGlobe } from "@/components/globe/ExploreGlobe";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { SeriesCard } from "@/components/series/SeriesCard";
@@ -20,11 +18,10 @@ export default function Home() {
 
   return (
     <>
-      <SplashHero />
-      <WorldScroller />
+      <ExploreGlobe />
 
       <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
-        <section className="pt-24 md:pt-30">
+        <section className="pt-4 md:pt-8">
           <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
             Story Series
           </p>
@@ -45,8 +42,6 @@ export default function Home() {
             })}
           </div>
         </section>
-
-        <ExploreGlobe />
 
         <section className="mx-auto max-w-[760px] py-24 text-center md:py-30">
           <p className="font-display text-heading-l text-charcoal md:text-heading-xl">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo_Black, IBM_Plex_Mono } from "next/font/google";
 import { Navbar } from "@/components/navigation/Navbar";
+import { SplashIntro } from "@/components/hero/SplashIntro";
 import "./globals.css";
 
 const plexMono = IBM_Plex_Mono({
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${plexMono.variable} ${archivoBlack.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        <SplashIntro />
         <Navbar />
         {children}
       </body>
