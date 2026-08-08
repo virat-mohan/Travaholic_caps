@@ -76,7 +76,7 @@ export function SplashIntro() {
         onClick={triggerExit}
         className="fixed inset-0 z-[999] flex cursor-pointer flex-col items-center justify-center bg-black"
       >
-        <div className="relative aspect-square h-[95vmin] w-[95vmin] max-h-[760px] max-w-[760px]">
+        <div className="relative aspect-square h-[98vmin] w-[98vmin] max-h-[960px] max-w-[960px]">
           <div className="grid h-full w-full grid-cols-4 grid-rows-4 gap-[3px]">
             {CELLS.map((src, i) => {
               const row = Math.floor(i / GRID_SIZE);
@@ -88,7 +88,7 @@ export function SplashIntro() {
                     src={src}
                     alt=""
                     fill
-                    sizes="200px"
+                    sizes="(min-width: 960px) 240px, 25vw"
                     className="object-cover"
                     style={{
                       opacity: revealed ? 1 : 0,
@@ -100,21 +100,6 @@ export function SplashIntro() {
                 </div>
               );
             })}
-          </div>
-
-          <div
-            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            style={{ width: "52%", maxWidth: "300px" }}
-          >
-            <Image
-              src="/images/brand/Travaholic logo.png"
-              alt="Travaholic"
-              width={300}
-              height={300}
-              className="w-full drop-shadow-[0_6px_24px_rgba(0,0,0,0.6)]"
-              style={{ filter: "invert(1)" }}
-              priority
-            />
           </div>
         </div>
 
