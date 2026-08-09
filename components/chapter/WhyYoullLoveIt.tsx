@@ -24,7 +24,9 @@ export function WhyYoullLoveIt({ image, name }: { image: string; name: string })
     <section className="px-6 py-12 md:px-12 md:py-16">
       <p className="font-display text-heading-m uppercase text-ink">Travaholic Craftsmanship</p>
 
-      <div className="relative mx-auto mt-12 h-[420px] max-w-[720px] md:h-[480px]">
+      {/* Desktop: annotated diagram with connector lines. Doesn't translate to
+          narrow screens — labels need real horizontal room either side of the image. */}
+      <div className="relative mx-auto mt-12 hidden h-[420px] max-w-[720px] md:block md:h-[480px]">
         <div className="absolute left-1/2 top-1/2 h-[85%] w-[46%] -translate-x-1/2 -translate-y-1/2">
           <Image src={image} alt={name} fill sizes="360px" className="object-contain" />
         </div>
@@ -62,6 +64,23 @@ export function WhyYoullLoveIt({ image, name }: { image: string; name: string })
             {c.label}
           </p>
         ))}
+      </div>
+
+      {/* Mobile: image full-width, features as a simple stacked list below. */}
+      <div className="mt-10 md:hidden">
+        <div className="relative mx-auto aspect-square w-full max-w-[320px]">
+          <Image src={image} alt={name} fill sizes="320px" className="object-contain" />
+        </div>
+        <ul className="mx-auto mt-8 grid max-w-[320px] grid-cols-2 gap-x-6 gap-y-4">
+          {CALLOUTS.map((c) => (
+            <li key={c.label} className="flex items-start gap-2">
+              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink" />
+              <span className="font-sans text-caption font-bold uppercase leading-tight text-ink">
+                {c.label}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

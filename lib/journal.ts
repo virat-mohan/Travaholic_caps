@@ -48,6 +48,11 @@ export const journalIssues: JournalIssue[] = [
     name: "Issue No. 02 — Thin Air & Bright Colour",
     theme: "Altitude, patch design up close, and a weekend in Jaipur.",
   },
+  {
+    number: 3,
+    name: "Issue No. 03 — Roads, Coffee & Wide Open Country",
+    theme: "A mountain pass, a slow coffee, and the safari guide we keep sending people back to.",
+  },
 ];
 
 function chapterHero(slug: string) {
@@ -201,6 +206,68 @@ export const journalArticles: JournalArticle[] = [
     relatedChapterSlugs: ["travaholic-orange"],
     issue: 2,
   },
+  {
+    slug: "road-to-nowhere-in-particular",
+    title: "The Road To Nowhere In Particular",
+    subtitle: "Road Trips — notes from a mountain pass in Ladakh, and why the bike matters less than the stop.",
+    category: "Road Trips",
+    readingTime: 5,
+    publishedAt: "2026-08-11",
+    heroImage: "/images/lifestyle/IMG_20210708_184623.jpg",
+    excerpt:
+      "Nobody remembers the highway. They remember the exact gravel patch where they stopped for no reason and stayed for an hour.",
+    body: [
+      "There's a stretch of road in Ladakh where the mountains change colour depending on where the sun is — rust in the morning, a kind of bruised gold by early afternoon. There's no real reason to stop anywhere specific along it. Every few kilometres looks like the best view of the trip until the next one shows up. Eventually you just stop when you stop, which is usually when the bike needs a break more than you do.",
+      "Dunes Maroon ended up on the ground in that exact spot, propped against gravel with a loaded motorcycle behind it, and it stayed the reference photo for the whole Chapter afterward — not because the light was perfect, but because it was the first stop that didn't feel like it was for a photo.",
+      "> If you're planning something similar: give yourself more days than you think you need. The Inner Line Permit stops matter, the altitude sickness is real above 4,000m, and the best hour of light shows up whenever it wants, not on your schedule.",
+      "This is a trip where the practical advice is unusually load-bearing. June to September is the realistic window before passes close. Acclimatise for a day in Leh before pushing up toward Khardung La — altitude doesn't care how fit you are. Layers matter more than any single heavy jacket, since a 30-degree swing between sunrise and midday is normal, not an exception.",
+      "A cap earns its keep here in a specific way: full sun at altitude with thin air means the glare off pale rock is meaner than it looks, and a real brim matters more than sunglasses alone. Dunes Maroon and Travaholic Snow both made this trip for that reason, one for the desert-toned lower passes, one for wherever the road climbs into actual snow.",
+      "The road doesn't need an itinerary. It needs fuel, permits sorted in advance, and the willingness to stop at the gravel patch that doesn't look like anything special until you're standing in it.",
+    ],
+    relatedChapterSlugs: ["dunes-maroon", "travaholic-snow"],
+    issue: 3,
+  },
+  {
+    slug: "city-slicker-coffee-and-slow-mornings",
+    title: "Coffee, City Slicker, And The Art Of Doing One Thing Slowly",
+    subtitle: "Coffee — a slow New York morning, and why the best coffee stop isn't the famous one.",
+    category: "Coffee",
+    readingTime: 4,
+    publishedAt: "2026-08-13",
+    heroImage: "/images/lifestyle/DSCF5484.jpg",
+    excerpt:
+      "The best coffee stop on any City Slicker morning is rarely the one everyone already knows about.",
+    body: [
+      "Every city has a coffee shop that shows up on every list, and it's usually fine — crowded, a little rushed, worth doing once. The better version of a City Slicker morning skips it. Walk two extra blocks, pick whichever place has three tables and nobody in a hurry, and order the simplest thing on the board. The point isn't the coffee. It's the twenty minutes of sitting still before a city day gets loud.",
+      "This is the whole argument for City Slicker Black specifically — not the daytime skyline version, but the one for slower hours, early enough that the mesh back is still catching a genuinely cold morning instead of afternoon heat. A cap that reads a little more considered than a baseball cap, worn somewhere that isn't trying to prove anything.",
+      "> A good travel coffee habit is really a scheduling habit: build in the twenty minutes on purpose, rather than hoping they show up between other plans.",
+      "If you're doing this in New York specifically: go early enough that the light is still low and gold off the glass towers, somewhere in a neighbourhood you haven't fully mapped yet. Skip the queue-around-the-block spot. The unremarkable café with good light and no line is doing more for the actual trip.",
+      "None of this needs planning beyond showing up slightly earlier than feels necessary. The reward is a slow twenty minutes in a city that doesn't usually offer them.",
+    ],
+    relatedChapterSlugs: ["city-slicker-black"],
+    issue: 3,
+  },
+  {
+    slug: "wildling-south-africa-safari-guide",
+    title: "South Africa, Beyond The Postcard: A Wildling Safari Guide",
+    subtitle: "Explorer Stories — the actual logistics of a safari, for the Chapter that started with a wolf on a rock.",
+    category: "Explorer Stories",
+    readingTime: 6,
+    publishedAt: "2026-08-15",
+    heroImage: chapterHero("wildling"),
+    excerpt:
+      "Wildling started as a sketch from one specific dusk. Here's what an actual trip to see something similar looks like, logistics included.",
+    body: [
+      "Wildling's sketch came from a single dusk on a trek, but the Chapter's spirit is really about a much bigger version of that feeling — the one you get properly on a South African safari, where the wild isn't a backdrop, it's actively walking past your vehicle at eye level.",
+      "Kruger National Park is the obvious starting point, and it's obvious for a reason: self-drive is genuinely possible here, which most major safari destinations don't allow. You can rent a car in Johannesburg, drive yourself in through one of the southern gates, and see the Big Five without ever booking a guided vehicle — though a guided game drive at dawn or dusk, when most predators actually move, is worth doing at least once.",
+      "> Best light, and the best odds of an actual sighting, are both in the first two hours after sunrise and the last two before dark. The middle of the day is for driving between camps and finding shade.",
+      "For something smaller and more personal, the private reserves bordering Kruger — Sabi Sands especially — trade the self-drive freedom for off-road tracking and closer sightings, at a real cost difference. Worth it once, if the budget allows. May to September (the dry winter months) is the strongest window: thinner bush means better visibility, and animals cluster around the remaining water sources.",
+      "Pack for genuinely cold early mornings in an open vehicle — it's colder than the daytime heat suggests — and for a lot of dust for the rest of the day. A cap with a real brim matters here too, less for looking the part and more because safari hours are dawn and dusk, exactly when low sun is hardest on your eyes through binoculars.",
+      "This is the trip Wildling was always pointing toward, even if the actual sketch came from somewhere smaller. If the Chapter's story made you want the bigger version of that dusk, Kruger — self-driven, patient, unhurried — is where to actually go looking for it.",
+    ],
+    relatedChapterSlugs: ["wildling"],
+    issue: 3,
+  },
 ];
 
 export function getJournalArticle(slug: string) {
@@ -225,4 +292,19 @@ export function articlesForIssue(issueNumber: number) {
   return journalArticles
     .filter((a) => a.issue === issueNumber)
     .sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
+}
+
+export function getIssue(issueNumber: number) {
+  return journalIssues.find((i) => i.number === issueNumber);
+}
+
+/** Every Chapter mentioned across an Issue's articles, in first-mention order. */
+export function featuredChaptersForIssue(issueNumber: number) {
+  const slugs: string[] = [];
+  for (const article of articlesForIssue(issueNumber)) {
+    for (const slug of article.relatedChapterSlugs) {
+      if (!slugs.includes(slug)) slugs.push(slug);
+    }
+  }
+  return chapters.filter((c) => slugs.includes(c.slug));
 }
