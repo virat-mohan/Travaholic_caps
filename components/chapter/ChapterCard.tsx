@@ -6,8 +6,17 @@ import { motion } from "framer-motion";
 import type { Chapter } from "@/types/chapter";
 import { chapterImageSrc } from "@/lib/chapters";
 import { ease } from "@/lib/motion";
+import type { StockLabel } from "@/lib/inventory";
 
-export function ChapterCard({ chapter, index = 0 }: { chapter: Chapter; index?: number }) {
+export function ChapterCard({
+  chapter,
+  index = 0,
+  stockLabel = null,
+}: {
+  chapter: Chapter;
+  index?: number;
+  stockLabel?: StockLabel;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -24,6 +33,15 @@ export function ChapterCard({ chapter, index = 0 }: { chapter: Chapter; index?: 
             sizes="(min-width: 1024px) 25vw, 50vw"
             className="object-cover object-bottom transition-transform duration-500 ease-out group-hover:scale-105"
           />
+          {stockLabel && (
+            <span
+              className={`absolute left-2 top-2 px-2 py-1 text-micro font-bold uppercase tracking-[0.05em] ${
+                stockLabel === "out-of-stock" ? "bg-ink text-cream" : "bg-tan-gold text-ink"
+              }`}
+            >
+              {stockLabel === "out-of-stock" ? "Out of Stock" : "Selling Fast"}
+            </span>
+          )}
         </div>
         <div className="mt-3 flex flex-col sm:flex-row sm:items-baseline sm:justify-between">
           <div>

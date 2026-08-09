@@ -5,7 +5,15 @@ import Link from "next/link";
 import { useCart } from "@/lib/cart";
 import type { Chapter } from "@/types/chapter";
 
-export function AddToCartButton({ chapter, image }: { chapter: Chapter; image: string }) {
+export function AddToCartButton({
+  chapter,
+  image,
+  disabled = false,
+}: {
+  chapter: Chapter;
+  image: string;
+  disabled?: boolean;
+}) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
 
@@ -22,6 +30,17 @@ export function AddToCartButton({ chapter, image }: { chapter: Chapter; image: s
           View Cart
         </Link>
       </div>
+    );
+  }
+
+  if (disabled) {
+    return (
+      <button
+        disabled
+        className="cursor-not-allowed border border-divider bg-surface-alt px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-secondary-text"
+      >
+        Out of Stock
+      </button>
     );
   }
 

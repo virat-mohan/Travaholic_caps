@@ -83,7 +83,7 @@ export default async function JournalArticlePage({
         {related.length > 0 && (
           <section className="mx-auto mt-20 max-w-[760px] border-t border-divider pt-10">
             <p className="mb-6 text-caption uppercase tracking-[0.1em] text-secondary-text">
-              Chapters in this story
+              Cap Suggestions
             </p>
             <div className="grid grid-cols-2 gap-6">
               {related.map((chapter) => (

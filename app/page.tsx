@@ -6,6 +6,7 @@ import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { chapters } from "@/lib/chapters";
 import { seriesOrder, seriesChapters } from "@/lib/series";
+import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 
 const pillars = [
   { title: "Premium Materials", copy: "Chosen for how they age, not just how they photograph." },
@@ -14,8 +15,9 @@ const pillars = [
   { title: "Inspired By Stories", copy: "Every Chapter starts with a place, not a spreadsheet." },
 ];
 
-export default function Home() {
+export default async function Home() {
   const featured = chapters.slice(0, 8);
+  const inventory = await getInventoryMap();
 
   return (
     <>
@@ -65,7 +67,12 @@ export default function Home() {
           </p>
           <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
             {featured.map((chapter, i) => (
-              <ChapterCard key={chapter.slug} chapter={chapter} index={i} />
+              <ChapterCard
+                key={chapter.slug}
+                chapter={chapter}
+                index={i}
+                stockLabel={stockLabelFor(inventory[chapter.slug])}
+              />
             ))}
           </div>
         </section>

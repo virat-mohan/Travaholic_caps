@@ -21,22 +21,22 @@ function chapterFor(slug: string) {
 // across the map. Coordinates are calibrated against the actual landmasses
 // drawn in world-map-clay.png, not literal lat/long.
 const PINS: MapPin[] = [
-  { chapterSlug: "city-slicker", blurb: "New York — a new skyline and a coffee you haven't tried yet.", x: 25, y: 27 },
-  { chapterSlug: "city-slicker-black", blurb: "Tokyo — same city energy, hours later, once the lights take over.", x: 90, y: 26 },
-  { chapterSlug: "travaholic-ocean", blurb: "Off the coast of Western Australia — where the sky and the sea stop being two things.", x: 86, y: 68 },
-  { chapterSlug: "travaholic-sky", blurb: "Further along the Australian coast — head in the clouds, energy immaculate.", x: 84, y: 72 },
-  { chapterSlug: "travaholic-black", blurb: "New Delhi — where the whole brand actually started.", x: 65, y: 32 },
-  { chapterSlug: "travaholic-snow", blurb: "The Swiss Alps — mornings your breath shows before your coffee does.", x: 43, y: 27 },
-  { chapterSlug: "travaholic-orange", blurb: "The Arabian Sea, just off Goa — a small flash of colour that says keep going.", x: 68, y: 46 },
-  { chapterSlug: "beachn", blurb: "California — golden hour, zero plans for tomorrow.", x: 13, y: 29 },
-  { chapterSlug: "sunshine", blurb: "The Yucatán coast — no itinerary, just sun on your face.", x: 24, y: 46 },
-  { chapterSlug: "tropical-blue", blurb: "The Brazilian coastline — too warm, too green, too good to be real.", x: 24, y: 63 },
-  { chapterSlug: "tropical-pink", blurb: "The southern tip of India, near Sri Lanka — the tropical energy, dialled all the way up.", x: 63, y: 46 },
-  { chapterSlug: "dunes-yellow", blurb: "Rajasthan — the last good hour before noon in the desert.", x: 57, y: 36 },
-  { chapterSlug: "dunes-maroon", blurb: "The Sahara — golden hour, but make it desert.", x: 58, y: 43 },
-  { chapterSlug: "peaking", blurb: "Around Everest — the view that finally quiets your legs.", x: 72, y: 25 },
-  { chapterSlug: "wildling", blurb: "South Africa — the last light before the forest goes properly dark.", x: 50, y: 69 },
-  { chapterSlug: "junglee", blurb: "Bangkok — a little feral, a little free, gloriously lost for an afternoon.", x: 81.03, y: 41.7 },
+  { chapterSlug: "city-slicker", blurb: "New York — a new skyline and a coffee you haven't tried yet.", x: 26.82, y: 42.53 },
+  { chapterSlug: "city-slicker-black", blurb: "Tokyo — same city energy, hours later, once the lights take over.", x: 82.09, y: 45.55 },
+  { chapterSlug: "travaholic-ocean", blurb: "Off the coast of Western Australia — where the sky and the sea stop being two things.", x: 78, y: 72.71 },
+  { chapterSlug: "travaholic-sky", blurb: "Further along the Australian coast — head in the clouds, energy immaculate.", x: 87.73, y: 74.16 },
+  { chapterSlug: "travaholic-black", blurb: "New Delhi — where the whole brand actually started.", x: 68.09, y: 45.67 },
+  { chapterSlug: "travaholic-snow", blurb: "The Swiss Alps — mornings your breath shows before your coffee does.", x: 49.82, y: 38.79 },
+  { chapterSlug: "travaholic-orange", blurb: "The Arabian Sea, just off Goa — a small flash of colour that says keep going.", x: 66.91, y: 52.55 },
+  { chapterSlug: "beachn", blurb: "California — golden hour, zero plans for tomorrow.", x: 13.64, y: 36.98 },
+  { chapterSlug: "sunshine", blurb: "The Yucatán coast — no itinerary, just sun on your face.", x: 46.18, y: 34.69 },
+  { chapterSlug: "tropical-blue", blurb: "The Brazilian coastline — too warm, too green, too good to be real.", x: 34.36, y: 70.17 },
+  { chapterSlug: "tropical-pink", blurb: "The southern tip of India, near Sri Lanka — the tropical energy, dialled all the way up.", x: 66.73, y: 57.62 },
+  { chapterSlug: "dunes-yellow", blurb: "Rajasthan — the last good hour before noon in the desert.", x: 66.18, y: 49.17 },
+  { chapterSlug: "dunes-maroon", blurb: "The Sahara — golden hour, but make it desert.", x: 52.82, y: 51.22 },
+  { chapterSlug: "peaking", blurb: "Around Everest — the view that finally quiets your legs.", x: 69.27, y: 42.29 },
+  { chapterSlug: "wildling", blurb: "South Africa — the last light before the forest goes properly dark.", x: 56.73, y: 62.81 },
+  { chapterSlug: "junglee", blurb: "Bangkok — a little feral, a little free, gloriously lost for an afternoon.", x: 74.18, y: 55.09 },
 ];
 
 function PinGlyph({ active }: { active: boolean }) {

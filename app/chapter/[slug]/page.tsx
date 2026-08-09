@@ -4,6 +4,7 @@ import Image from "next/image";
 import { chapters, chapterImageSrc, SHARED_SPECS } from "@/lib/chapters";
 import { seriesChapters } from "@/lib/series";
 import { getExplorerPostsForChapter } from "@/lib/community";
+import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { WhyYoullLoveIt } from "@/components/chapter/WhyYoullLoveIt";
@@ -22,6 +23,9 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
 
   const others = seriesChapters(chapter.series).filter((c) => c.slug !== chapter.slug);
   const explorerPosts = getExplorerPostsForChapter(chapter.slug);
+  const inventory = await getInventoryMap();
+  const stock = inventory[chapter.slug];
+  const stockLabel = stockLabelFor(stock);
 
   return (
     <>
@@ -49,10 +53,21 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
               </p>
             )}
 
+            {stockLabel && (
+              <p
+                className={`mt-4 font-sans text-caption font-bold uppercase tracking-[0.05em] ${
+                  stockLabel === "out-of-stock" ? "text-paint-orange" : "text-tan-gold"
+                }`}
+              >
+                {stockLabel === "out-of-stock" ? "Out of Stock" : "Selling Fast"}
+              </p>
+            )}
+
             <div className="mt-10 flex items-center gap-4">
               <AddToCartButton
                 chapter={chapter}
                 image={chapterImageSrc(chapter.folder, chapter.primary)}
+                disabled={stockLabel === "out-of-stock"}
               />
               <span className="font-sans text-caption text-secondary-text">One size · 52–60cm</span>
             </div>
@@ -105,7 +120,12 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
             </p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
               {others.map((c, i) => (
-                <ChapterCard key={c.slug} chapter={c} index={i} />
+                <ChapterCard
+                  key={c.slug}
+                  chapter={c}
+                  index={i}
+                  stockLabel={stockLabelFor(inventory[c.slug])}
+                />
               ))}
             </div>
           </section>

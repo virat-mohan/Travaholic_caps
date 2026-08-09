@@ -3,6 +3,7 @@ import Image from "next/image";
 import { seriesOrder, seriesChapters } from "@/lib/series";
 import { chapterImageSrc } from "@/lib/chapters";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
+import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -17,6 +18,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
 
   const chapters = seriesChapters(series.name);
   const hero = chapters[0];
+  const inventory = await getInventoryMap();
 
   return (
     <>
@@ -45,7 +47,12 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
         </p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
           {chapters.map((chapter, i) => (
-            <ChapterCard key={chapter.slug} chapter={chapter} index={i} />
+            <ChapterCard
+              key={chapter.slug}
+              chapter={chapter}
+              index={i}
+              stockLabel={stockLabelFor(inventory[chapter.slug])}
+            />
           ))}
         </div>
       </main>

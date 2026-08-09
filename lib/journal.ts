@@ -27,7 +27,28 @@ export type JournalArticle = {
   body: string[];
   /** At most two Chapters per article, per brand rule — this is a story, not a catalogue. */
   relatedChapterSlugs: string[];
+  /** Which magazine-style Issue this article belongs to. */
+  issue: number;
 };
+
+export type JournalIssue = {
+  number: number;
+  name: string;
+  theme: string;
+};
+
+export const journalIssues: JournalIssue[] = [
+  {
+    number: 1,
+    name: "Issue No. 01 — First Light",
+    theme: "Origins, deserts at dawn, and the first few Chapters worth writing down.",
+  },
+  {
+    number: 2,
+    name: "Issue No. 02 — Thin Air & Bright Colour",
+    theme: "Altitude, patch design up close, and a weekend in Jaipur.",
+  },
+];
 
 function chapterHero(slug: string) {
   const chapter = chapters.find((c) => c.slug === slug);
@@ -56,6 +77,7 @@ export const journalArticles: JournalArticle[] = [
       "That's the part we think gets lost when a cap becomes just \"merch.\" Nothing on a Travaholic cap is a stock graphic dropped onto a template. It's a sketch that had to earn its way onto your head — one revision at a time.",
     ],
     relatedChapterSlugs: ["dunes-yellow", "wildling"],
+    issue: 1,
   },
   {
     slug: "desert-trails-packing-list",
@@ -76,6 +98,7 @@ export const journalArticles: JournalArticle[] = [
       "What you don't need: anything heavy, anything black that isn't actively being worn on your head, and a strict itinerary. The desert rewards people who get up early and otherwise let the day happen to them. Bring a cap that can take the sun, bring enough water for the boredom in between the good hours, and let the rest sort itself out.",
     ],
     relatedChapterSlugs: ["dunes-maroon", "dunes-yellow"],
+    issue: 1,
   },
   {
     slug: "urban-nomad-weekend-guide",
@@ -96,6 +119,7 @@ export const journalArticles: JournalArticle[] = [
       "You don't need a car, a plan, or a mountain to have a real trip. You need a weekend, a cap, and the willingness to treat an unfamiliar subway map the way you'd treat a trailhead — as something to figure out as you go.",
     ],
     relatedChapterSlugs: ["city-slicker", "city-slicker-black"],
+    issue: 1,
   },
   {
     slug: "no-signal-into-the-wild",
@@ -115,6 +139,67 @@ export const journalArticles: JournalArticle[] = [
       "If you're planning time off signal — actually off, not just doom-scrolling in airplane mode — bring less than you think, tell someone roughly where you'll be, and let a few hours go unplanned. The best stories from Into The Wild were never the ones on the itinerary.",
     ],
     relatedChapterSlugs: ["wildling", "junglee"],
+    issue: 1,
+  },
+  {
+    slug: "view-that-quiets-your-legs",
+    title: "The View That Finally Quiets Your Legs",
+    subtitle: "On altitude, thin air, and why the last switchback is always the one that gets you.",
+    category: "Photography",
+    readingTime: 5,
+    publishedAt: "2026-07-28",
+    heroImage: chapterHero("peaking"),
+    excerpt:
+      "Nobody warns you that the hardest part of a summit isn't the climb — it's the twenty minutes before the climb, when your legs already know.",
+    body: [
+      "There's a specific kind of quiet that only shows up above a certain altitude — thinner air, fewer birds, your own breathing suddenly the loudest thing around. Peaking was sketched from exactly that moment: not the summit photo everyone takes, but the switchback right before it, the one where you stop talking because talking costs oxygen you'd rather spend on the next step.",
+      "Every mountain trail has a version of this. The view doesn't actually arrive all at once — it leaks in, ridge by ridge, until you're far enough up that turning around feels like the harder option. That's usually the exact point where a cap starts mattering more than you expected: sun at altitude is meaner than sun at sea level, and squinting through the last hour of a climb is its own kind of miserable.",
+      "> The camera never quite gets it. Thin light, cold hands, a view that's more felt than seen — Peaking exists because a sketch could hold what a photo kept losing.",
+      "Travaholic Snow came from the same range, a season later — the version of altitude that isn't about climbing anymore, just about being there once the snow's settled in and the whole mountain's gone quiet in a different way. Breath showing before your coffee does. Fewer people. The same thin light, colder.",
+      "If you're planning a trip that involves any real altitude — a trek, a pass, a viewpoint that requires actual effort to reach — the gear advice is boring but true: layers you can shed fast, a cap with a real brim for the glare, and a phone you're willing to leave in your bag for the last hour. The view has never once been improved by someone checking their notifications first.",
+    ],
+    relatedChapterSlugs: ["peaking", "travaholic-snow"],
+    issue: 2,
+  },
+  {
+    slug: "jaipur-two-shades-of-blue",
+    title: "Jaipur, In Two Shades Of Blue",
+    subtitle: "A weekend at the Hawa Mahal, and the two Chapters that ended up in every photo.",
+    category: "Travel Guides",
+    readingTime: 4,
+    publishedAt: "2026-08-04",
+    heroImage: "/images/lifestyle/DSCF5311.jpg",
+    excerpt:
+      "Jaipur gives you pink sandstone against a blue sky often enough that packing anything but blue felt wrong.",
+    body: [
+      "The Hawa Mahal doesn't need much help — a five-storey wall of pink sandstone and 953 tiny windows, built so the palace women could watch the street below without being seen themselves. Mornings there are quiet in a way the rest of Jaipur isn't, and the light does something specific: the sandstone goes almost orange, and everything else — sky, shadow, the caps we happened to be wearing — reads bluer by comparison.",
+      "We hadn't planned it, but Travaholic Ocean and Travaholic Sky ended up in almost every photo from that weekend. Ocean is the deeper of the two, the blue you'd associate with open water. Sky is a shade lighter, closer to the actual colour of a clear Rajasthan afternoon. Side by side against pink sandstone, they read like they were designed for exactly this, even though the sketch for both happened nowhere near a desert.",
+      "> Same brand, same circular patch, two different blues — the kind of detail that only matters once you see them next to each other in real light.",
+      "Jaipur rewards slow mornings and even slower food breaks — this isn't a city to rush through on a checklist. Hawa Mahal before 9 a.m., the City Palace once the light gets harder, and then however many hours it takes to get properly lost in the lanes around Bapu Bazaar. Bring a cap that can handle full sun for most of the day, because shade is not a guarantee here.",
+      "If a trip is mostly going to happen in front of pink sandstone and blue sky, it turns out the cap you pick matters more than you'd think. We didn't plan the colour story. Jaipur just kept handing it to us.",
+    ],
+    relatedChapterSlugs: ["travaholic-ocean", "travaholic-sky"],
+    issue: 2,
+  },
+  {
+    slug: "patch-before-the-patch",
+    title: "The Patch Before The Patch",
+    subtitle: "Design Notes — what a Chapter's graphic looks like before it's ever stitched.",
+    category: "Design Notes",
+    readingTime: 4,
+    publishedAt: "2026-08-08",
+    heroImage: "/images/brand/travaholic-lines-sketch-hero.png",
+    excerpt:
+      "Every patch spends longer as a coloured-pencil sketch than it ever does as a charcoal drawing — this is the stage nobody outside the studio usually sees.",
+    body: [
+      "Most people who've heard how a Travaholic patch gets made know the first step: charcoal, paper, a real place. Fewer know the middle step, the one that actually takes the longest — a coloured-pencil pass, done after the digital render, that exists purely to test whether a colour combination survives being looked at slowly.",
+      "It sounds redundant. It isn't. A digital mockup can lie — screens render colour with a confidence thread never has. Coloured pencil is slower and more honest; you can see exactly where a shade is doing too much work, where a line is thinner than the embroidery machine will actually manage, where two colours that looked fine on-screen are fighting each other on paper.",
+      "> The line-art version — no colour, just the shapes — is the real test. If a patch still reads clearly in pure black outline, the design underneath is solid. If it needs colour to make sense, it needs more work.",
+      "Travaholic Orange exists almost entirely as that line-art test, kept deliberately uncoloured — a mountain, a sun, a wave, stitched straight onto the panel with no patch material at all. It's the one Chapter where the middle step became the whole point instead of a checkpoint on the way to something busier.",
+      "None of this is visible in the final product photo, and that's sort of the idea. A cap either feels considered or it doesn't, and most of what makes it feel that way happened in a sketchbook weeks before a single thread got involved.",
+    ],
+    relatedChapterSlugs: ["travaholic-orange"],
+    issue: 2,
   },
 ];
 
@@ -130,4 +215,14 @@ export function allJournalArticlesSorted() {
 
 export function relatedChaptersFor(article: JournalArticle) {
   return chapters.filter((c) => article.relatedChapterSlugs.includes(c.slug));
+}
+
+export function issuesSorted() {
+  return [...journalIssues].sort((a, b) => b.number - a.number);
+}
+
+export function articlesForIssue(issueNumber: number) {
+  return journalArticles
+    .filter((a) => a.issue === issueNumber)
+    .sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
 }
