@@ -112,13 +112,13 @@ export function ExploreGlobe() {
         <div className="w-full md:w-[38%]">
           {activePin && activeChapter ? (
             <Link href={`/chapter/${activeChapter.slug}`} className="group block">
-              <div className="relative aspect-[4/5] w-full max-w-[240px] overflow-hidden border border-divider md:mx-0 mx-auto">
+              <div className="relative aspect-[4/5] w-full max-w-[240px] overflow-visible md:mx-0 mx-auto">
                 <Image
                   src={chapterImageSrc(activeChapter.folder, activeChapter.primary)}
                   alt={activeChapter.name}
                   fill
                   sizes="240px"
-                  className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                  className="object-contain drop-shadow-[0_18px_28px_rgba(20,14,8,0.35)] transition-transform duration-500 ease-out group-hover:scale-105"
                 />
               </div>
               <p className="mt-5 font-display text-heading-m uppercase text-ink">
