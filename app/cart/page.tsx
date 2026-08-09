@@ -4,11 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { useDiscountRule } from "@/lib/useDiscountRule";
+import { calculateDiscount } from "@/lib/discounts";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
 export default function CartPage() {
   const { items, setQuantity, removeItem, subtotal } = useCart();
+  const discountRule = useDiscountRule();
+  const discount = calculateDiscount(items, discountRule);
+  const total = subtotal - discount;
 
   return (
     <>
@@ -92,9 +97,21 @@ export default function CartPage() {
 
             <div className="mt-8 flex items-center justify-between">
               <p className="font-sans text-body text-ink">Subtotal</p>
-              <p className="font-display text-heading-m text-ink">
-                ₹{subtotal.toLocaleString("en-IN")}
-              </p>
+              <p className="font-sans text-body text-ink">₹{subtotal.toLocaleString("en-IN")}</p>
+            </div>
+
+            {discount > 0 && discountRule && (
+              <div className="mt-2 flex items-center justify-between">
+                <p className="font-sans text-body-s text-tan-gold">{discountRule.name}</p>
+                <p className="font-sans text-body-s text-tan-gold">
+                  −₹{discount.toLocaleString("en-IN")}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-2 flex items-center justify-between border-t border-divider pt-3">
+              <p className="font-sans text-body text-ink">Total</p>
+              <p className="font-display text-heading-m text-ink">₹{total.toLocaleString("en-IN")}</p>
             </div>
             <p className="mt-2 text-caption text-secondary-text">
               Shipping and any taxes are calculated at checkout.

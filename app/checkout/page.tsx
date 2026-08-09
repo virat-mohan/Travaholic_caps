@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
+import { useDiscountRule } from "@/lib/useDiscountRule";
+import { calculateDiscount } from "@/lib/discounts";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -11,8 +13,13 @@ const WHATSAPP_NUMBER = "919958871283";
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
+  const discountRule = useDiscountRule();
+  const discount = calculateDiscount(items, discountRule);
+  const total = subtotal - discount;
   const router = useRouter();
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
+  const [isGift, setIsGift] = useState(false);
+  const [giftNote, setGiftNote] = useState("");
 
   function update(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -35,6 +42,10 @@ export default function CheckoutPage() {
             quantity: i.quantity,
           })),
           subtotal,
+          discountAmount: discount,
+          total,
+          isGift,
+          giftNote: isGift ? giftNote : null,
         }),
       });
     } catch (err) {
@@ -48,11 +59,14 @@ export default function CheckoutPage() {
       ...items.map((i) => `${i.quantity} x ${i.name} — ₹${(i.price * i.quantity).toLocaleString("en-IN")}`),
       "",
       `Subtotal: ₹${subtotal.toLocaleString("en-IN")}`,
+      ...(discount > 0 ? [`Discount: −₹${discount.toLocaleString("en-IN")}`] : []),
+      `Total: ₹${total.toLocaleString("en-IN")}`,
       "",
       `Name: ${form.name}`,
       `Phone: ${form.phone}`,
       `Email: ${form.email}`,
       `Address: ${form.address}`,
+      ...(isGift ? ["", "This is a gift.", `Gift note: ${giftNote || "(none)"}`] : []),
     ];
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`;
@@ -99,9 +113,15 @@ export default function CheckoutPage() {
               </span>
             </div>
           ))}
+          {discount > 0 && discountRule && (
+            <div className="flex items-center justify-between text-body-s">
+              <span className="text-tan-gold">{discountRule.name}</span>
+              <span className="text-tan-gold">−₹{discount.toLocaleString("en-IN")}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-3 font-display text-heading-s text-ink">
             <span>Total</span>
-            <span>₹{subtotal.toLocaleString("en-IN")}</span>
+            <span>₹{total.toLocaleString("en-IN")}</span>
           </div>
         </div>
 
@@ -155,6 +175,30 @@ export default function CheckoutPage() {
               onChange={update("address")}
               className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
             />
+          </div>
+
+          <div className="border-t border-divider pt-6">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={isGift}
+                onChange={(e) => setIsGift(e.target.checked)}
+                className="h-4 w-4 accent-ink"
+              />
+              <span className="font-sans text-body-s uppercase tracking-[0.05em] text-ink">
+                This is a gift
+              </span>
+            </label>
+
+            {isGift && (
+              <textarea
+                rows={3}
+                placeholder="Add a personal note to include with the order..."
+                value={giftNote}
+                onChange={(e) => setGiftNote(e.target.value)}
+                className="mt-4 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+              />
+            )}
           </div>
 
           <button

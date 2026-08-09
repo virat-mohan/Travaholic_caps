@@ -7,8 +7,16 @@ create table if not exists orders (
   customer_phone text not null,
   customer_email text not null,
   delivery_address text not null,
-  subtotal integer not null, -- in INR, whole rupees
-  status text not null default 'pending_whatsapp_confirmation'
+  subtotal integer not null, -- in INR, whole rupees, before discount
+  discount_amount integer not null default 0,
+  total integer not null default 0, -- subtotal - discount_amount
+  status text not null default 'pending_whatsapp_confirmation',
+  -- Fulfilment. shiprocket_order_id gets filled in once that integration exists.
+  shipment_status text not null default 'not_shipped',
+  shiprocket_order_id text,
+  refund_status text not null default 'none', -- none | requested | approved | refunded | denied
+  is_gift boolean not null default false,
+  gift_note text
 );
 
 create table if not exists order_items (
@@ -53,3 +61,18 @@ on conflict (chapter_slug) do update set stock_on_hand = excluded.stock_on_hand;
 --   'City Slicker Burgundy' — 54 units
 --   'Travaholic White' — 31 units
 -- Also missing entirely from the stock sheet: 'city-slicker' (City Slicker Black/Grey).
+
+-- Discount rules: simple "buy N, cheapest one at X% off" promos (e.g. buy 2 get
+-- 3rd at half price = buy_quantity 3, discount_percent 50). Only one should be
+-- active at a time — the app just takes the first active row it finds.
+create table if not exists discount_rules (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  buy_quantity integer not null,
+  discount_percent integer not null,
+  active boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+insert into discount_rules (name, buy_quantity, discount_percent, active) values
+  ('Buy 2, get 3rd at half price', 3, 50, true);

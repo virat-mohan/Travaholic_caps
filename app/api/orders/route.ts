@@ -5,6 +5,10 @@ type OrderPayload = {
   customer: { name: string; phone: string; email: string; address: string };
   items: { slug: string; name: string; price: number; quantity: number }[];
   subtotal: number;
+  discountAmount?: number;
+  total?: number;
+  isGift?: boolean;
+  giftNote?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -21,6 +25,8 @@ export async function POST(request: Request) {
 
   try {
     const supabase = getSupabaseServerClient();
+    const discountAmount = body.discountAmount ?? 0;
+    const total = body.total ?? body.subtotal - discountAmount;
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -30,6 +36,10 @@ export async function POST(request: Request) {
         customer_email: body.customer.email,
         delivery_address: body.customer.address,
         subtotal: body.subtotal,
+        discount_amount: discountAmount,
+        total,
+        is_gift: body.isGift ?? false,
+        gift_note: body.giftNote ?? null,
       })
       .select()
       .single();
@@ -47,6 +57,21 @@ export async function POST(request: Request) {
     );
 
     if (itemsError) throw itemsError;
+
+    // Decrement inventory. Best-effort — a failed decrement shouldn't fail the order.
+    for (const item of body.items) {
+      const { data: inv } = await supabase
+        .from("inventory")
+        .select("stock_on_hand")
+        .eq("chapter_slug", item.slug)
+        .maybeSingle();
+      if (inv) {
+        await supabase
+          .from("inventory")
+          .update({ stock_on_hand: Math.max(0, inv.stock_on_hand - item.quantity) })
+          .eq("chapter_slug", item.slug);
+      }
+    }
 
     return NextResponse.json({ orderId: order.id });
   } catch (err) {
