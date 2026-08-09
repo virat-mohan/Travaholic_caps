@@ -7,6 +7,8 @@ export type ExplorerPost = {
   src: string;
   /** Short on-brand caption/testimonial, written to fit the scene in the photo. No names. */
   testimonial: string;
+  /** Chapter slug to link to, when the cap in the photo is identifiable with confidence. */
+  chapterSlug?: string;
 };
 
 /**
@@ -28,6 +30,20 @@ const CAPTIONS: Record<string, string> = {
   "Screenshot 2026-08-07 at 9.06.05 PM.png": "Caps on, completely unbothered by whatever's happening in the foreground of this one.",
 };
 
+/**
+ * Which Chapter is being worn in each photo, only where identifiable with confidence
+ * (clear patch + cap body colour match). Photos with multiple people/caps or an
+ * ambiguous colourway are left unmapped rather than guessed.
+ */
+const CHAPTER_LINKS: Record<string, string> = {
+  "Screenshot 2026-08-07 at 9.03.41 PM.png": "travaholic-black",
+  "Screenshot 2026-08-07 at 9.04.08 PM.png": "junglee",
+  "Screenshot 2026-08-07 at 9.04.42 PM.png": "travaholic-orange",
+  "Screenshot 2026-08-07 at 9.04.53 PM.png": "junglee",
+  "Screenshot 2026-08-07 at 9.05.35 PM.png": "sunshine",
+  "Screenshot 2026-08-07 at 9.06.05 PM.png": "city-slicker-black",
+};
+
 export function getExplorerPosts(): ExplorerPost[] {
   const dir = path.join(process.cwd(), "public/images/community");
   if (!fs.existsSync(dir)) return [];
@@ -39,5 +55,10 @@ export function getExplorerPosts(): ExplorerPost[] {
       file,
       src: `/images/community/${encodeURIComponent(file)}`,
       testimonial: CAPTIONS[file] ?? "Wearing the story, wherever the trip takes them next.",
+      chapterSlug: CHAPTER_LINKS[file],
     }));
+}
+
+export function getExplorerPostsForChapter(slug: string): ExplorerPost[] {
+  return getExplorerPosts().filter((p) => p.chapterSlug === slug);
 }

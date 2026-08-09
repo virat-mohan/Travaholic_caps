@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { chapters, SHARED_SPECS } from "@/lib/chapters";
+import Image from "next/image";
+import { chapters, chapterImageSrc, SHARED_SPECS } from "@/lib/chapters";
 import { seriesChapters } from "@/lib/series";
+import { getExplorerPostsForChapter } from "@/lib/community";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
+import { WhyYoullLoveIt } from "@/components/chapter/WhyYoullLoveIt";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -17,6 +20,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
   if (!chapter) notFound();
 
   const others = seriesChapters(chapter.series).filter((c) => c.slug !== chapter.slug);
+  const explorerPosts = getExplorerPostsForChapter(chapter.slug);
 
   return (
     <>
@@ -58,6 +62,39 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
             </div>
           </div>
         </div>
+
+        <div className="mt-24 md:mt-32">
+          <WhyYoullLoveIt
+            image={chapterImageSrc(chapter.folder, chapter.primary)}
+            name={chapter.name}
+          />
+        </div>
+
+        {explorerPosts.length > 0 && (
+          <section className="mt-24 border-t border-divider pt-16 md:mt-32">
+            <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
+              Explorers Wearing {chapter.name}
+            </p>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {explorerPosts.map((post) => (
+                <div key={post.file}>
+                  <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
+                    <Image
+                      src={post.src}
+                      alt={post.testimonial}
+                      fill
+                      sizes="(min-width: 768px) 25vw, 50vw"
+                      className="object-cover"
+                    />
+                  </div>
+                  <p className="mt-3 text-caption text-secondary-text">
+                    &ldquo;{post.testimonial}&rdquo;
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {others.length > 0 && (
           <section className="mt-32 border-t border-divider pt-16">

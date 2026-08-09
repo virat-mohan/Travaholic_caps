@@ -36,13 +36,12 @@ export function SeriesCard({
             sizes="(min-width: 1024px) 50vw, 100vw"
             className="object-cover grayscale-[0.15] contrast-[1.08] transition-transform duration-700 ease-out group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10" />
-          <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
-            <p className="font-display text-[2.6rem] uppercase leading-[0.92] text-white md:text-[3.4rem]">
-              {name}
-            </p>
-            <p className="mt-3 max-w-[80%] text-body-s text-white/80">{blurb}</p>
-          </div>
+        </div>
+        <div className="mt-4">
+          <p className="font-display text-heading-m uppercase leading-[0.95] text-ink md:text-heading-l">
+            {name}
+          </p>
+          <p className="mt-2 max-w-[80%] text-body-s text-secondary-text">{blurb}</p>
         </div>
       </Link>
     </motion.div>

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const GRID_SIZE = 4; // 4x4 = 16 cells, one per Chapter, no empty center needed
@@ -25,15 +25,17 @@ export function SplashIntro() {
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialized = useRef(false);
 
-  useEffect(() => {
-    if (pathname !== "/") return;
-    if (typeof window === "undefined") return;
+  useLayoutEffect(() => {
+    if (pathname !== "/" || sessionStorage.getItem(SESSION_KEY)) {
+      document.documentElement.classList.remove("splash-pending");
+      return;
+    }
     if (initialized.current) return; // guards React Strict Mode's dev double-invocation
-    if (sessionStorage.getItem(SESSION_KEY)) return;
 
     initialized.current = true;
     sessionStorage.setItem(SESSION_KEY, "1");
     setShouldRender(true);
+    document.documentElement.classList.remove("splash-pending");
 
     let settled = 0;
 
@@ -76,7 +78,7 @@ export function SplashIntro() {
         onClick={triggerExit}
         className="fixed inset-0 z-[999] flex cursor-pointer flex-col items-center justify-center bg-black"
       >
-        <div className="relative aspect-square h-[112vmin] w-[112vmin] max-h-[1240px] max-w-[1240px]">
+        <div className="relative aspect-square h-[96vmin] w-[96vmin] max-h-[1200px] max-w-[1200px]">
           <div className="grid h-full w-full grid-cols-4 grid-rows-4 gap-[10px] md:gap-[14px]">
             {CELLS.map((src, i) => {
               const row = Math.floor(i / GRID_SIZE);
@@ -103,14 +105,23 @@ export function SplashIntro() {
           </div>
         </div>
 
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: revealed ? 1 : 0 }}
           transition={{ duration: 0.6, delay: revealed ? 0.5 : 0 }}
-          className="mt-8 font-sans text-body-s uppercase tracking-[0.2em] text-cream/85"
+          className="mt-8 flex flex-col items-center gap-3 text-center"
         >
-          Premium Truckers, Made In India
-        </motion.p>
+          <Image
+            src="/images/brand/travaholic-logo-mono-white.png"
+            alt="Travaholic"
+            width={132}
+            height={95}
+            className="h-auto w-[110px]"
+          />
+          <p className="font-sans text-body-s font-bold not-italic uppercase tracking-[0.2em] text-white">
+            Premium Truckers, Made In India
+          </p>
+        </motion.div>
 
         <motion.p
           initial={{ opacity: 0 }}

@@ -129,6 +129,10 @@ body {
   color: var(--color-foreground);
 }
 
+html.splash-pending body > *:not(script) {
+  visibility: hidden;
+}
+
 /* Archivo Black headlines read best with tight, slightly negative tracking. */
 .font-display {
   letter-spacing: -0.03em;

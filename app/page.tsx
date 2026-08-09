@@ -1,4 +1,5 @@
 import { ExploreGlobe } from "@/components/globe/ExploreGlobe";
+import { RevealOnClick } from "@/components/home/RevealOnClick";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { SeriesCard } from "@/components/series/SeriesCard";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
@@ -20,6 +21,7 @@ export default function Home() {
     <>
       <ExploreGlobe />
 
+      <RevealOnClick>
       <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
         <section className="pt-4 md:pt-8">
           <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
@@ -80,6 +82,7 @@ export default function Home() {
 
       <NewsletterBlock />
       <FooterEditorial />
+      </RevealOnClick>
     </>
   );
 }

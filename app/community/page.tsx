@@ -34,22 +34,34 @@ export default function CommunityPage() {
 
         {posts.length > 0 ? (
           <div className="mt-16 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
-            {posts.map((post) => (
-              <div key={post.file}>
+            {posts.map((post) => {
+              const image = (
                 <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
                   <Image
                     src={post.src}
                     alt={post.testimonial}
                     fill
                     sizes="(min-width: 768px) 25vw, 50vw"
-                    className="object-cover"
+                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                   />
                 </div>
-                <p className="mt-3 text-caption text-secondary-text">
-                  &ldquo;{post.testimonial}&rdquo;
-                </p>
-              </div>
-            ))}
+              );
+
+              return (
+                <div key={post.file}>
+                  {post.chapterSlug ? (
+                    <Link href={`/chapter/${post.chapterSlug}`} className="group block">
+                      {image}
+                    </Link>
+                  ) : (
+                    image
+                  )}
+                  <p className="mt-3 text-caption text-secondary-text">
+                    &ldquo;{post.testimonial}&rdquo;
+                  </p>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="mt-16 border-t border-divider py-24 text-center">

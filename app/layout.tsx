@@ -29,6 +29,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${plexMono.variable} ${archivoBlack.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        <script
+          // Prevents a flash of the homepage before the splash overlay mounts.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(window.location.pathname==="/"&&!sessionStorage.getItem("travaholic-splash-shown")){document.documentElement.classList.add("splash-pending");}}catch(e){}})();`,
+          }}
+        />
         <SplashIntro />
         <Navbar />
         {children}

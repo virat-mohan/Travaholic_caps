@@ -25,14 +25,16 @@ export function ChapterCard({ chapter, index = 0 }: { chapter: Chapter; index?: 
             className="object-cover object-bottom transition-transform duration-500 ease-out group-hover:scale-105"
           />
         </div>
-        <div className="mt-3 flex items-baseline justify-between">
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <p className="font-sans text-body-s uppercase tracking-[0.03em] text-ink">
               {chapter.name}
             </p>
             <p className="font-sans text-caption text-secondary-text">{chapter.series}</p>
           </div>
-          <p className="font-sans text-body-s text-ink">₹{chapter.price.toLocaleString("en-IN")}</p>
+          <p className="mt-1 font-sans text-body-s text-ink sm:mt-0">
+            ₹{chapter.price.toLocaleString("en-IN")}
+          </p>
         </div>
       </Link>
     </motion.div>

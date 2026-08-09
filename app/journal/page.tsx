@@ -28,6 +28,31 @@ export default function JournalIndexPage() {
           affiliate links — just the stuff worth reading before your next trip.
         </p>
 
+        <div className="mt-14 border-t border-b border-divider py-8">
+          <p className="mb-5 text-caption uppercase tracking-[0.1em] text-secondary-text">
+            In This Issue
+          </p>
+          <ol className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 md:grid-cols-3">
+            {articles.map((article, i) => (
+              <li key={article.slug}>
+                <Link href={`/journal/${article.slug}`} className="group flex gap-3">
+                  <span className="font-sans text-caption text-secondary-text">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span>
+                    <span className="block font-sans text-body-s uppercase tracking-[0.02em] text-ink underline-offset-4 group-hover:underline">
+                      {article.title}
+                    </span>
+                    <span className="block text-caption text-secondary-text">
+                      {article.category}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </div>
+
         {featured && (
           <Link href={`/journal/${featured.slug}`} className="group mt-16 block">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-10">
