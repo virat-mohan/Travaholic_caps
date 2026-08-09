@@ -11,18 +11,18 @@ type Callout = {
 };
 
 const CALLOUTS: Callout[] = [
-  { label: "Embroidered Patch Graphic", side: "left", labelY: 18, targetX: 40, targetY: 38 },
-  { label: "Poly-Blend Cotton Twill", side: "left", labelY: 50, targetX: 30, targetY: 55 },
-  { label: "Made In India", side: "left", labelY: 82, targetX: 38, targetY: 78 },
-  { label: "One Size — 52 to 60cm", side: "right", labelY: 18, targetX: 62, targetY: 25 },
-  { label: "Snap Backstrap", side: "right", labelY: 50, targetX: 68, targetY: 48 },
-  { label: "Reinforced Stitching", side: "right", labelY: 82, targetX: 60, targetY: 72 },
+  { label: "Embroidered Patch Graphic", side: "left", labelY: 18, targetX: 44, targetY: 42 },
+  { label: "Poly-Blend Cotton Twill", side: "left", labelY: 50, targetX: 40, targetY: 14 },
+  { label: "Made In India", side: "left", labelY: 82, targetX: 45, targetY: 90 },
+  { label: "One Size — 52 to 60cm", side: "right", labelY: 18, targetX: 62, targetY: 16 },
+  { label: "Curved Brim", side: "right", labelY: 50, targetX: 58, targetY: 88 },
+  { label: "Reinforced Stitching", side: "right", labelY: 82, targetX: 56, targetY: 44 },
 ];
 
 export function WhyYoullLoveIt({ image, name }: { image: string; name: string }) {
   return (
-    <section className="border border-divider bg-surface px-6 py-12 md:px-12 md:py-16">
-      <p className="font-display text-heading-m uppercase text-ink">Why You&apos;ll Love It:</p>
+    <section className="px-6 py-12 md:px-12 md:py-16">
+      <p className="font-display text-heading-m uppercase text-ink">Travaholic Craftsmanship</p>
 
       <div className="relative mx-auto mt-12 h-[420px] max-w-[720px] md:h-[480px]">
         <div className="absolute left-1/2 top-1/2 h-[85%] w-[46%] -translate-x-1/2 -translate-y-1/2">
@@ -42,7 +42,7 @@ export function WhyYoullLoveIt({ image, name }: { image: string; name: string })
                 d={`M ${labelX} ${c.labelY} H ${(labelX + c.targetX) / 2} V ${c.targetY} H ${c.targetX}`}
                 fill="none"
                 stroke="var(--color-secondary-text)"
-                strokeWidth="0.3"
+                strokeWidth="0.12"
               />
             );
           })}

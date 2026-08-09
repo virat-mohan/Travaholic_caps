@@ -1,8 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getExplorerPosts } from "@/lib/community";
+import { chapters } from "@/lib/chapters";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
+
+function chapterName(slug: string) {
+  return chapters.find((c) => c.slug === slug)?.name ?? slug;
+}
 
 export default function CommunityPage() {
   const posts = getExplorerPosts();
@@ -35,30 +40,40 @@ export default function CommunityPage() {
         {posts.length > 0 ? (
           <div className="mt-16 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
             {posts.map((post) => {
-              const image = (
-                <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
-                  <Image
-                    src={post.src}
-                    alt={post.testimonial}
-                    fill
-                    sizes="(min-width: 768px) 25vw, 50vw"
-                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                  />
-                </div>
-              );
+              const primarySlug = post.chapterSlugs[0];
 
               return (
                 <div key={post.file}>
-                  {post.chapterSlug ? (
-                    <Link href={`/chapter/${post.chapterSlug}`} className="group block">
-                      {image}
-                    </Link>
-                  ) : (
-                    image
-                  )}
+                  <Link
+                    href={primarySlug ? `/chapter/${primarySlug}` : "/series"}
+                    className="group block"
+                  >
+                    <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
+                      <Image
+                        src={post.src}
+                        alt={post.testimonial}
+                        fill
+                        sizes="(min-width: 768px) 25vw, 50vw"
+                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                    </div>
+                  </Link>
                   <p className="mt-3 text-caption text-secondary-text">
                     &ldquo;{post.testimonial}&rdquo;
                   </p>
+                  {post.chapterSlugs.length > 0 && (
+                    <p className="mt-2 text-caption uppercase tracking-[0.05em] text-ink">
+                      Worn by Explorer —{" "}
+                      {post.chapterSlugs.map((slug, i) => (
+                        <span key={slug}>
+                          <Link href={`/chapter/${slug}`} className="underline underline-offset-4">
+                            {chapterName(slug)}
+                          </Link>
+                          {i < post.chapterSlugs.length - 1 ? " & " : ""}
+                        </span>
+                      ))}
+                    </p>
+                  )}
                 </div>
               );
             })}

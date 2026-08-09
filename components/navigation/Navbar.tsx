@@ -9,8 +9,8 @@ import { useCart } from "@/lib/cart";
 
 const links = [
   { label: "Series", href: "/series" },
-  { label: "Journal", href: "/journal" },
   { label: "Explorers", href: "/community" },
+  { label: "Journal", href: "/journal" },
   { label: "About", href: "/about" },
 ];
 

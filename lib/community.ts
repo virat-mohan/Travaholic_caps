@@ -7,8 +7,8 @@ export type ExplorerPost = {
   src: string;
   /** Short on-brand caption/testimonial, written to fit the scene in the photo. No names. */
   testimonial: string;
-  /** Chapter slug to link to, when the cap in the photo is identifiable with confidence. */
-  chapterSlug?: string;
+  /** Chapter slug(s) worn in the photo — one per cap visible, most confident guess first. */
+  chapterSlugs: string[];
 };
 
 /**
@@ -31,17 +31,20 @@ const CAPTIONS: Record<string, string> = {
 };
 
 /**
- * Which Chapter is being worn in each photo, only where identifiable with confidence
- * (clear patch + cap body colour match). Photos with multiple people/caps or an
- * ambiguous colourway are left unmapped rather than guessed.
+ * Which Chapter(s) are being worn in each photo — one entry per cap visible.
+ * Best-effort identification by patch + cap body colour.
  */
-const CHAPTER_LINKS: Record<string, string> = {
-  "Screenshot 2026-08-07 at 9.03.41 PM.png": "travaholic-black",
-  "Screenshot 2026-08-07 at 9.04.08 PM.png": "junglee",
-  "Screenshot 2026-08-07 at 9.04.42 PM.png": "travaholic-orange",
-  "Screenshot 2026-08-07 at 9.04.53 PM.png": "junglee",
-  "Screenshot 2026-08-07 at 9.05.35 PM.png": "sunshine",
-  "Screenshot 2026-08-07 at 9.06.05 PM.png": "city-slicker-black",
+const CHAPTER_LINKS: Record<string, string[]> = {
+  "Screenshot 2026-08-07 at 9.03.28 PM.png": ["travaholic-snow"],
+  "Screenshot 2026-08-07 at 9.03.41 PM.png": ["travaholic-black"],
+  "Screenshot 2026-08-07 at 9.03.58 PM.png": ["tropical-blue", "sunshine"],
+  "Screenshot 2026-08-07 at 9.04.08 PM.png": ["junglee"],
+  "Screenshot 2026-08-07 at 9.04.24 PM.png": ["junglee", "wildling"],
+  "Screenshot 2026-08-07 at 9.04.42 PM.png": ["travaholic-orange"],
+  "Screenshot 2026-08-07 at 9.04.53 PM.png": ["junglee"],
+  "Screenshot 2026-08-07 at 9.05.09 PM.png": ["travaholic-sky", "travaholic-ocean"],
+  "Screenshot 2026-08-07 at 9.05.35 PM.png": ["sunshine"],
+  "Screenshot 2026-08-07 at 9.06.05 PM.png": ["city-slicker-black", "tropical-pink"],
 };
 
 export function getExplorerPosts(): ExplorerPost[] {
@@ -55,10 +58,10 @@ export function getExplorerPosts(): ExplorerPost[] {
       file,
       src: `/images/community/${encodeURIComponent(file)}`,
       testimonial: CAPTIONS[file] ?? "Wearing the story, wherever the trip takes them next.",
-      chapterSlug: CHAPTER_LINKS[file],
+      chapterSlugs: CHAPTER_LINKS[file] ?? [],
     }));
 }
 
 export function getExplorerPostsForChapter(slug: string): ExplorerPost[] {
-  return getExplorerPosts().filter((p) => p.chapterSlug === slug);
+  return getExplorerPosts().filter((p) => p.chapterSlugs.includes(slug));
 }

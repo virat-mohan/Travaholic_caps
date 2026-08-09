@@ -42,20 +42,20 @@ const PINS: MapPin[] = [
 function PinGlyph({ active }: { active: boolean }) {
   const fill = active ? "#e6c68f" : "#ffffff";
   return (
-    <span className="relative flex h-6 w-3 items-end justify-center">
+    <span className="relative flex h-[30px] w-4 items-end justify-center">
       <span
         className="absolute bottom-0 h-1.5 w-1.5 rounded-full bg-black/40 blur-[1.5px] transition-opacity duration-200"
         style={{ opacity: active ? 0.9 : 0.5 }}
       />
       <svg
-        viewBox="0 0 12 24"
-        className={`relative h-6 w-3 drop-shadow-[0_2px_3px_rgba(0,0,0,0.55)] transition-transform duration-200 ${
+        viewBox="0 0 14 28"
+        className={`relative h-[30px] w-4 drop-shadow-[0_2px_3px_rgba(0,0,0,0.55)] transition-transform duration-200 ${
           active ? "pin-bouncing" : ""
         }`}
         style={active ? undefined : { transform: "scale(1)" }}
       >
-        <line x1="6" y1="9" x2="6" y2="24" stroke={fill} strokeWidth="1.5" />
-        <circle cx="6" cy="6" r="5.25" fill={fill} stroke="#2a2a2a" strokeWidth="1.75" />
+        <line x1="7" y1="15" x2="7" y2="28" stroke={fill} strokeWidth="1.5" />
+        <circle cx="7" cy="7.5" r="6.75" fill={fill} stroke="#2a2a2a" strokeWidth="2" />
       </svg>
     </span>
   );
@@ -84,7 +84,7 @@ export function ExploreGlobe() {
       </div>
 
       <div className="mx-auto mt-14 flex max-w-[1200px] flex-col gap-8 px-6 md:flex-row md:items-center md:gap-10 md:px-0">
-        <div className="relative w-full md:w-[62%]" style={{ aspectRatio: "4 / 3" }}>
+        <div className="relative w-full md:w-[62%]" style={{ aspectRatio: "4928 / 3712" }}>
           <Image
             src="/images/globe/world-map-clay.png"
             alt="World map"
@@ -99,7 +99,13 @@ export function ExploreGlobe() {
               type="button"
               onMouseEnter={() => setActiveSlug(pin.chapterSlug)}
               onFocus={() => setActiveSlug(pin.chapterSlug)}
-              onClick={() => router.push(`/chapter/${pin.chapterSlug}`)}
+              onClick={() => {
+                if (activeSlug === pin.chapterSlug) {
+                  router.push(`/chapter/${pin.chapterSlug}`);
+                } else {
+                  setActiveSlug(pin.chapterSlug);
+                }
+              }}
               className="absolute -translate-x-1/2 -translate-y-full cursor-pointer"
               style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
               aria-label={chapterFor(pin.chapterSlug)?.name ?? pin.chapterSlug}

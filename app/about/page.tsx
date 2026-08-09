@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -14,15 +15,23 @@ export default function AboutPage() {
         </h1>
 
         <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-2 md:gap-16">
-          <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface-alt">
-            <Image
-              src="/images/team/ishan-seth.png"
-              alt="Ishan Seth, Founder of Travaholic"
-              fill
-              sizes="(min-width: 768px) 50vw, 100vw"
-              className="object-cover"
-              priority
-            />
+          <div>
+            <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface-alt">
+              <Image
+                src="/images/team/ishan-seth.png"
+                alt="Ishan Seth, Founder of Travaholic"
+                fill
+                sizes="(min-width: 768px) 50vw, 100vw"
+                className="object-cover"
+                priority
+              />
+            </div>
+            <p className="mt-3 text-caption uppercase tracking-[0.05em] text-secondary-text">
+              Wearing{" "}
+              <Link href="/chapter/wildling" className="text-ink underline underline-offset-4">
+                Wildling
+              </Link>
+            </p>
           </div>
 
           <div>
