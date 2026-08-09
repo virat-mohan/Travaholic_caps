@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { chapters, chapterImageSrc } from "@/lib/chapters";
 
@@ -24,15 +25,15 @@ function chapterFor(slug: string) {
 const PINS: MapPin[] = [
   { chapterSlug: "city-slicker", blurb: "New York — a new skyline and a coffee you haven't tried yet.", x: 25, y: 27, color: "#106796" },
   { chapterSlug: "city-slicker-black", blurb: "Tokyo — same city energy, hours later, once the lights take over.", x: 90, y: 26, color: "#bd6662" },
-  { chapterSlug: "travaholic-ocean", blurb: "Somewhere over the Pacific — where the sky and the sea stop being two things.", x: 88.81, y: 61.44, color: "#9c3482" },
-  { chapterSlug: "travaholic-sky", blurb: "Further out over the Pacific — head in the clouds, energy immaculate.", x: 88.14, y: 70.5, color: "#a91b58" },
+  { chapterSlug: "travaholic-ocean", blurb: "Off the coast of Western Australia — where the sky and the sea stop being two things.", x: 86, y: 68, color: "#9c3482" },
+  { chapterSlug: "travaholic-sky", blurb: "Further along the Australian coast — head in the clouds, energy immaculate.", x: 84, y: 72, color: "#a91b58" },
   { chapterSlug: "travaholic-black", blurb: "New Delhi — where the whole brand actually started.", x: 65, y: 32, color: "#bda985" },
   { chapterSlug: "travaholic-snow", blurb: "The Swiss Alps — mornings your breath shows before your coffee does.", x: 43, y: 27, color: "#812c60" },
   { chapterSlug: "travaholic-orange", blurb: "The Arabian Sea, just off Goa — a small flash of colour that says keep going.", x: 56, y: 48, color: "#9c5467" },
   { chapterSlug: "beachn", blurb: "California — golden hour, zero plans for tomorrow.", x: 13, y: 29, color: "#2f8ca2" },
   { chapterSlug: "sunshine", blurb: "The Yucatán coast — no itinerary, just sun on your face.", x: 24, y: 46, color: "#1a6c98" },
-  { chapterSlug: "tropical-blue", blurb: "Bali — too warm, too green, too good to be real.", x: 81.56, y: 55.61, color: "#ab1816" },
-  { chapterSlug: "tropical-pink", blurb: "Sri Lanka — the tropical energy, dialled all the way up.", x: 62.42, y: 50.16, color: "#b74e6a" },
+  { chapterSlug: "tropical-blue", blurb: "The Brazilian coastline — too warm, too green, too good to be real.", x: 24, y: 63, color: "#ab1816" },
+  { chapterSlug: "tropical-pink", blurb: "The southern tip of India, near Sri Lanka — the tropical energy, dialled all the way up.", x: 63, y: 46, color: "#b74e6a" },
   { chapterSlug: "dunes-yellow", blurb: "Rajasthan — the last good hour before noon in the desert.", x: 57, y: 36, color: "#b96306" },
   { chapterSlug: "dunes-maroon", blurb: "The Sahara — golden hour, but make it desert.", x: 50, y: 38, color: "#b4514b" },
   { chapterSlug: "peaking", blurb: "Around Everest — the view that finally quiets your legs.", x: 72, y: 25, color: "#ba5b4d" },
@@ -54,13 +55,14 @@ function PinGlyph({ active, color }: { active: boolean; color: string }) {
         style={{ transform: active ? "scale(1.4) translateY(-2px)" : "scale(1)" }}
       >
         <line x1="6" y1="9" x2="6" y2="24" stroke={fill} strokeWidth="1.5" />
-        <circle cx="6" cy="6" r="5.5" fill={fill} stroke="#f0eee4" strokeWidth="1.25" />
+        <circle cx="6" cy="6" r="5.25" fill={fill} stroke="#f0eee4" strokeWidth="2.25" />
       </svg>
     </span>
   );
 }
 
 export function ExploreGlobe() {
+  const router = useRouter();
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const activePin = PINS.find((p) => p.chapterSlug === activeSlug) ?? null;
   const activeChapter = activePin ? chapterFor(activePin.chapterSlug) : null;
@@ -92,18 +94,19 @@ export function ExploreGlobe() {
           />
 
           {PINS.map((pin) => (
-            <Link
+            <button
               key={pin.chapterSlug}
-              href={`/chapter/${pin.chapterSlug}`}
+              type="button"
               onMouseEnter={() => setActiveSlug(pin.chapterSlug)}
               onFocus={() => setActiveSlug(pin.chapterSlug)}
               onMouseLeave={() => setActiveSlug((k) => (k === pin.chapterSlug ? null : k))}
+              onClick={() => router.push(`/chapter/${pin.chapterSlug}`)}
               className="absolute -translate-x-1/2 -translate-y-full cursor-pointer"
               style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
               aria-label={chapterFor(pin.chapterSlug)?.name ?? pin.chapterSlug}
             >
               <PinGlyph active={activeSlug === pin.chapterSlug} color={pin.color} />
-            </Link>
+            </button>
           ))}
         </div>
 

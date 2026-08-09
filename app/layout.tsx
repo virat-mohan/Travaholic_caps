@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo_Black, IBM_Plex_Mono } from "next/font/google";
 import { Navbar } from "@/components/navigation/Navbar";
 import { SplashIntro } from "@/components/hero/SplashIntro";
+import { CartProvider } from "@/lib/cart";
 import "./globals.css";
 
 const plexMono = IBM_Plex_Mono({
@@ -35,9 +36,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             __html: `(function(){try{if(window.location.pathname==="/"&&!sessionStorage.getItem("travaholic-splash-shown")){document.documentElement.classList.add("splash-pending");}}catch(e){}})();`,
           }}
         />
-        <SplashIntro />
-        <Navbar />
-        {children}
+        <CartProvider>
+          <SplashIntro />
+          <Navbar />
+          {children}
+        </CartProvider>
       </body>
     </html>
   );

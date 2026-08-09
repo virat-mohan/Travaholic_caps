@@ -7,6 +7,7 @@ import { getExplorerPostsForChapter } from "@/lib/community";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { WhyYoullLoveIt } from "@/components/chapter/WhyYoullLoveIt";
+import { AddToCartButton } from "@/components/chapter/AddToCartButton";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -49,9 +50,10 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
             )}
 
             <div className="mt-10 flex items-center gap-4">
-              <button className="border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink">
-                Add to Cart
-              </button>
+              <AddToCartButton
+                chapter={chapter}
+                image={chapterImageSrc(chapter.folder, chapter.primary)}
+              />
               <span className="font-sans text-caption text-secondary-text">One size · 52–60cm</span>
             </div>
 

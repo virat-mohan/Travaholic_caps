@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import { seriesOrder } from "@/lib/series";
+import { useCart } from "@/lib/cart";
 
 const links = [
   { label: "Series", href: "/series" },
@@ -15,6 +16,7 @@ const links = [
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { count } = useCart();
 
   return (
     <header className="sticky inset-x-0 top-0 z-50 border-b border-[var(--color-divider)] bg-near-black">
@@ -54,9 +56,14 @@ export function Navbar() {
           >
             {menuOpen ? <X size={20} strokeWidth={1.5} /> : <Menu size={20} strokeWidth={1.5} />}
           </button>
-          <button aria-label="Cart" className="text-cream">
+          <Link aria-label="Cart" href="/cart" className="relative text-cream">
             <ShoppingBag size={18} strokeWidth={1.5} />
-          </button>
+            {count > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-tan-gold text-[10px] font-bold text-ink">
+                {count}
+              </span>
+            )}
+          </Link>
         </div>
       </nav>
 

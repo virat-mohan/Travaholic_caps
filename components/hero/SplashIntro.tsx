@@ -118,8 +118,11 @@ export function SplashIntro() {
             height={95}
             className="h-auto w-[110px]"
           />
-          <p className="font-sans text-body-s font-bold not-italic uppercase tracking-[0.2em] text-white">
-            Premium Truckers, Made In India
+          <p className="font-display text-body-l uppercase tracking-[0.1em] text-white">
+            Premium Truckers
+          </p>
+          <p className="-mt-1 font-display text-caption uppercase tracking-[0.25em] text-white/80">
+            Made In India
           </p>
         </motion.div>
 
