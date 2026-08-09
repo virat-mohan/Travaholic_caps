@@ -19,8 +19,28 @@ export default function CheckoutPage() {
       setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    try {
+      await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: form,
+          items: items.map((i) => ({
+            slug: i.slug,
+            name: i.name,
+            price: i.price,
+            quantity: i.quantity,
+          })),
+          subtotal,
+        }),
+      });
+    } catch (err) {
+      // Best-effort logging — WhatsApp remains the real order channel either way.
+      console.error("Order logging failed", err);
+    }
 
     const lines = [
       "New order from travaholic.in",

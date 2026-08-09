@@ -11,8 +11,6 @@ type MapPin = {
   blurb: string;
   x: number;
   y: number;
-  /** Pin-top colour, themed to the terrain it sits on. */
-  color: string;
 };
 
 function chapterFor(slug: string) {
@@ -23,39 +21,41 @@ function chapterFor(slug: string) {
 // across the map. Coordinates are calibrated against the actual landmasses
 // drawn in world-map-clay.png, not literal lat/long.
 const PINS: MapPin[] = [
-  { chapterSlug: "city-slicker", blurb: "New York — a new skyline and a coffee you haven't tried yet.", x: 25, y: 27, color: "#106796" },
-  { chapterSlug: "city-slicker-black", blurb: "Tokyo — same city energy, hours later, once the lights take over.", x: 90, y: 26, color: "#bd6662" },
-  { chapterSlug: "travaholic-ocean", blurb: "Off the coast of Western Australia — where the sky and the sea stop being two things.", x: 86, y: 68, color: "#9c3482" },
-  { chapterSlug: "travaholic-sky", blurb: "Further along the Australian coast — head in the clouds, energy immaculate.", x: 84, y: 72, color: "#a91b58" },
-  { chapterSlug: "travaholic-black", blurb: "New Delhi — where the whole brand actually started.", x: 65, y: 32, color: "#bda985" },
-  { chapterSlug: "travaholic-snow", blurb: "The Swiss Alps — mornings your breath shows before your coffee does.", x: 43, y: 27, color: "#812c60" },
-  { chapterSlug: "travaholic-orange", blurb: "The Arabian Sea, just off Goa — a small flash of colour that says keep going.", x: 56, y: 48, color: "#9c5467" },
-  { chapterSlug: "beachn", blurb: "California — golden hour, zero plans for tomorrow.", x: 13, y: 29, color: "#2f8ca2" },
-  { chapterSlug: "sunshine", blurb: "The Yucatán coast — no itinerary, just sun on your face.", x: 24, y: 46, color: "#1a6c98" },
-  { chapterSlug: "tropical-blue", blurb: "The Brazilian coastline — too warm, too green, too good to be real.", x: 24, y: 63, color: "#ab1816" },
-  { chapterSlug: "tropical-pink", blurb: "The southern tip of India, near Sri Lanka — the tropical energy, dialled all the way up.", x: 63, y: 46, color: "#b74e6a" },
-  { chapterSlug: "dunes-yellow", blurb: "Rajasthan — the last good hour before noon in the desert.", x: 57, y: 36, color: "#b96306" },
-  { chapterSlug: "dunes-maroon", blurb: "The Sahara — golden hour, but make it desert.", x: 50, y: 38, color: "#b4514b" },
-  { chapterSlug: "peaking", blurb: "Around Everest — the view that finally quiets your legs.", x: 72, y: 25, color: "#ba5b4d" },
-  { chapterSlug: "wildling", blurb: "South Africa — the last light before the forest goes properly dark.", x: 67.7, y: 57.32, color: "#601221" },
-  { chapterSlug: "junglee", blurb: "Bangkok — a little feral, a little free, gloriously lost for an afternoon.", x: 81.03, y: 41.7, color: "#8a1512" },
+  { chapterSlug: "city-slicker", blurb: "New York — a new skyline and a coffee you haven't tried yet.", x: 25, y: 27 },
+  { chapterSlug: "city-slicker-black", blurb: "Tokyo — same city energy, hours later, once the lights take over.", x: 90, y: 26 },
+  { chapterSlug: "travaholic-ocean", blurb: "Off the coast of Western Australia — where the sky and the sea stop being two things.", x: 86, y: 68 },
+  { chapterSlug: "travaholic-sky", blurb: "Further along the Australian coast — head in the clouds, energy immaculate.", x: 84, y: 72 },
+  { chapterSlug: "travaholic-black", blurb: "New Delhi — where the whole brand actually started.", x: 65, y: 32 },
+  { chapterSlug: "travaholic-snow", blurb: "The Swiss Alps — mornings your breath shows before your coffee does.", x: 43, y: 27 },
+  { chapterSlug: "travaholic-orange", blurb: "The Arabian Sea, just off Goa — a small flash of colour that says keep going.", x: 68, y: 46 },
+  { chapterSlug: "beachn", blurb: "California — golden hour, zero plans for tomorrow.", x: 13, y: 29 },
+  { chapterSlug: "sunshine", blurb: "The Yucatán coast — no itinerary, just sun on your face.", x: 24, y: 46 },
+  { chapterSlug: "tropical-blue", blurb: "The Brazilian coastline — too warm, too green, too good to be real.", x: 24, y: 63 },
+  { chapterSlug: "tropical-pink", blurb: "The southern tip of India, near Sri Lanka — the tropical energy, dialled all the way up.", x: 63, y: 46 },
+  { chapterSlug: "dunes-yellow", blurb: "Rajasthan — the last good hour before noon in the desert.", x: 57, y: 36 },
+  { chapterSlug: "dunes-maroon", blurb: "The Sahara — golden hour, but make it desert.", x: 58, y: 43 },
+  { chapterSlug: "peaking", blurb: "Around Everest — the view that finally quiets your legs.", x: 72, y: 25 },
+  { chapterSlug: "wildling", blurb: "South Africa — the last light before the forest goes properly dark.", x: 50, y: 69 },
+  { chapterSlug: "junglee", blurb: "Bangkok — a little feral, a little free, gloriously lost for an afternoon.", x: 81.03, y: 41.7 },
 ];
 
-function PinGlyph({ active, color }: { active: boolean; color: string }) {
-  const fill = active ? "#e6c68f" : color;
+function PinGlyph({ active }: { active: boolean }) {
+  const fill = active ? "#e6c68f" : "#ffffff";
   return (
     <span className="relative flex h-6 w-3 items-end justify-center">
       <span
-        className="absolute bottom-0 h-1.5 w-1.5 rounded-full bg-white/70 blur-[1.5px] transition-opacity duration-200"
+        className="absolute bottom-0 h-1.5 w-1.5 rounded-full bg-black/40 blur-[1.5px] transition-opacity duration-200"
         style={{ opacity: active ? 0.9 : 0.5 }}
       />
       <svg
         viewBox="0 0 12 24"
-        className="relative h-6 w-3 drop-shadow-[0_2px_3px_rgba(0,0,0,0.55)] transition-transform duration-200"
-        style={{ transform: active ? "scale(1.4) translateY(-2px)" : "scale(1)" }}
+        className={`relative h-6 w-3 drop-shadow-[0_2px_3px_rgba(0,0,0,0.55)] transition-transform duration-200 ${
+          active ? "pin-bouncing" : ""
+        }`}
+        style={active ? undefined : { transform: "scale(1)" }}
       >
         <line x1="6" y1="9" x2="6" y2="24" stroke={fill} strokeWidth="1.5" />
-        <circle cx="6" cy="6" r="5.25" fill={fill} stroke="#f0eee4" strokeWidth="2.25" />
+        <circle cx="6" cy="6" r="5.25" fill={fill} stroke="#2a2a2a" strokeWidth="1.75" />
       </svg>
     </span>
   );
@@ -99,13 +99,12 @@ export function ExploreGlobe() {
               type="button"
               onMouseEnter={() => setActiveSlug(pin.chapterSlug)}
               onFocus={() => setActiveSlug(pin.chapterSlug)}
-              onMouseLeave={() => setActiveSlug((k) => (k === pin.chapterSlug ? null : k))}
               onClick={() => router.push(`/chapter/${pin.chapterSlug}`)}
               className="absolute -translate-x-1/2 -translate-y-full cursor-pointer"
               style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
               aria-label={chapterFor(pin.chapterSlug)?.name ?? pin.chapterSlug}
             >
-              <PinGlyph active={activeSlug === pin.chapterSlug} color={pin.color} />
+              <PinGlyph active={activeSlug === pin.chapterSlug} />
             </button>
           ))}
         </div>

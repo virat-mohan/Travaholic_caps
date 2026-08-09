@@ -133,6 +133,15 @@ html.splash-pending body > *:not(script) {
   visibility: hidden;
 }
 
+@keyframes pin-bounce {
+  0%, 100% { transform: scale(1.4) translateY(-2px); }
+  50% { transform: scale(1.4) translateY(-8px); }
+}
+
+.pin-bouncing {
+  animation: pin-bounce 0.6s ease-in-out infinite;
+}
+
 /* Archivo Black headlines read best with tight, slightly negative tracking. */
 .font-display {
   letter-spacing: -0.03em;
