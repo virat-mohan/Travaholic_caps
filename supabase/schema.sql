@@ -92,11 +92,22 @@ create table if not exists dynamic_chapters (
   created_at timestamptz not null default now()
 );
 
--- Hero-image override: works for BOTH the static 16 (value = one of that
--- chapter's existing filenames, e.g. "IMG_1822.jpg") and dynamic chapters
--- (value = a full Storage URL already in that chapter's images array).
+-- Per-chapter edits from /admin/edit-chapter — works for BOTH the static 16
+-- and dynamic_chapters rows. Any column left null means "use the hardcoded
+-- value" for that field. primary_image is either one of that chapter's
+-- existing filenames (static) or a full Storage URL (dynamic).
 create table if not exists chapter_hero_overrides (
   chapter_slug text primary key,
-  primary_image text not null,
+  primary_image text,
+  price integer,
+  story text,
+  updated_at timestamptz not null default now()
+);
+
+-- Simple key/value store for admin-entered settings (e.g. Razorpay keys)
+-- that need to be readable server-side without redeploying env vars.
+create table if not exists app_settings (
+  key text primary key,
+  value text not null,
   updated_at timestamptz not null default now()
 );

@@ -1,5 +1,4 @@
 import { ExploreGlobe } from "@/components/globe/ExploreGlobe";
-import { RevealOnClick } from "@/components/home/RevealOnClick";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { SeriesCard } from "@/components/series/SeriesCard";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
@@ -22,14 +21,14 @@ export default async function Home() {
 
   return (
     <>
-      <ExploreGlobe />
-
-      <RevealOnClick>
       <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
-        <section className="pt-4 md:pt-8">
+        <section className="pt-8 md:pt-12">
           <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
-            Story Series
+            The Collection
           </p>
+          <h1 className="mb-8 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
+            Story Series.
+          </h1>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {seriesOrder.map((s, i) => {
               const rep = chapters.find((c) => c.series === s.name);
@@ -47,7 +46,11 @@ export default async function Home() {
             })}
           </div>
         </section>
+      </main>
 
+      <ExploreGlobe />
+
+      <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
         <section className="mx-auto max-w-[760px] py-24 text-center md:py-30">
           <p className="font-display text-heading-l text-charcoal md:text-heading-xl">
             My love for caps was inspired by an outdoorsy childhood in Durban — surfing, hiking,
@@ -90,7 +93,6 @@ export default async function Home() {
 
       <NewsletterBlock />
       <FooterEditorial />
-      </RevealOnClick>
     </>
   );
 }

@@ -8,11 +8,14 @@ import { seriesOrder } from "@/lib/series";
 import { useCart } from "@/lib/cart";
 
 const links = [
-  { label: "Series", href: "/series" },
-  { label: "Explorers", href: "/community" },
+  { label: "Collection", href: "/series" },
+  { label: "Travel Inspiration", href: "/#pick-your-world" },
   { label: "Journal", href: "/journal" },
   { label: "About", href: "/about" },
 ];
+
+// Kept reachable from the mega-menu even though it's off the primary nav.
+const secondaryLinks = [{ label: "Explorers", href: "/community" }];
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,7 +75,7 @@ export function Navbar() {
           <div className="mx-auto grid w-full max-w-[1440px] grid-cols-2 gap-10 px-6 py-10 md:grid-cols-4 md:px-12">
             <div>
               <p className="mb-4 text-caption uppercase tracking-[0.1em] text-cream/50">
-                Chapters
+                Collection
               </p>
               <ul className="space-y-3">
                 {seriesOrder.map((s) => (
@@ -103,7 +106,7 @@ export function Navbar() {
                 Travaholic
               </p>
               <ul className="space-y-3">
-                {links.map((link) => (
+                {[...links, ...secondaryLinks].map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}

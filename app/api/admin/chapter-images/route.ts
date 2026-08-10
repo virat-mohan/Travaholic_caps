@@ -18,5 +18,11 @@ export async function GET(request: Request) {
     value: img,
   }));
 
-  return NextResponse.json({ name: chapter.name, images, currentPrimary: chapter.primary });
+  return NextResponse.json({
+    name: chapter.name,
+    images,
+    currentPrimary: chapter.primary,
+    price: chapter.price,
+    story: chapter.story,
+  });
 }
