@@ -1,6 +1,9 @@
+import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { chapters } from "@/lib/chapters";
 import { InventoryRow } from "@/components/admin/InventoryRow";
+import { OrderStatusCell } from "@/components/admin/OrderStatusCell";
+import { DiscountRulesEditor } from "@/components/admin/DiscountRulesEditor";
 
 // This page reads live, frequently-changing data (orders, stock) and needs
 // Supabase env vars — never prerender it at build time.
@@ -16,7 +19,7 @@ function formatDate(iso: string) {
 }
 
 export default async function AdminDashboardPage() {
-  let orders: { id: string; created_at: string; customer_name: string; customer_phone: string; total: number; subtotal: number; discount_amount: number; status: string; is_gift: boolean; gift_note: string | null }[] = [];
+  let orders: { id: string; created_at: string; customer_name: string; customer_phone: string; total: number; subtotal: number; discount_amount: number; status: string; shipment_status: string | null; refund_status: string | null; is_gift: boolean; gift_note: string | null }[] = [];
   let inventory: { chapter_slug: string; stock_on_hand: number }[] = [];
   let rules: { id: string; name: string; buy_quantity: number; discount_percent: number; active: boolean }[] = [];
   let configError = false;
@@ -26,7 +29,7 @@ export default async function AdminDashboardPage() {
     const [ordersRes, inventoryRes, rulesRes] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, status, is_gift, gift_note")
+        .select("id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, status, shipment_status, refund_status, is_gift, gift_note")
         .order("created_at", { ascending: false })
         .limit(50),
       supabase.from("inventory").select("chapter_slug, stock_on_hand").order("chapter_slug"),
@@ -75,6 +78,8 @@ export default async function AdminDashboardPage() {
                 <th className="py-2 pr-4">Discount</th>
                 <th className="py-2 pr-4">Total</th>
                 <th className="py-2 pr-4">Status</th>
+                <th className="py-2 pr-4">Shipment</th>
+                <th className="py-2 pr-4">Refund</th>
                 <th className="py-2 pr-4">Gift</th>
               </tr>
             </thead>
@@ -95,7 +100,23 @@ export default async function AdminDashboardPage() {
                   <td className="py-3 font-sans text-body-s text-ink">
                     ₹{o.total?.toLocaleString("en-IN")}
                   </td>
-                  <td className="py-3 text-caption text-secondary-text">{o.status}</td>
+                  <td className="py-3">
+                    <OrderStatusCell orderId={o.id} field="status" value={o.status} />
+                  </td>
+                  <td className="py-3">
+                    <OrderStatusCell
+                      orderId={o.id}
+                      field="shipmentStatus"
+                      value={o.shipment_status ?? "not_shipped"}
+                    />
+                  </td>
+                  <td className="py-3">
+                    <OrderStatusCell
+                      orderId={o.id}
+                      field="refundStatus"
+                      value={o.refund_status ?? "none"}
+                    />
+                  </td>
                   <td className="py-3 text-caption text-secondary-text">
                     {o.is_gift ? o.gift_note || "Yes" : "—"}
                   </td>
@@ -103,7 +124,7 @@ export default async function AdminDashboardPage() {
               ))}
               {(!orders || orders.length === 0) && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-body-s text-secondary-text">
+                  <td colSpan={10} className="py-8 text-center text-body-s text-secondary-text">
                     No orders yet.
                   </td>
                 </tr>
@@ -138,15 +159,18 @@ export default async function AdminDashboardPage() {
 
       <section className="mt-16">
         <h2 className="font-display text-heading-s uppercase text-ink">Discount Rules</h2>
-        <div className="mt-4 space-y-2">
-          {(rules ?? []).map((r) => (
-            <p key={r.id} className="text-body-s text-ink">
-              {r.active ? "🟢" : "⚪"} {r.name} — buy {r.buy_quantity}, cheapest at {r.discount_percent}% off
-            </p>
-          ))}
-          {(!rules || rules.length === 0) && (
-            <p className="text-body-s text-secondary-text">No rules configured.</p>
-          )}
+        <DiscountRulesEditor initialRules={rules ?? []} />
+      </section>
+
+      <section className="mt-16 border-t border-divider pt-8">
+        <h2 className="font-display text-heading-s uppercase text-ink">More</h2>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <Link href="/admin/edit-chapter" className="text-body-s text-ink underline">
+            Edit Chapters &amp; Hero Images
+          </Link>
+          <Link href="/admin/settings" className="text-body-s text-ink underline">
+            API Keys &amp; Settings
+          </Link>
         </div>
       </section>
     </main>

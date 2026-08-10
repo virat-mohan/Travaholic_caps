@@ -73,8 +73,8 @@ export function ExploreGlobe() {
         <p className="text-caption uppercase tracking-[0.08em] text-secondary-text">
           Explore by Terrain
         </p>
-        <p className="mt-3 font-display text-heading-l text-charcoal md:text-heading-xl">
-          Pick your world.
+        <p className="mt-3 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
+          Pick Your World.
         </p>
         <p className="mx-auto mt-4 max-w-md text-body-s text-secondary-text">
           Every Chapter starts with a real place — a coastline, a summit, a city that never quite

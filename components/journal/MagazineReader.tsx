@@ -72,6 +72,28 @@ export function MagazineReader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let cooldown = false;
+
+    function onWheel(e: WheelEvent) {
+      if (cooldown || e.deltaY <= 0) return;
+      const atBottom = el!.scrollTop + el!.clientHeight >= el!.scrollHeight - 4;
+      if (atBottom && page < totalPages - 1) {
+        cooldown = true;
+        goTo(page + 1);
+        setTimeout(() => {
+          cooldown = false;
+        }, 700);
+      }
+    }
+
+    el.addEventListener("wheel", onWheel, { passive: true });
+    return () => el.removeEventListener("wheel", onWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, totalPages]);
+
   const issueTitle = issue.name.replace(/^Issue No\. \d+ — /, "");
   const article = page > 0 ? articles[page - 1] : null;
   const articleChapters = article
@@ -111,8 +133,8 @@ export function MagazineReader({
                 />
               )}
               <div className="absolute inset-0 bg-black/40" />
-              <p className="absolute inset-x-1 bottom-1 text-center text-[0.6rem] uppercase tracking-[0.05em] text-white">
-                Cover
+              <p className="absolute inset-x-1 bottom-1 text-center text-[0.6rem] uppercase leading-tight tracking-[0.05em] text-white">
+                {issueTitle}
               </p>
             </div>
           </button>

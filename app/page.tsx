@@ -16,7 +16,7 @@ const pillars = [
 
 export default async function Home() {
   const chapters = await getAllChapters();
-  const featured = chapters.slice(-8).reverse();
+  const featured = [...chapters].reverse();
   const inventory = await getInventoryMap();
 
   return (
@@ -66,17 +66,18 @@ export default async function Home() {
         </section>
 
         <section className="pb-24 md:pb-30">
-          <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
-            Featured Chapters
-          </p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
+          <h2 className="mb-8 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
+            Featured Chapters.
+          </h2>
+          <div className="-mx-6 flex gap-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] md:-mx-12 md:px-12 [&::-webkit-scrollbar]:hidden">
             {featured.map((chapter, i) => (
-              <ChapterCard
-                key={chapter.slug}
-                chapter={chapter}
-                index={i}
-                stockLabel={stockLabelFor(inventory[chapter.slug])}
-              />
+              <div key={chapter.slug} className="w-[46vw] shrink-0 md:w-[280px]">
+                <ChapterCard
+                  chapter={chapter}
+                  index={i}
+                  stockLabel={stockLabelFor(inventory[chapter.slug])}
+                />
+              </div>
             ))}
           </div>
         </section>
