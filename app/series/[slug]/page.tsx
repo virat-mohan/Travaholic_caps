@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { seriesOrder, seriesChapters } from "@/lib/series";
+import { seriesOrder } from "@/lib/series";
 import { chapterImageSrc } from "@/lib/chapters";
+import { getAllChapters } from "@/lib/chapters-dynamic";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
@@ -16,7 +17,8 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
   const series = seriesOrder.find((s) => s.slug === slug);
   if (!series) notFound();
 
-  const chapters = seriesChapters(series.name);
+  const allChapters = await getAllChapters();
+  const chapters = allChapters.filter((c) => c.series === series.name);
   const hero = chapters[0];
   const inventory = await getInventoryMap();
 

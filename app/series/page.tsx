@@ -1,9 +1,12 @@
 import { SeriesCard } from "@/components/series/SeriesCard";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
-import { seriesOrder, seriesChapters } from "@/lib/series";
+import { seriesOrder } from "@/lib/series";
+import { getAllChapters } from "@/lib/chapters-dynamic";
 
-export default function SeriesIndexPage() {
+export default async function SeriesIndexPage() {
+  const chapters = await getAllChapters();
+
   return (
     <>
       <main className="mx-auto w-full max-w-[1440px] px-6 pt-32 pb-24 md:px-12 md:pt-40">
@@ -16,7 +19,7 @@ export default function SeriesIndexPage() {
 
         <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2">
           {seriesOrder.map((s, i) => {
-            const rep = seriesChapters(s.name)[0];
+            const rep = chapters.find((c) => c.series === s.name);
             if (!rep) return null;
             return (
               <SeriesCard

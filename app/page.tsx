@@ -4,8 +4,8 @@ import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { SeriesCard } from "@/components/series/SeriesCard";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
-import { chapters } from "@/lib/chapters";
-import { seriesOrder, seriesChapters } from "@/lib/series";
+import { seriesOrder } from "@/lib/series";
+import { getAllChapters } from "@/lib/chapters-dynamic";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 
 const pillars = [
@@ -16,7 +16,8 @@ const pillars = [
 ];
 
 export default async function Home() {
-  const featured = chapters.slice(0, 8);
+  const chapters = await getAllChapters();
+  const featured = chapters.slice(-8).reverse();
   const inventory = await getInventoryMap();
 
   return (
@@ -31,7 +32,7 @@ export default async function Home() {
           </p>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {seriesOrder.map((s, i) => {
-              const rep = seriesChapters(s.name)[0];
+              const rep = chapters.find((c) => c.series === s.name);
               if (!rep) return null;
               return (
                 <SeriesCard

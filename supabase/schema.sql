@@ -76,3 +76,27 @@ create table if not exists discount_rules (
 
 insert into discount_rules (name, buy_quantity, discount_percent, active) values
   ('Buy 2, get 3rd at half price', 3, 50, true);
+
+-- Chapters added from the admin (the original 16 stay hardcoded in lib/chapters.ts —
+-- this table is only for new ones added later, and their images live in Supabase
+-- Storage's "chapter-images" bucket rather than public/images/chapters).
+create table if not exists dynamic_chapters (
+  slug text primary key,
+  name text not null,
+  series text not null,
+  story text not null,
+  price integer not null default 1399,
+  verified_on_site boolean not null default true,
+  images text[] not null default '{}', -- full Storage URLs
+  primary_image text not null,
+  created_at timestamptz not null default now()
+);
+
+-- Hero-image override: works for BOTH the static 16 (value = one of that
+-- chapter's existing filenames, e.g. "IMG_1822.jpg") and dynamic chapters
+-- (value = a full Storage URL already in that chapter's images array).
+create table if not exists chapter_hero_overrides (
+  chapter_slug text primary key,
+  primary_image text not null,
+  updated_at timestamptz not null default now()
+);

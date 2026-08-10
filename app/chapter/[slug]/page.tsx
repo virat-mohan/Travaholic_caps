@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { chapters, chapterImageSrc, SHARED_SPECS } from "@/lib/chapters";
-import { seriesChapters } from "@/lib/series";
+import { chapters as staticChapters, chapterImageSrc, SHARED_SPECS } from "@/lib/chapters";
+import { getAllChapters } from "@/lib/chapters-dynamic";
 import { getExplorerPostsForChapter } from "@/lib/community";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
@@ -13,15 +13,19 @@ import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
 export function generateStaticParams() {
-  return chapters.map((c) => ({ slug: c.slug }));
+  return staticChapters.map((c) => ({ slug: c.slug }));
 }
 
 export default async function ChapterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const chapter = chapters.find((c) => c.slug === slug);
+  const allChapters = await getAllChapters();
+  const chapter = allChapters.find((c) => c.slug === slug);
   if (!chapter) notFound();
 
-  const others = seriesChapters(chapter.series).filter((c) => c.slug !== chapter.slug);
+  const hasCraftsmanshipDiagram = staticChapters.some((c) => c.slug === chapter.slug);
+  const others = allChapters
+    .filter((c) => c.series === chapter.series)
+    .filter((c) => c.slug !== chapter.slug);
   const explorerPosts = getExplorerPostsForChapter(chapter.slug);
   const inventory = await getInventoryMap();
   const stock = inventory[chapter.slug];
@@ -84,9 +88,11 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
           </div>
         </div>
 
-        <div className="mt-24 md:mt-32">
-          <WhyYoullLoveIt slug={chapter.slug} name={chapter.name} />
-        </div>
+        {hasCraftsmanshipDiagram && (
+          <div className="mt-24 md:mt-32">
+            <WhyYoullLoveIt slug={chapter.slug} name={chapter.name} />
+          </div>
+        )}
 
         {explorerPosts.length > 0 && (
           <section className="mt-24 border-t border-divider pt-16 md:mt-32">

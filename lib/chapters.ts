@@ -277,6 +277,11 @@ export const SHARED_SPECS = [
  * this resolves them to the actual file on disk.
  */
 export function chapterImageSrc(folder: string, file: string) {
+  // Admin-added Chapters and hero overrides can point straight at a full
+  // Storage URL — pass those through unchanged instead of treating them as
+  // an on-disk filename.
+  if (/^https?:\/\//.test(file)) return file;
+
   const dot = file.lastIndexOf(".");
   const stem = dot === -1 ? file : file.slice(0, dot);
   const resolved = `${stem}_no_bg.png`;
