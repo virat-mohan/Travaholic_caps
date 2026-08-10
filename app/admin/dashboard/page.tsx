@@ -2,6 +2,10 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { chapters } from "@/lib/chapters";
 import { InventoryRow } from "@/components/admin/InventoryRow";
 
+// This page reads live, frequently-changing data (orders, stock) and needs
+// Supabase env vars — never prerender it at build time.
+export const dynamic = "force-dynamic";
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
     day: "numeric",
@@ -12,19 +16,42 @@ function formatDate(iso: string) {
 }
 
 export default async function AdminDashboardPage() {
-  const supabase = getSupabaseServerClient();
+  let orders: { id: string; created_at: string; customer_name: string; customer_phone: string; total: number; subtotal: number; discount_amount: number; status: string; is_gift: boolean; gift_note: string | null }[] = [];
+  let inventory: { chapter_slug: string; stock_on_hand: number }[] = [];
+  let rules: { id: string; name: string; buy_quantity: number; discount_percent: number; active: boolean }[] = [];
+  let configError = false;
 
-  const [{ data: orders }, { data: inventory }, { data: rules }] = await Promise.all([
-    supabase
-      .from("orders")
-      .select("id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, status, is_gift, gift_note")
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase.from("inventory").select("chapter_slug, stock_on_hand").order("chapter_slug"),
-    supabase.from("discount_rules").select("id, name, buy_quantity, discount_percent, active"),
-  ]);
+  try {
+    const supabase = getSupabaseServerClient();
+    const [ordersRes, inventoryRes, rulesRes] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, status, is_gift, gift_note")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase.from("inventory").select("chapter_slug, stock_on_hand").order("chapter_slug"),
+      supabase.from("discount_rules").select("id, name, buy_quantity, discount_percent, active"),
+    ]);
+    orders = ordersRes.data ?? [];
+    inventory = inventoryRes.data ?? [];
+    rules = rulesRes.data ?? [];
+  } catch {
+    configError = true;
+  }
 
-  const inventoryBySlug = new Map((inventory ?? []).map((i) => [i.chapter_slug, i.stock_on_hand]));
+  const inventoryBySlug = new Map(inventory.map((i) => [i.chapter_slug, i.stock_on_hand]));
+
+  if (configError) {
+    return (
+      <main className="mx-auto w-full max-w-[1400px] px-6 pt-28 pb-24 md:px-12">
+        <h1 className="font-display text-heading-l uppercase text-ink">Admin Dashboard</h1>
+        <p className="mt-4 text-body-s text-paint-orange">
+          SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY aren&apos;t set in this environment yet — add
+          them in Vercel under Project Settings → Environment Variables, then redeploy.
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-6 pt-28 pb-24 md:px-12">
