@@ -1,22 +1,22 @@
 export type CraftsmanshipPin = { x: number; y: number };
 
 export const CRAFTSMANSHIP_LABELS = [
-  "Embroidered Patch Graphic",
-  "Poly-Blend Cotton Twill",
-  "Made In India",
-  "One Size — 52 to 60cm",
-  "Curved Brim",
-  "Reinforced Stitching",
+  "Hand-Sketched Patch Graphic",
+  "Poly-Blend Cotton Twill Fabric",
+  "Featherlight, All-Day Wear",
+  "Structured To Hold Its Shape",
+  "Curved Brim For Real Sun Coverage",
+  "Premium Stitch Reinforcement",
 ] as const;
 
 /** Fallback positions, tuned against the tightly-cropped /images/craftsmanship set. */
 const DEFAULT_PINS: Record<string, CraftsmanshipPin> = {
-  "Embroidered Patch Graphic": { x: 38, y: 32 },
-  "Poly-Blend Cotton Twill": { x: 55, y: 18 },
-  "Made In India": { x: 50, y: 55 },
-  "One Size — 52 to 60cm": { x: 70, y: 25 },
-  "Curved Brim": { x: 35, y: 68 },
-  "Reinforced Stitching": { x: 45, y: 40 },
+  "Hand-Sketched Patch Graphic": { x: 38, y: 32 },
+  "Poly-Blend Cotton Twill Fabric": { x: 55, y: 18 },
+  "Featherlight, All-Day Wear": { x: 50, y: 55 },
+  "Structured To Hold Its Shape": { x: 70, y: 25 },
+  "Curved Brim For Real Sun Coverage": { x: 35, y: 68 },
+  "Premium Stitch Reinforcement": { x: 45, y: 40 },
 };
 
 /**

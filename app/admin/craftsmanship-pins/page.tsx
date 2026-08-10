@@ -3,18 +3,12 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { chapters } from "@/lib/chapters";
+import { CRAFTSMANSHIP_LABELS } from "@/lib/craftsmanshipPins";
 
 type Coord = { x: number; y: number };
 type ChapterCoords = Record<string, Coord>;
 
-const LABELS = [
-  "Embroidered Patch Graphic",
-  "Poly-Blend Cotton Twill",
-  "Made In India",
-  "One Size — 52 to 60cm",
-  "Curved Brim",
-  "Reinforced Stitching",
-];
+const LABELS = [...CRAFTSMANSHIP_LABELS];
 
 const STORAGE_KEY = "travaholic-craftsmanship-calibration";
 
