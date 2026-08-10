@@ -1,8 +1,21 @@
 import Image from "next/image";
 import { craftsmanshipPinsFor } from "@/lib/craftsmanshipPins";
 
+// The cap image sits in a centered box that's only 46% wide / 85% tall of the
+// diagram container (see the `absolute ... h-[85%] w-[46%]` div below) — pins
+// are calibrated as a % of the IMAGE itself, so they need remapping into that
+// smaller box's position within the full container before use as SVG/CSS %.
+const IMAGE_BOX = { xStart: 27, width: 46, yStart: 7.5, height: 85 };
+
+function toContainerPercent(pin: { x: number; y: number }) {
+  return {
+    x: IMAGE_BOX.xStart + (pin.x / 100) * IMAGE_BOX.width,
+    y: IMAGE_BOX.yStart + (pin.y / 100) * IMAGE_BOX.height,
+  };
+}
+
 export function WhyYoullLoveIt({ slug, name }: { slug: string; name: string }) {
-  const pins = craftsmanshipPinsFor(slug);
+  const pins = craftsmanshipPinsFor(slug).map((p) => ({ label: p.label, ...toContainerPercent(p) }));
   const image = `/images/craftsmanship/${slug}.png`;
   const leftPins = pins.filter((_, i) => i % 2 === 0);
   const rightPins = pins.filter((_, i) => i % 2 === 1);
