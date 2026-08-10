@@ -1,28 +1,17 @@
 import Image from "next/image";
+import { craftsmanshipPinsFor } from "@/lib/craftsmanshipPins";
 
-type Callout = {
-  label: string;
-  side: "left" | "right";
-  /** Vertical position of the label, top to bottom, as a % of the card height. */
-  labelY: number;
-  /** Where the connector line points to on the cap image, in % of the image box. */
-  targetX: number;
-  targetY: number;
-};
+export function WhyYoullLoveIt({ slug, name }: { slug: string; name: string }) {
+  const pins = craftsmanshipPinsFor(slug);
+  const image = `/images/craftsmanship/${slug}.png`;
+  const leftPins = pins.filter((_, i) => i % 2 === 0);
+  const rightPins = pins.filter((_, i) => i % 2 === 1);
 
-const CALLOUTS: Callout[] = [
-  { label: "Embroidered Patch Graphic", side: "left", labelY: 18, targetX: 44, targetY: 42 },
-  { label: "Poly-Blend Cotton Twill", side: "left", labelY: 50, targetX: 40, targetY: 14 },
-  { label: "Made In India", side: "left", labelY: 82, targetX: 45, targetY: 90 },
-  { label: "One Size — 52 to 60cm", side: "right", labelY: 18, targetX: 62, targetY: 16 },
-  { label: "Curved Brim", side: "right", labelY: 50, targetX: 58, targetY: 88 },
-  { label: "Reinforced Stitching", side: "right", labelY: 82, targetX: 56, targetY: 44 },
-];
-
-export function WhyYoullLoveIt({ image, name }: { image: string; name: string }) {
   return (
     <section className="px-6 py-12 md:px-12 md:py-16">
-      <p className="font-display text-heading-m uppercase text-ink">Travaholic Craftsmanship</p>
+      <p className="text-center font-display text-heading-m uppercase text-ink">
+        Travaholic Craftsmanship
+      </p>
 
       {/* Desktop: annotated diagram with connector lines. Doesn't translate to
           narrow screens — labels need real horizontal room either side of the image. */}
@@ -36,30 +25,51 @@ export function WhyYoullLoveIt({ image, name }: { image: string; name: string })
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
         >
-          {CALLOUTS.map((c) => {
-            const labelX = c.side === "left" ? 22 : 78;
+          {leftPins.map((c, i) => {
+            const labelY = 18 + i * 32;
+            const labelX = 22;
             return (
               <path
                 key={c.label}
-                d={`M ${labelX} ${c.labelY} H ${(labelX + c.targetX) / 2} V ${c.targetY} H ${c.targetX}`}
+                d={`M ${labelX} ${labelY} H ${(labelX + c.x) / 2} V ${c.y} H ${c.x}`}
                 fill="none"
                 stroke="var(--color-secondary-text)"
                 strokeWidth="0.12"
               />
             );
           })}
-          {CALLOUTS.map((c) => (
-            <circle key={`${c.label}-dot`} cx={c.targetX} cy={c.targetY} r="0.8" fill="var(--color-ink)" />
+          {rightPins.map((c, i) => {
+            const labelY = 18 + i * 32;
+            const labelX = 78;
+            return (
+              <path
+                key={c.label}
+                d={`M ${labelX} ${labelY} H ${(labelX + c.x) / 2} V ${c.y} H ${c.x}`}
+                fill="none"
+                stroke="var(--color-secondary-text)"
+                strokeWidth="0.12"
+              />
+            );
+          })}
+          {pins.map((c) => (
+            <circle key={`${c.label}-dot`} cx={c.x} cy={c.y} r="0.8" fill="var(--color-ink)" />
           ))}
         </svg>
 
-        {CALLOUTS.map((c) => (
+        {leftPins.map((c, i) => (
           <p
             key={c.label}
-            className={`absolute max-w-[150px] font-sans text-caption font-bold uppercase leading-tight text-ink ${
-              c.side === "left" ? "left-0 text-right" : "right-0 text-left"
-            }`}
-            style={{ top: `${c.labelY}%`, transform: "translateY(-50%)" }}
+            className="absolute left-0 max-w-[150px] text-right font-sans text-caption font-bold uppercase leading-tight text-ink"
+            style={{ top: `${18 + i * 32}%`, transform: "translateY(-50%)" }}
+          >
+            {c.label}
+          </p>
+        ))}
+        {rightPins.map((c, i) => (
+          <p
+            key={c.label}
+            className="absolute right-0 max-w-[150px] text-left font-sans text-caption font-bold uppercase leading-tight text-ink"
+            style={{ top: `${18 + i * 32}%`, transform: "translateY(-50%)" }}
           >
             {c.label}
           </p>
@@ -72,7 +82,7 @@ export function WhyYoullLoveIt({ image, name }: { image: string; name: string })
           <Image src={image} alt={name} fill sizes="320px" className="object-contain" />
         </div>
         <ul className="mx-auto mt-8 grid max-w-[320px] grid-cols-2 gap-x-6 gap-y-4">
-          {CALLOUTS.map((c) => (
+          {pins.map((c) => (
             <li key={c.label} className="flex items-start gap-2">
               <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink" />
               <span className="font-sans text-caption font-bold uppercase leading-tight text-ink">

@@ -29,7 +29,7 @@ const PINS: MapPin[] = [
   { chapterSlug: "travaholic-snow", blurb: "The Swiss Alps — mornings your breath shows before your coffee does.", x: 49.82, y: 38.79 },
   { chapterSlug: "travaholic-orange", blurb: "The Arabian Sea, just off Goa — a small flash of colour that says keep going.", x: 66.91, y: 52.55 },
   { chapterSlug: "beachn", blurb: "California — golden hour, zero plans for tomorrow.", x: 13.64, y: 36.98 },
-  { chapterSlug: "sunshine", blurb: "The Yucatán coast — no itinerary, just sun on your face.", x: 46.18, y: 34.69 },
+  { chapterSlug: "sunshine", blurb: "London, on the rare afternoon Hyde Park actually gets sun — no itinerary, just the deck chairs and the light.", x: 46.18, y: 34.69 },
   { chapterSlug: "tropical-blue", blurb: "The Brazilian coastline — too warm, too green, too good to be real.", x: 34.36, y: 70.17 },
   { chapterSlug: "tropical-pink", blurb: "The southern tip of India, near Sri Lanka — the tropical energy, dialled all the way up.", x: 66.73, y: 57.62 },
   { chapterSlug: "dunes-yellow", blurb: "Rajasthan — the last good hour before noon in the desert.", x: 66.18, y: 49.17 },
@@ -84,7 +84,7 @@ export function ExploreGlobe() {
       </div>
 
       <div className="mx-auto mt-14 flex max-w-[1200px] flex-col gap-8 px-6 md:flex-row md:items-center md:gap-10 md:px-0">
-        <div className="relative w-full md:w-[62%]" style={{ aspectRatio: "4928 / 3712" }}>
+        <div className="relative w-full md:w-[54%]" style={{ aspectRatio: "4928 / 3712" }}>
           <Image
             src="/images/globe/world-map-clay.png"
             alt="World map"
@@ -115,15 +115,15 @@ export function ExploreGlobe() {
           ))}
         </div>
 
-        <div className="w-full md:w-[38%]">
+        <div className="w-full md:w-[46%] md:pl-6">
           {activePin && activeChapter ? (
             <Link href={`/chapter/${activeChapter.slug}`} className="group block">
-              <div className="relative aspect-[4/5] w-full max-w-[240px] overflow-visible md:mx-0 mx-auto">
+              <div className="relative aspect-[4/5] w-full max-w-[380px] overflow-visible md:mx-0 mx-auto">
                 <Image
                   src={chapterImageSrc(activeChapter.folder, activeChapter.primary)}
                   alt={activeChapter.name}
                   fill
-                  sizes="240px"
+                  sizes="380px"
                   className="object-contain drop-shadow-[0_18px_28px_rgba(20,14,8,0.35)] transition-transform duration-500 ease-out group-hover:scale-105"
                 />
               </div>

@@ -69,7 +69,11 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
                 image={chapterImageSrc(chapter.folder, chapter.primary)}
                 disabled={stockLabel === "out-of-stock"}
               />
-              <span className="font-sans text-caption text-secondary-text">One size · 52–60cm</span>
+              <span className="flex flex-col font-sans text-caption text-secondary-text sm:flex-row sm:gap-1">
+                <span>One size</span>
+                <span className="hidden sm:inline">·</span>
+                <span>52–60cm</span>
+              </span>
             </div>
 
             <div className="mt-10 space-y-2 border-t border-divider pt-6 font-sans text-caption uppercase tracking-[0.03em] text-secondary-text">
@@ -81,10 +85,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
         </div>
 
         <div className="mt-24 md:mt-32">
-          <WhyYoullLoveIt
-            image={chapterImageSrc(chapter.folder, chapter.primary)}
-            name={chapter.name}
-          />
+          <WhyYoullLoveIt slug={chapter.slug} name={chapter.name} />
         </div>
 
         {explorerPosts.length > 0 && (

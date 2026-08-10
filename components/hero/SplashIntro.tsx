@@ -7,10 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const GRID_SIZE = 4; // 4x4 = 16 cells, one per Chapter, no empty center needed
 const CELL_COUNT = GRID_SIZE * GRID_SIZE;
-const SWEEP_MS = 1800;
+const SWEEP_MS = 2600;
 const MAX_DIAGONAL = (GRID_SIZE - 1) * 2;
-const CELL_TRANSITION_MS = 900;
-const HOLD_MS = 5000;
+const CELL_TRANSITION_MS = 1300;
+const HOLD_MS = 8000;
 const EXIT_MS = 700;
 const SESSION_KEY = "travaholic-splash-shown";
 
@@ -76,10 +76,10 @@ export function SplashIntro() {
         animate={exiting ? { opacity: 0, scale: 1.05 } : { opacity: 1, scale: 1 }}
         transition={{ duration: EXIT_MS / 1000, ease: [0.16, 1, 0.3, 1] }}
         onClick={triggerExit}
-        className="fixed inset-0 z-[999] flex cursor-pointer flex-col items-center justify-center bg-black"
+        className="fixed inset-0 z-[999] flex cursor-pointer flex-col items-center justify-center overflow-y-auto bg-black py-6"
       >
-        <div className="relative aspect-square h-[96vmin] w-[96vmin] max-h-[1200px] max-w-[1200px]">
-          <div className="grid h-full w-full grid-cols-4 grid-rows-4 gap-[10px] md:gap-[14px]">
+        <div className="relative aspect-square h-[74vmin] w-[74vmin] max-h-[900px] max-w-[900px] shrink-0 md:h-[92vmin] md:w-[92vmin] md:max-h-[1200px] md:max-w-[1200px]">
+          <div className="grid h-full w-full grid-cols-4 grid-rows-4 gap-[8px] md:gap-[14px]">
             {CELLS.map((src, i) => {
               const row = Math.floor(i / GRID_SIZE);
               const col = i % GRID_SIZE;
