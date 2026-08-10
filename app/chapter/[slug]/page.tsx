@@ -8,7 +8,6 @@ import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { AddToCartButton } from "@/components/chapter/AddToCartButton";
-import { CRAFTSMANSHIP_LABELS } from "@/lib/craftsmanshipPins";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -66,23 +65,12 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
               </p>
             )}
 
-            <div className="mt-10 flex items-center gap-4">
+            <div className="mt-10">
               <AddToCartButton
                 chapter={chapter}
                 image={chapterImageSrc(chapter.folder, chapter.primary)}
                 disabled={stockLabel === "out-of-stock"}
               />
-              <span className="flex flex-col font-sans text-caption text-secondary-text sm:flex-row sm:gap-1">
-                <span>One size</span>
-                <span className="hidden sm:inline">·</span>
-                <span>52–60cm</span>
-              </span>
-            </div>
-
-            <div className="mt-10 space-y-2 border-t border-divider pt-6 font-sans text-caption uppercase tracking-[0.03em] text-secondary-text">
-              {SHARED_SPECS.map((spec) => (
-                <p key={spec}>{spec}</p>
-              ))}
             </div>
 
             <div className="mt-10 border-t border-divider pt-6">
@@ -90,9 +78,10 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
                 Travaholic Craftsmanship
               </p>
               <ul className="mt-3 space-y-1.5">
-                {CRAFTSMANSHIP_LABELS.map((label) => (
-                  <li key={label} className="font-sans text-caption text-secondary-text">
-                    {label}
+                {SHARED_SPECS.map((spec) => (
+                  <li key={spec} className="flex gap-2 font-sans text-caption text-secondary-text">
+                    <span aria-hidden>•</span>
+                    <span>{spec}</span>
                   </li>
                 ))}
               </ul>

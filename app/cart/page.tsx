@@ -39,8 +39,8 @@ export default function CartPage() {
           <>
             <div className="mt-12 divide-y divide-divider border-y border-divider">
               {items.map((item) => (
-                <div key={item.slug} className="flex items-center gap-5 py-6">
-                  <div className="relative h-24 w-24 shrink-0 overflow-hidden bg-surface-alt">
+                <div key={item.slug} className="flex flex-wrap items-center gap-4 py-6 sm:flex-nowrap sm:gap-5">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden bg-surface-alt sm:h-24 sm:w-24">
                     <Image
                       src={item.image}
                       alt={item.name}
@@ -50,7 +50,7 @@ export default function CartPage() {
                     />
                   </div>
 
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Link
                       href={`/chapter/${item.slug}`}
                       className="font-sans text-body-s uppercase tracking-[0.03em] text-ink hover:underline"
@@ -62,35 +62,37 @@ export default function CartPage() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 border border-divider px-3 py-1.5">
+                  <div className="ml-auto flex shrink-0 items-center gap-3 sm:ml-0">
+                    <div className="flex items-center gap-3 border border-divider px-3 py-1.5">
+                      <button
+                        aria-label="Decrease quantity"
+                        onClick={() => setQuantity(item.slug, item.quantity - 1)}
+                        className="text-ink"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="w-4 text-center text-body-s text-ink">{item.quantity}</span>
+                      <button
+                        aria-label="Increase quantity"
+                        onClick={() => setQuantity(item.slug, item.quantity + 1)}
+                        className="text-ink"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+
                     <button
-                      aria-label="Decrease quantity"
-                      onClick={() => setQuantity(item.slug, item.quantity - 1)}
-                      className="text-ink"
+                      aria-label="Remove"
+                      onClick={() => removeItem(item.slug)}
+                      className="text-secondary-text transition-colors hover:text-ink"
                     >
-                      <Minus size={14} />
-                    </button>
-                    <span className="w-4 text-center text-body-s text-ink">{item.quantity}</span>
-                    <button
-                      aria-label="Increase quantity"
-                      onClick={() => setQuantity(item.slug, item.quantity + 1)}
-                      className="text-ink"
-                    >
-                      <Plus size={14} />
+                      <X size={16} />
                     </button>
                   </div>
 
-                  <p className="w-20 text-right font-sans text-body-s text-ink">
+                  <p className="w-full text-right font-sans text-body-s text-ink sm:w-20">
                     ₹{(item.price * item.quantity).toLocaleString("en-IN")}
                   </p>
-
-                  <button
-                    aria-label="Remove"
-                    onClick={() => removeItem(item.slug)}
-                    className="text-secondary-text transition-colors hover:text-ink"
-                  >
-                    <X size={16} />
-                  </button>
                 </div>
               ))}
             </div>

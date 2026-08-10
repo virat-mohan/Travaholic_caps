@@ -262,12 +262,21 @@ export const chapters: Chapter[] = [
   },
 ];
 
-/** Shared spec line for every Chapter, per travaholic-build-brief.md. */
+/**
+ * One combined list for every Chapter's product-details + craftsmanship
+ * section, in the specific order the brand wants it read in. Made In India
+ * stays last on purpose.
+ */
 export const SHARED_SPECS = [
-  "Poly blend / cotton twill",
-  "One size fits all — 52cm to 60cm",
-  "Snap backstrap",
-  "Made in India",
+  "One Size Fits All — 52cm To 60cm",
+  "Snap Backstrap",
+  "Hand-Sketched Patch Graphic",
+  "Poly-Blend Cotton Twill Fabric",
+  "Featherlight, All-Day Wear",
+  "Structured To Hold Its Shape",
+  "Curved Brim For Real Sun Coverage",
+  "Premium Stitch Reinforcement",
+  "Made In India",
 ];
 
 /**
