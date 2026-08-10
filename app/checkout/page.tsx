@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
@@ -10,6 +11,12 @@ import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
 const WHATSAPP_NUMBER = "919958871283";
+
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
@@ -20,14 +27,100 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
   const [isGift, setIsGift] = useState(false);
   const [giftNote, setGiftNote] = useState("");
+  const [razorpay, setRazorpay] = useState<{ enabled: boolean; keyId: string | null }>({
+    enabled: false,
+    keyId: null,
+  });
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/checkout/config")
+      .then((res) => res.json())
+      .then((data) => setRazorpay({ enabled: !!data.razorpayEnabled, keyId: data.razorpayKeyId }))
+      .catch(() => setRazorpay({ enabled: false, keyId: null }));
+  }, []);
 
   function update(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
+  async function handleRazorpayPayment() {
+    setPayError(null);
+    setPaying(true);
+    try {
+      const createRes = await fetch("/api/checkout/razorpay/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: total }),
+      });
+      const createData = await createRes.json();
+      if (!createRes.ok) throw new Error(createData.error ?? "Could not start payment");
+
+      const rzp = new window.Razorpay({
+        key: createData.keyId,
+        order_id: createData.razorpayOrderId,
+        amount: Math.round(total * 100),
+        currency: "INR",
+        name: "Travaholic",
+        description: "Order payment",
+        prefill: { name: form.name, email: form.email, contact: form.phone },
+        handler: async (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            const verifyRes = await fetch("/api/checkout/razorpay/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...response,
+                order: {
+                  customer: form,
+                  items: items.map((i) => ({
+                    slug: i.slug,
+                    name: i.name,
+                    price: i.price,
+                    quantity: i.quantity,
+                  })),
+                  subtotal,
+                  discountAmount: discount,
+                  total,
+                  isGift,
+                  giftNote: isGift ? giftNote : null,
+                },
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) throw new Error(verifyData.error ?? "Payment verification failed");
+            clear();
+            router.push("/checkout/confirmed");
+          } catch (err) {
+            setPayError(err instanceof Error ? err.message : "Payment verification failed");
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: () => setPaying(false),
+        },
+      });
+      rzp.open();
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Could not start payment");
+      setPaying(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (razorpay.enabled) {
+      await handleRazorpayPayment();
+      return;
+    }
 
     try {
       await fetch("/api/orders", {
@@ -97,9 +190,9 @@ export default function CheckoutPage() {
           Almost Done.
         </h1>
         <p className="mt-4 max-w-md text-body-s text-secondary-text">
-          We don&apos;t run this through a payment gateway yet — placing an order sends your
-          details and cart straight to us on WhatsApp, and we&apos;ll confirm payment and delivery
-          with you directly.
+          {razorpay.enabled
+            ? "Pay securely below and we'll email your invoice and confirm on WhatsApp right after."
+            : "We don't run this through a payment gateway yet — placing an order sends your details and cart straight to us on WhatsApp, and we'll confirm payment and delivery with you directly."}
         </p>
 
         <div className="mt-10 space-y-2 border-y border-divider py-6">
@@ -201,14 +294,23 @@ export default function CheckoutPage() {
             )}
           </div>
 
+          {payError && <p className="text-body-s text-paint-orange">{payError}</p>}
+
           <button
             type="submit"
-            className="w-full border border-ink bg-ink px-8 py-4 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink"
+            disabled={paying}
+            className="w-full border border-ink bg-ink px-8 py-4 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
           >
-            Place Order via WhatsApp
+            {razorpay.enabled
+              ? paying
+                ? "Processing..."
+                : `Pay ₹${total.toLocaleString("en-IN")}`
+              : "Place Order via WhatsApp"}
           </button>
         </form>
       </main>
+
+      {razorpay.enabled && <Script src="https://checkout.razorpay.com/v1/checkout.js" />}
 
       <NewsletterBlock />
       <FooterEditorial />

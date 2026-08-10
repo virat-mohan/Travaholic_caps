@@ -111,3 +111,24 @@ create table if not exists app_settings (
   value text not null,
   updated_at timestamptz not null default now()
 );
+
+-- Razorpay/payment fields on an already-existing orders table (safe to
+-- re-run — these are no-ops once applied).
+alter table orders add column if not exists payment_status text not null default 'unpaid';
+alter table orders add column if not exists razorpay_order_id text;
+alter table orders add column if not exists razorpay_payment_id text;
+
+-- Claude-generated Journal article drafts from /admin/journal-drafts. These
+-- are NOT auto-published — the live Journal is still the static list in
+-- lib/journal.ts, so a draft has to be copied in by hand once it's approved.
+create table if not exists journal_drafts (
+  id uuid primary key default gen_random_uuid(),
+  topic text not null,
+  title text,
+  subtitle text,
+  category text,
+  excerpt text,
+  body text[],
+  status text not null default 'draft', -- draft | ready | archived
+  created_at timestamptz not null default now()
+);

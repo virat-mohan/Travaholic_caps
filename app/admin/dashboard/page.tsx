@@ -171,6 +171,9 @@ export default async function AdminDashboardPage() {
           <Link href="/admin/settings" className="text-body-s text-ink underline">
             API Keys &amp; Settings
           </Link>
+          <Link href="/admin/journal-drafts" className="text-body-s text-ink underline">
+            Journal Draft Generator
+          </Link>
         </div>
       </section>
     </main>

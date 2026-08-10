@@ -116,7 +116,7 @@ export function SplashIntro() {
             alt="Travaholic"
             width={132}
             height={95}
-            className="h-auto w-[90px]"
+            className="h-auto w-[130px]"
           />
           <p className="font-display text-body-l uppercase tracking-[0.1em] text-white">
             Travel Inspired Truckers

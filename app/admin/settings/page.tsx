@@ -46,7 +46,7 @@ export default function AdminSettingsPage() {
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">API Keys & Settings</h1>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
         Stored server-side in Supabase, never sent to the browser. Add a key any time — features
-        that depend on it switch on automatically once it's here.
+        that depend on it switch on automatically once it&apos;s here.
       </p>
 
       {loading ? (

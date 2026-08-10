@@ -1,0 +1,36 @@
+import { renderInvoiceHtml } from "@/lib/invoice";
+
+const sampleOrder = {
+  id: "a1b2c3d4-preview",
+  created_at: new Date().toISOString(),
+  customer_name: "Aarav Mehta",
+  customer_email: "aarav@example.com",
+  delivery_address: "42, Green Park Extension, New Delhi, 110016",
+  subtotal: 4197,
+  discount_amount: 700,
+  total: 3497,
+};
+
+const sampleItems = [
+  { chapter_name: "Travaholic Orange", unit_price: 1399, quantity: 1 },
+  { chapter_name: "Dunes Maroon", unit_price: 1399, quantity: 1 },
+  { chapter_name: "Wildling", unit_price: 1399, quantity: 1 },
+];
+
+export default function InvoicePreviewPage() {
+  return (
+    <main className="mx-auto w-full max-w-[900px] px-6 pt-28 pb-24 md:px-12">
+      <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
+        Internal — not linked in navigation
+      </p>
+      <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Invoice Email Preview</h1>
+      <p className="mt-2 max-w-lg text-body-s text-secondary-text">
+        This is exactly the HTML that gets emailed via Resend after a Razorpay payment is verified —
+        shown here with sample data since no paid orders exist yet.
+      </p>
+      <div className="mt-10 border border-divider bg-white p-8">
+        <div dangerouslySetInnerHTML={{ __html: renderInvoiceHtml(sampleOrder, sampleItems) }} />
+      </div>
+    </main>
+  );
+}
