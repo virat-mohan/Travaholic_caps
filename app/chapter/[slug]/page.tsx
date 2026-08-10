@@ -7,8 +7,8 @@ import { getExplorerPostsForChapter } from "@/lib/community";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
-import { WhyYoullLoveIt } from "@/components/chapter/WhyYoullLoveIt";
 import { AddToCartButton } from "@/components/chapter/AddToCartButton";
+import { CRAFTSMANSHIP_LABELS } from "@/lib/craftsmanshipPins";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -22,7 +22,6 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
   const chapter = allChapters.find((c) => c.slug === slug);
   if (!chapter) notFound();
 
-  const hasCraftsmanshipDiagram = staticChapters.some((c) => c.slug === chapter.slug);
   const others = allChapters
     .filter((c) => c.series === chapter.series)
     .filter((c) => c.slug !== chapter.slug);
@@ -85,14 +84,21 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
                 <p key={spec}>{spec}</p>
               ))}
             </div>
+
+            <div className="mt-10 border-t border-divider pt-6">
+              <p className="font-display text-body-s uppercase tracking-[0.05em] text-ink">
+                Travaholic Craftsmanship
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {CRAFTSMANSHIP_LABELS.map((label) => (
+                  <li key={label} className="font-sans text-caption text-secondary-text">
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
-
-        {hasCraftsmanshipDiagram && (
-          <div className="mt-24 md:mt-32">
-            <WhyYoullLoveIt slug={chapter.slug} name={chapter.name} />
-          </div>
-        )}
 
         {explorerPosts.length > 0 && (
           <section className="mt-24 border-t border-divider pt-16 md:mt-32">

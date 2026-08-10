@@ -78,7 +78,7 @@ export function SplashIntro() {
         onClick={triggerExit}
         className="fixed inset-0 z-[999] flex cursor-pointer flex-col items-center justify-center overflow-y-auto bg-black py-6"
       >
-        <div className="relative aspect-square h-[74vmin] w-[74vmin] max-h-[900px] max-w-[900px] shrink-0 md:h-[92vmin] md:w-[92vmin] md:max-h-[1200px] md:max-w-[1200px]">
+        <div className="relative aspect-square h-[70vmin] w-[70vmin] max-h-[820px] max-w-[820px] shrink-0 md:h-[76vmin] md:w-[76vmin] md:max-h-[880px] md:max-w-[880px]">
           <div className="grid h-full w-full grid-cols-4 grid-rows-4 gap-[8px] md:gap-[14px]">
             {CELLS.map((src, i) => {
               const row = Math.floor(i / GRID_SIZE);
@@ -109,17 +109,17 @@ export function SplashIntro() {
           initial={{ opacity: 0 }}
           animate={{ opacity: revealed ? 1 : 0 }}
           transition={{ duration: 0.6, delay: revealed ? 0.5 : 0 }}
-          className="mt-8 flex flex-col items-center gap-3 text-center"
+          className="mt-6 flex flex-col items-center gap-2 text-center"
         >
           <Image
             src="/images/brand/travaholic-logo-mono-white.png"
             alt="Travaholic"
             width={132}
             height={95}
-            className="h-auto w-[110px]"
+            className="h-auto w-[90px]"
           />
           <p className="font-display text-body-l uppercase tracking-[0.1em] text-white">
-            Premium Truckers
+            Travel Inspired Truckers
           </p>
           <p className="-mt-1 font-display text-caption uppercase tracking-[0.25em] text-white/80">
             Made In India
