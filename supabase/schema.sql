@@ -132,3 +132,55 @@ create table if not exists journal_drafts (
   status text not null default 'draft', -- draft | ready | archived
   created_at timestamptz not null default now()
 );
+
+-- Claude-generated ad copy + creative brief for a Chapter, from
+-- /admin/ad-briefs. image_url is either an AI-generated image (via Gemini,
+-- stored in the ad-creatives Storage bucket) or a real photo picked from
+-- marketing_assets/chapter images — image_source tells you which.
+-- Approving a brief creates a PAUSED Meta campaign/adset/ad; nothing ever
+-- goes live without a human flipping it on in Meta Ads Manager.
+create table if not exists ad_briefs (
+  id uuid primary key default gen_random_uuid(),
+  chapter_slug text,
+  headline text,
+  primary_text text,
+  cta text,
+  target_audience text,
+  image_prompt text,
+  image_url text,
+  image_source text, -- generated | real
+  status text not null default 'draft', -- draft | approved | launched | rejected
+  meta_campaign_id text,
+  meta_adset_id text,
+  meta_ad_id text,
+  created_at timestamptz not null default now()
+);
+
+-- Submissions from /community/add-your-chapter. Pending until an admin
+-- approves them in /admin/explorer-submissions — only then do they show up
+-- on the live Explorers wall (merged with the static filesystem-backed
+-- photos in lib/community.ts) and, best-effort, get posted as an Instagram
+-- Story.
+create table if not exists explorer_submissions (
+  id uuid primary key default gen_random_uuid(),
+  photo_url text not null,
+  testimonial text not null,
+  location text,
+  email text,
+  chapter_slugs text[] not null default '{}',
+  status text not null default 'pending', -- pending | approved | rejected
+  instagram_posted boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- Real product/lifestyle photos the admin uploads on purpose, to be used as
+-- ad creatives directly (skip generation entirely) or as reference images fed
+-- into image-gen for compositing — keeps ad creative costs down and grounded
+-- in real photography rather than always generating from scratch.
+create table if not exists marketing_assets (
+  id uuid primary key default gen_random_uuid(),
+  url text not null,
+  label text,
+  tags text[] not null default '{}',
+  created_at timestamptz not null default now()
+);

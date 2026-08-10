@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { chapters } from "@/lib/chapters";
 import { InventoryRow } from "@/components/admin/InventoryRow";
@@ -162,20 +161,6 @@ export default async function AdminDashboardPage() {
         <DiscountRulesEditor initialRules={rules ?? []} />
       </section>
 
-      <section className="mt-16 border-t border-divider pt-8">
-        <h2 className="font-display text-heading-s uppercase text-ink">More</h2>
-        <div className="mt-4 flex flex-wrap gap-4">
-          <Link href="/admin/edit-chapter" className="text-body-s text-ink underline">
-            Edit Chapters &amp; Hero Images
-          </Link>
-          <Link href="/admin/settings" className="text-body-s text-ink underline">
-            API Keys &amp; Settings
-          </Link>
-          <Link href="/admin/journal-drafts" className="text-body-s text-ink underline">
-            Journal Draft Generator
-          </Link>
-        </div>
-      </section>
     </main>
   );
 }

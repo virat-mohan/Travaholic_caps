@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { getSupabaseServerClient } from "@/lib/supabase";
 
 export type ExplorerPost = {
   /** Filename on disk under public/images/community. */
@@ -47,7 +48,7 @@ const CHAPTER_LINKS: Record<string, string[]> = {
   "Screenshot 2026-08-07 at 9.06.05 PM.png": ["city-slicker-black", "tropical-pink"],
 };
 
-export function getExplorerPosts(): ExplorerPost[] {
+function getStaticExplorerPosts(): ExplorerPost[] {
   const dir = path.join(process.cwd(), "public/images/community");
   if (!fs.existsSync(dir)) return [];
 
@@ -62,6 +63,36 @@ export function getExplorerPosts(): ExplorerPost[] {
     }));
 }
 
-export function getExplorerPostsForChapter(slug: string): ExplorerPost[] {
-  return getExplorerPosts().filter((p) => p.chapterSlugs.includes(slug));
+/**
+ * Static filesystem photos plus admin-approved submissions from
+ * /community/add-your-chapter. Falls back to the static list alone if
+ * Supabase is unreachable, same pattern as getAllChapters().
+ */
+export async function getExplorerPosts(): Promise<ExplorerPost[]> {
+  const staticPosts = getStaticExplorerPosts();
+
+  try {
+    const supabase = getSupabaseServerClient();
+    const { data } = await supabase
+      .from("explorer_submissions")
+      .select("id, photo_url, testimonial, chapter_slugs")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false });
+
+    const approvedPosts: ExplorerPost[] = (data ?? []).map((row) => ({
+      file: row.id,
+      src: row.photo_url,
+      testimonial: row.testimonial,
+      chapterSlugs: row.chapter_slugs ?? [],
+    }));
+
+    return [...approvedPosts, ...staticPosts];
+  } catch (err) {
+    console.error("getExplorerPosts: Supabase fetch failed, falling back to static list", err);
+    return staticPosts;
+  }
+}
+
+export async function getExplorerPostsForChapter(slug: string): Promise<ExplorerPost[]> {
+  return (await getExplorerPosts()).filter((p) => p.chapterSlugs.includes(slug));
 }

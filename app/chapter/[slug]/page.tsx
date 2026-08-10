@@ -24,7 +24,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
   const others = allChapters
     .filter((c) => c.series === chapter.series)
     .filter((c) => c.slug !== chapter.slug);
-  const explorerPosts = getExplorerPostsForChapter(chapter.slug);
+  const explorerPosts = await getExplorerPostsForChapter(chapter.slug);
   const inventory = await getInventoryMap();
   const stock = inventory[chapter.slug];
   const stockLabel = stockLabelFor(stock);

@@ -7,9 +7,12 @@ const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "RAZORPAY_KEY_SECRET", label: "Razorpay Key Secret", hint: "Paired secret for the Key ID above." },
   { key: "RESEND_API_KEY", label: "Resend API Key", hint: "For emailing invoices/order confirmations." },
   { key: "INTERAKT_API_KEY", label: "Interakt API Key", hint: "For automatic WhatsApp order confirmations." },
-  { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key", hint: "Powers Claude-generated Journal drafts and, later, the marketing intelligence layer." },
-  { key: "META_ACCESS_TOKEN", label: "Meta Access Token", hint: "From Meta Business Manager, for the ad account below." },
+  { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key", hint: "Powers Claude-generated Journal drafts and ad briefs." },
+  { key: "META_ACCESS_TOKEN", label: "Meta Access Token", hint: "From Meta Business Manager, for the ad account and Instagram account below." },
   { key: "META_AD_ACCOUNT_ID", label: "Meta Ad Account ID", hint: "e.g. act_1234567890" },
+  { key: "META_PAGE_ID", label: "Meta Page ID", hint: "The Facebook Page linked to your ad account — required to create ad creatives." },
+  { key: "INSTAGRAM_BUSINESS_ACCOUNT_ID", label: "Instagram Business Account ID", hint: "For auto-posting approved Explorer photos as Instagram Stories." },
+  { key: "IMAGE_GEN_API_KEY", label: "Image Gen API Key (Gemini)", hint: "Google AI Studio API key — powers ad creative image generation." },
 ];
 
 export default function AdminSettingsPage() {

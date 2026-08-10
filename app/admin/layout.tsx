@@ -1,0 +1,68 @@
+import Link from "next/link";
+
+const NAV_SECTIONS = [
+  {
+    label: "Store",
+    links: [
+      { href: "/admin/dashboard", label: "Dashboard" },
+      { href: "/admin/edit-chapter", label: "Edit Chapters" },
+      { href: "/admin/add-chapter", label: "Add Chapter" },
+      { href: "/admin/map-pins", label: "Map Pin Calibration" },
+    ],
+  },
+  {
+    label: "Content",
+    links: [
+      { href: "/admin/journal-drafts", label: "Journal Draft Generator" },
+      { href: "/admin/invoice-preview", label: "Invoice Preview" },
+    ],
+  },
+  {
+    label: "Community",
+    links: [{ href: "/admin/explorer-submissions", label: "Explorer Submissions" }],
+  },
+  {
+    label: "Marketing",
+    links: [
+      { href: "/admin/ad-briefs", label: "Ad Brief Generator" },
+      { href: "/admin/marketing-assets", label: "Marketing Assets" },
+      { href: "/admin/brand-profile", label: "Brand Profile" },
+    ],
+  },
+  {
+    label: "Configuration",
+    links: [{ href: "/admin/settings", label: "API Keys & Settings" }],
+  },
+];
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen w-full">
+      <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-divider bg-surface px-5 pt-28 pb-10 md:flex">
+        <p className="mb-6 text-micro uppercase tracking-[0.15em] text-secondary-text">Admin</p>
+        <nav className="space-y-8">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.label}>
+              <p className="mb-2 text-micro uppercase tracking-[0.1em] text-secondary-text/70">
+                {section.label}
+              </p>
+              <ul className="space-y-1.5">
+                {section.links.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="block text-body-s text-ink hover:underline"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </aside>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}

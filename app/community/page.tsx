@@ -9,8 +9,8 @@ function chapterName(slug: string) {
   return chapters.find((c) => c.slug === slug)?.name ?? slug;
 }
 
-export default function CommunityPage() {
-  const posts = getExplorerPosts();
+export default async function CommunityPage() {
+  const posts = await getExplorerPosts();
 
   return (
     <>

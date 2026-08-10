@@ -4,10 +4,13 @@ export const SETTINGS_KEYS = [
   "ANTHROPIC_API_KEY",
   "META_ACCESS_TOKEN",
   "META_AD_ACCOUNT_ID",
+  "META_PAGE_ID",
+  "INSTAGRAM_BUSINESS_ACCOUNT_ID",
   "RAZORPAY_KEY_ID",
   "RAZORPAY_KEY_SECRET",
   "RESEND_API_KEY",
   "INTERAKT_API_KEY",
+  "IMAGE_GEN_API_KEY",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

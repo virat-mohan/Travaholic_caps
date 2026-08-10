@@ -6,12 +6,37 @@ import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
 export default function AddYourChapterPage() {
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    if (!photo) {
+      setError("Please add a photo.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    const form = e.currentTarget;
+    const formData = new FormData();
+    formData.append("photo", photo);
+    formData.append("testimonial", (form.elements.namedItem("story") as HTMLTextAreaElement).value);
+    formData.append("location", (form.elements.namedItem("location") as HTMLInputElement).value);
+    formData.append("email", (form.elements.namedItem("email") as HTMLInputElement).value);
+
+    try {
+      const res = await fetch("/api/community/submit", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Could not submit");
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong sending that — mind trying again?");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -53,7 +78,7 @@ export default function AddYourChapterPage() {
                 className="block cursor-pointer border border-dashed border-ink/30 px-6 py-12 text-center transition-colors hover:border-ink"
               >
                 <span className="block font-sans text-body-s uppercase tracking-[0.1em] text-ink">
-                  {fileName ?? "Upload Your Photo"}
+                  {photo?.name ?? "Upload Your Photo"}
                 </span>
                 <span className="mt-2 block text-caption text-secondary-text">
                   JPG or PNG, one photo per submission
@@ -63,7 +88,7 @@ export default function AddYourChapterPage() {
                   type="file"
                   accept="image/jpeg,image/png"
                   className="hidden"
-                  onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+                  onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
                 />
               </label>
             </div>
@@ -77,10 +102,27 @@ export default function AddYourChapterPage() {
               </label>
               <textarea
                 id="story"
+                name="story"
                 required
                 rows={5}
                 placeholder="e.g. Somewhere above 4,000m in Spiti, three days off signal, still wearing it."
                 className="mt-3 w-full border border-ink/30 bg-surface px-5 py-4 font-sans text-body text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="location"
+                className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text"
+              >
+                Where was this taken?
+              </label>
+              <input
+                id="location"
+                name="location"
+                type="text"
+                placeholder="e.g. Spiti Valley, Himachal Pradesh"
+                className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
               />
             </div>
 
@@ -93,6 +135,7 @@ export default function AddYourChapterPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
                 placeholder="you@email.com"
@@ -100,11 +143,14 @@ export default function AddYourChapterPage() {
               />
             </div>
 
+            {error && <p className="text-body-s text-paint-orange">{error}</p>}
+
             <button
               type="submit"
-              className="border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink"
+              disabled={submitting}
+              className="border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
             >
-              Submit Your Chapter
+              {submitting ? "Sending..." : "Submit Your Chapter"}
             </button>
           </form>
         )}
