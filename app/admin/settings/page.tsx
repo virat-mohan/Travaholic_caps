@@ -12,7 +12,9 @@ const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "META_AD_ACCOUNT_ID", label: "Meta Ad Account ID", hint: "e.g. act_1234567890" },
   { key: "META_PAGE_ID", label: "Meta Page ID", hint: "The Facebook Page linked to your ad account — required to create ad creatives." },
   { key: "INSTAGRAM_BUSINESS_ACCOUNT_ID", label: "Instagram Business Account ID", hint: "For auto-posting approved Explorer photos as Instagram Stories." },
-  { key: "IMAGE_GEN_API_KEY", label: "Image Gen API Key (Gemini)", hint: "Google AI Studio API key — powers ad creative image generation." },
+  { key: "IMAGE_GEN_API_KEY", label: "Image Gen API Key (Gemini)", hint: "Google AI Studio API key — powers ad creative image and reel (Veo) generation." },
+  { key: "META_PIXEL_ID", label: "Meta Pixel ID", hint: "Enables the Meta pixel + server-side Conversions API mirror on the site." },
+  { key: "CRON_SECRET", label: "Cron Secret", hint: "Protects /api/cron/* routes — set this once you wire up Vercel Cron or another scheduler." },
 ];
 
 export default function AdminSettingsPage() {

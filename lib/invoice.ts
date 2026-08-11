@@ -1,3 +1,5 @@
+import { getBrandProfile } from "@/lib/brand";
+
 type InvoiceOrder = {
   id: string;
   created_at: string;
@@ -11,7 +13,10 @@ type InvoiceOrder = {
 
 type InvoiceItem = { chapter_name: string; unit_price: number; quantity: number };
 
-export function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[]) {
+export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[]) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-color-v2.png`;
+
   const date = new Date(order.created_at).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -32,8 +37,8 @@ export function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[]) {
 
   return `
     <div style="max-width:600px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
-      <h1 style="font-size:20px;letter-spacing:0.05em;text-transform:uppercase;">Travaholic</h1>
-      <p style="color:#666;font-size:13px;">Invoice for Order #${order.id.slice(0, 8).toUpperCase()} · ${date}</p>
+      <img src="${logoUrl}" alt="${brand.brandName}" width="120" style="display:block;margin:0 auto 24px;" />
+      <p style="color:#666;font-size:13px;text-align:center;">Invoice for Order #${order.id.slice(0, 8).toUpperCase()} · ${date}</p>
 
       <table style="width:100%;margin-top:24px;border-collapse:collapse;font-size:14px;">
         <thead>

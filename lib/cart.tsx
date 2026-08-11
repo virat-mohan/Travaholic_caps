@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Chapter } from "@/types/chapter";
+import { trackEvent } from "@/lib/client-tracking";
 
 export type CartItem = {
   slug: string;
@@ -44,6 +45,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, loaded]);
 
   function addItem(chapter: Chapter, image: string) {
+    trackEvent("AddToCart", { chapterSlug: chapter.slug, value: chapter.price });
     setItems((prev) => {
       const existing = prev.find((i) => i.slug === chapter.slug);
       if (existing) {

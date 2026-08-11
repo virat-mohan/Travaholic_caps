@@ -14,6 +14,8 @@ type Brief = {
   image_prompt: string;
   image_url: string | null;
   image_source: string | null;
+  video_status: string | null;
+  video_url: string | null;
   status: string;
   meta_campaign_id: string | null;
   created_at: string;
@@ -81,6 +83,43 @@ export default function AdBriefsPage() {
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate image");
+    }
+  }
+
+  async function generateVideo(brief: Brief) {
+    setError(null);
+    setBriefs((prev) => prev.map((b) => (b.id === brief.id ? { ...b, video_status: "generating" } : b)));
+    try {
+      const res = await fetch("/api/admin/ad-briefs/generate-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brief.id, imagePrompt: brief.image_prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not start video generation");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start video generation");
+      setBriefs((prev) => prev.map((b) => (b.id === brief.id ? { ...b, video_status: "failed" } : b)));
+    }
+  }
+
+  async function checkVideoStatus(brief: Brief) {
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/ad-briefs/video-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brief.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not check video status");
+      if (data.status === "ready") {
+        setBriefs((prev) =>
+          prev.map((b) => (b.id === brief.id ? { ...b, video_status: "ready", video_url: data.videoUrl } : b))
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not check video status");
     }
   }
 
@@ -215,6 +254,30 @@ export default function AdBriefsPage() {
                       ))}
                     </div>
                   )}
+
+                  <div className="mt-4 border-t border-divider pt-3">
+                    <p className="mb-1.5 text-micro uppercase tracking-[0.05em] text-secondary-text">
+                      Reel (Veo)
+                    </p>
+                    {brief.video_status === "ready" && brief.video_url ? (
+                      <video src={brief.video_url} controls className="w-full bg-surface-alt" />
+                    ) : brief.video_status === "generating" ? (
+                      <button
+                        onClick={() => checkVideoStatus(brief)}
+                        className="block w-full border border-divider px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink"
+                      >
+                        Check Status
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => generateVideo(brief)}
+                        disabled={!brief.image_prompt}
+                        className="block w-full border border-ink px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream disabled:opacity-50"
+                      >
+                        {brief.video_status === "failed" ? "Retry Generation" : "Generate Reel"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div>

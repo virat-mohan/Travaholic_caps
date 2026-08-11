@@ -19,9 +19,11 @@ export default async function InvoicePage({
 
   if (!order) notFound();
 
+  const html = await renderInvoiceHtml(order, items ?? []);
+
   return (
     <main className="mx-auto w-full max-w-[700px] px-6 py-16">
-      <div dangerouslySetInnerHTML={{ __html: renderInvoiceHtml(order, items ?? []) }} />
+      <div dangerouslySetInnerHTML={{ __html: html }} />
     </main>
   );
 }

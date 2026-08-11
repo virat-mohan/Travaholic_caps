@@ -12,6 +12,7 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
   }
 
   try {
+    const html = await renderInvoiceHtml(order, items);
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -22,7 +23,7 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
         from: "Travaholic <orders@travaholic.in>",
         to: order.customer_email,
         subject: `Your Travaholic Invoice — Order #${order.id.slice(0, 8).toUpperCase()}`,
-        html: renderInvoiceHtml(order, items),
+        html,
       }),
     });
     if (!res.ok) {

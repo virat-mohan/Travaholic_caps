@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
+import { trackEvent, getSessionKey } from "@/lib/client-tracking";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -40,6 +41,33 @@ export default function CheckoutPage() {
       .then((data) => setRazorpay({ enabled: !!data.razorpayEnabled, keyId: data.razorpayKeyId }))
       .catch(() => setRazorpay({ enabled: false, keyId: null }));
   }, []);
+
+  useEffect(() => {
+    if (items.length > 0) trackEvent("InitiateCheckout", { value: total });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced cart-session capture — this is what makes an abandoned cart
+  // retargetable at all: the moment a shopper has typed a phone/email, we
+  // know who they are even if they never finish paying.
+  useEffect(() => {
+    if (!form.name && !form.phone && !form.email) return;
+    const timeout = setTimeout(() => {
+      fetch("/api/cart-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionKey: getSessionKey(),
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+          items,
+          subtotal: total,
+        }),
+      }).catch(() => {});
+    }, 1200);
+    return () => clearTimeout(timeout);
+  }, [form, items, total]);
 
   function update(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -90,11 +118,13 @@ export default function CheckoutPage() {
                   total,
                   isGift,
                   giftNote: isGift ? giftNote : null,
+                  sessionKey: getSessionKey(),
                 },
               }),
             });
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok) throw new Error(verifyData.error ?? "Payment verification failed");
+            trackEvent("Purchase", { value: total });
             clear();
             router.push("/checkout/confirmed");
           } catch (err) {
@@ -139,8 +169,10 @@ export default function CheckoutPage() {
           total,
           isGift,
           giftNote: isGift ? giftNote : null,
+          sessionKey: getSessionKey(),
         }),
       });
+      trackEvent("Purchase", { value: total });
     } catch (err) {
       // Best-effort logging — WhatsApp remains the real order channel either way.
       console.error("Order logging failed", err);

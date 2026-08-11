@@ -11,6 +11,11 @@ export const SETTINGS_KEYS = [
   "RESEND_API_KEY",
   "INTERAKT_API_KEY",
   "IMAGE_GEN_API_KEY",
+  "META_PIXEL_ID",
+  "CRON_SECRET",
+  "AGENT_ENABLED",
+  "AGENT_MAX_DAILY_BUDGET_RUPEES",
+  "MILES_PER_CAP",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

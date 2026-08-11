@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { markCartSessionConverted } from "@/lib/cart-session-convert";
 
 type OrderPayload = {
   customer: { name: string; phone: string; email: string; address: string };
@@ -9,6 +10,7 @@ type OrderPayload = {
   total?: number;
   isGift?: boolean;
   giftNote?: string | null;
+  sessionKey?: string;
 };
 
 export async function POST(request: Request) {
@@ -72,6 +74,13 @@ export async function POST(request: Request) {
           .eq("chapter_slug", item.slug);
       }
     }
+
+    await markCartSessionConverted(body.sessionKey, {
+      id: order.id,
+      customer_email: order.customer_email,
+      customer_phone: order.customer_phone,
+      total,
+    });
 
     return NextResponse.json({ orderId: order.id });
   } catch (err) {

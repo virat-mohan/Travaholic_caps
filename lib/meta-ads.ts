@@ -24,6 +24,16 @@ async function graphPost(path: string, accessToken: string, body: Record<string,
   return data;
 }
 
+async function graphGet(path: string, accessToken: string, params: Record<string, string> = {}) {
+  const res = await fetch(
+    `https://graph.facebook.com/${GRAPH_VERSION}/${path}?` +
+      new URLSearchParams({ ...params, access_token: accessToken })
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Meta Graph API error: ${JSON.stringify(data)}`);
+  return data;
+}
+
 /**
  * Creates a Campaign, Ad Set and Ad on Meta — all PAUSED. Nothing this
  * function does can ever spend money on its own; a human has to open Meta
@@ -91,4 +101,36 @@ export async function createPausedMetaCampaign(brief: {
   });
 
   return { campaignId: campaign.id as string, adSetId: adSet.id as string, adId: ad.id as string };
+}
+
+/**
+ * True only if a human has flipped the campaign to ACTIVE in Meta Ads
+ * Manager. The ad agent checks this before touching anything — it is never
+ * allowed to activate a campaign itself, only to pause or resize spend on
+ * one a human already turned on.
+ */
+export async function isCampaignActive(campaignId: string) {
+  const creds = await getMetaCredentials();
+  if (!creds) return false;
+  const data = await graphGet(campaignId, creds.accessToken, { fields: "status" });
+  return data.status === "ACTIVE";
+}
+
+export async function pauseCampaign(campaignId: string) {
+  const creds = await getMetaCredentials();
+  if (!creds) throw new Error("Meta is not configured");
+  await graphPost(campaignId, creds.accessToken, { status: "PAUSED" });
+}
+
+export async function getAdSetDailyBudgetRupees(adSetId: string) {
+  const creds = await getMetaCredentials();
+  if (!creds) throw new Error("Meta is not configured");
+  const data = await graphGet(adSetId, creds.accessToken, { fields: "daily_budget" });
+  return Math.round(Number(data.daily_budget ?? 0) / 100);
+}
+
+export async function updateAdSetDailyBudgetRupees(adSetId: string, newBudgetRupees: number) {
+  const creds = await getMetaCredentials();
+  if (!creds) throw new Error("Meta is not configured");
+  await graphPost(adSetId, creds.accessToken, { daily_budget: Math.round(newBudgetRupees * 100) });
 }

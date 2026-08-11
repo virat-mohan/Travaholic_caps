@@ -184,3 +184,100 @@ create table if not exists marketing_assets (
   tags text[] not null default '{}',
   created_at timestamptz not null default now()
 );
+
+-- One row per anonymous shopper's cart, keyed by a client-generated
+-- session_key stored alongside the cart in localStorage. Contact fields fill
+-- in as soon as the shopper types them at checkout — that's what makes an
+-- "abandoned cart" retargetable at all, since the cart itself is anonymous
+-- until then. /api/cron/abandon-sweep flips 'active' rows stale for 45+
+-- minutes to 'abandoned' and triggers a WhatsApp nudge; the Razorpay/WhatsApp
+-- order routes flip a session to 'converted' the moment it becomes a real
+-- order.
+create table if not exists cart_sessions (
+  id uuid primary key default gen_random_uuid(),
+  session_key text unique not null,
+  customer_name text,
+  customer_phone text,
+  customer_email text,
+  items jsonb not null default '[]',
+  subtotal integer,
+  status text not null default 'active', -- active | converted | abandoned
+  retargeted_at timestamptz,
+  last_activity_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+-- First-party funnel log — deliberately NOT dependent on Meta's pixel or any
+-- third-party analytics being configured. This is what /admin/reports reads
+-- to compute the funnel (views -> add to cart -> checkout -> purchase);
+-- ad spend/clicks get joined in separately from Meta's own Insights API only
+-- when Meta keys exist. event_name mirrors the standard Meta/GA4 vocabulary
+-- (PageView, ViewContent, AddToCart, InitiateCheckout, Purchase) so wiring in
+-- a second ad platform later is additive, not a rewrite.
+create table if not exists tracking_events (
+  id uuid primary key default gen_random_uuid(),
+  event_name text not null,
+  session_key text,
+  chapter_slug text,
+  value integer,
+  created_at timestamptz not null default now()
+);
+create index if not exists tracking_events_created_at_idx on tracking_events (created_at);
+
+-- One row per WhatsApp send (order confirmation OR abandoned-cart retarget),
+-- so /admin/reports can show open rate (delivered/read, via the Interakt
+-- webhook) and conversion rate (converted, flipped by the order routes when
+-- the linked cart_session becomes a real order) — not just "message sent."
+create table if not exists whatsapp_messages (
+  id uuid primary key default gen_random_uuid(),
+  cart_session_id uuid references cart_sessions (id),
+  order_id uuid references orders (id),
+  interakt_message_id text,
+  template_name text not null,
+  status text not null default 'sent', -- sent | delivered | read | failed
+  sent_at timestamptz not null default now(),
+  delivered_at timestamptz,
+  read_at timestamptz,
+  converted boolean not null default false
+);
+
+-- Weekly ROAS snapshots, generated on demand from /admin/reports (or by the
+-- weekly cron once Vercel cron is available on your plan). Stored so the
+-- report has history instead of only ever showing "right now."
+create table if not exists weekly_reports (
+  id uuid primary key default gen_random_uuid(),
+  week_start date not null,
+  week_end date not null,
+  ad_spend integer not null default 0,
+  clicks integer not null default 0,
+  impressions integer not null default 0,
+  page_views integer not null default 0,
+  add_to_carts integer not null default 0,
+  checkouts_started integer not null default 0,
+  orders_count integer not null default 0,
+  revenue integer not null default 0,
+  abandoned_carts integer not null default 0,
+  roas numeric,
+  created_at timestamptz not null default now()
+);
+
+-- Meta campaign/reel state on an ad_brief, plus the running audit log of
+-- every autonomous action the ad agent takes on it.
+alter table ad_briefs add column if not exists video_status text; -- none | generating | ready | failed
+alter table ad_briefs add column if not exists video_operation_name text;
+alter table ad_briefs add column if not exists video_url text;
+
+-- Every action the ad agent takes (or explicitly declines to take) on a
+-- launched campaign, with before/after values — this table IS the safety
+-- mechanism for letting an agent touch ad spend at all. Read it before you
+-- ever trust an autonomous action; it's designed to make second-guessing the
+-- agent trivial.
+create table if not exists agent_actions (
+  id uuid primary key default gen_random_uuid(),
+  ad_brief_id uuid references ad_briefs (id),
+  action text not null, -- paused | budget_increased | budget_decreased | no_action
+  reason text not null,
+  before_value text,
+  after_value text,
+  created_at timestamptz not null default now()
+);

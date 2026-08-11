@@ -7,7 +7,6 @@ const NAV_SECTIONS = [
       { href: "/admin/dashboard", label: "Dashboard" },
       { href: "/admin/edit-chapter", label: "Edit Chapters" },
       { href: "/admin/add-chapter", label: "Add Chapter" },
-      { href: "/admin/map-pins", label: "Map Pin Calibration" },
     ],
   },
   {
@@ -16,6 +15,10 @@ const NAV_SECTIONS = [
       { href: "/admin/journal-drafts", label: "Journal Draft Generator" },
       { href: "/admin/invoice-preview", label: "Invoice Preview" },
     ],
+  },
+  {
+    label: "Customers",
+    links: [{ href: "/admin/customers", label: "Customers & Miles" }],
   },
   {
     label: "Community",
@@ -27,6 +30,8 @@ const NAV_SECTIONS = [
       { href: "/admin/ad-briefs", label: "Ad Brief Generator" },
       { href: "/admin/marketing-assets", label: "Marketing Assets" },
       { href: "/admin/brand-profile", label: "Brand Profile" },
+      { href: "/admin/reports", label: "Growth Reports" },
+      { href: "/admin/agent-log", label: "Ad Agent" },
     ],
   },
   {

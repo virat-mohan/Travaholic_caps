@@ -8,6 +8,7 @@ import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { AddToCartButton } from "@/components/chapter/AddToCartButton";
+import { ViewContentTracker } from "@/components/tracking/ViewContentTracker";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -31,6 +32,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
 
   return (
     <>
+      <ViewContentTracker chapterSlug={chapter.slug} value={chapter.price} />
       <main className="mx-auto w-full max-w-[1440px] px-6 pt-28 md:px-12 md:pt-36">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
           <Product360Viewer folder={chapter.folder} images={chapter.images} name={chapter.name} />

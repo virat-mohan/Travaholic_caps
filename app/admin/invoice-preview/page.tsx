@@ -17,7 +17,9 @@ const sampleItems = [
   { chapter_name: "Wildling", unit_price: 1399, quantity: 1 },
 ];
 
-export default function InvoicePreviewPage() {
+export default async function InvoicePreviewPage() {
+  const html = await renderInvoiceHtml(sampleOrder, sampleItems);
+
   return (
     <main className="mx-auto w-full max-w-[900px] px-6 pt-28 pb-24 md:px-12">
       <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
@@ -29,7 +31,7 @@ export default function InvoicePreviewPage() {
         shown here with sample data since no paid orders exist yet.
       </p>
       <div className="mt-10 border border-divider bg-white p-8">
-        <div dangerouslySetInnerHTML={{ __html: renderInvoiceHtml(sampleOrder, sampleItems) }} />
+        <div dangerouslySetInnerHTML={{ __html: html }} />
       </div>
     </main>
   );
