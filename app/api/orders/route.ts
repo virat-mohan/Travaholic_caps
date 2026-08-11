@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
+import { getCurrentCustomer } from "@/lib/auth";
+import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 
 type OrderPayload = {
   customer: { name: string; phone: string; email: string; address: string };
   items: { slug: string; name: string; price: number; quantity: number }[];
   subtotal: number;
   discountAmount?: number;
-  total?: number;
   isGift?: boolean;
   giftNote?: string | null;
   sessionKey?: string;
+  redeemMilesRupees?: number;
 };
 
 export async function POST(request: Request) {
@@ -28,7 +30,19 @@ export async function POST(request: Request) {
   try {
     const supabase = getSupabaseServerClient();
     const discountAmount = body.discountAmount ?? 0;
-    const total = body.total ?? body.subtotal - discountAmount;
+
+    // Loyalty customer_id and redemption amount are resolved server-side
+    // from the session cookie and the ledger — never from client input, so
+    // a tampered request can't claim someone else's Miles or redeem more
+    // than they actually have.
+    const customer = await getCurrentCustomer();
+    let loyaltyDiscountAmount = 0;
+    if (customer && body.redeemMilesRupees) {
+      const { maxRedeemableRupees } = await getRedeemableAmount(customer.id);
+      loyaltyDiscountAmount = Math.min(body.redeemMilesRupees, maxRedeemableRupees);
+    }
+
+    const total = body.subtotal - discountAmount - loyaltyDiscountAmount;
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -39,9 +53,11 @@ export async function POST(request: Request) {
         delivery_address: body.customer.address,
         subtotal: body.subtotal,
         discount_amount: discountAmount,
+        loyalty_discount_amount: loyaltyDiscountAmount,
         total,
         is_gift: body.isGift ?? false,
         gift_note: body.giftNote ?? null,
+        customer_id: customer?.id ?? null,
       })
       .select()
       .single();
@@ -59,6 +75,14 @@ export async function POST(request: Request) {
     );
 
     if (itemsError) throw itemsError;
+
+    if (customer) {
+      const capsBought = body.items.reduce((sum, item) => sum + item.quantity, 0);
+      if (loyaltyDiscountAmount > 0) {
+        await redeemMilesForOrder(customer.id, order.id, loyaltyDiscountAmount);
+      }
+      await earnMilesForOrder(customer.id, order.id, capsBought);
+    }
 
     // Decrement inventory. Best-effort — a failed decrement shouldn't fail the order.
     for (const item of body.items) {

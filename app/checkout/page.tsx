@@ -19,11 +19,22 @@ declare global {
   }
 }
 
+type Account = {
+  customer: { id: string; phone: string; name: string | null; email: string | null; newsletter_subscribed: boolean } | null;
+  addresses: {
+    id: string;
+    recipient_name: string;
+    phone: string;
+    address_line: string;
+    is_default: boolean;
+  }[];
+  loyalty: { balance: number; maxRedeemableRupees: number; threshold: number } | null;
+};
+
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
   const discountRule = useDiscountRule();
   const discount = calculateDiscount(items, discountRule);
-  const total = subtotal - discount;
   const router = useRouter();
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
   const [isGift, setIsGift] = useState(false);
@@ -34,12 +45,36 @@ export default function CheckoutPage() {
   });
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [redeemMiles, setRedeemMiles] = useState(false);
+
+  const loyaltyDiscount = redeemMiles ? account?.loyalty?.maxRedeemableRupees ?? 0 : 0;
+  const total = Math.max(0, subtotal - discount - loyaltyDiscount);
 
   useEffect(() => {
     fetch("/api/checkout/config")
       .then((res) => res.json())
       .then((data) => setRazorpay({ enabled: !!data.razorpayEnabled, keyId: data.razorpayKeyId }))
       .catch(() => setRazorpay({ enabled: false, keyId: null }));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/account/me")
+      .then((res) => res.json())
+      .then((data: Account) => {
+        setAccount(data);
+        if (data.customer) {
+          const defaultAddress = data.addresses.find((a) => a.is_default) ?? data.addresses[0];
+          setForm((f) => ({
+            name: f.name || data.customer?.name || defaultAddress?.recipient_name || "",
+            phone: f.phone || data.customer?.phone || defaultAddress?.phone || "",
+            email: f.email || data.customer?.email || "",
+            address: f.address || defaultAddress?.address_line || "",
+          }));
+        }
+      })
+      .catch(() => setAccount(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -74,14 +109,21 @@ export default function CheckoutPage() {
       setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
+  async function logOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setAccount(null);
+    setRedeemMiles(false);
+  }
+
   async function handleRazorpayPayment() {
     setPayError(null);
     setPaying(true);
     try {
+      const cartItems = items.map((i) => ({ slug: i.slug, quantity: i.quantity }));
       const createRes = await fetch("/api/checkout/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total }),
+        body: JSON.stringify({ items: cartItems, redeemMilesRupees: loyaltyDiscount }),
       });
       const createData = await createRes.json();
       if (!createRes.ok) throw new Error(createData.error ?? "Could not start payment");
@@ -89,7 +131,7 @@ export default function CheckoutPage() {
       const rzp = new window.Razorpay({
         key: createData.keyId,
         order_id: createData.razorpayOrderId,
-        amount: Math.round(total * 100),
+        amount: Math.round(createData.total * 100),
         currency: "INR",
         name: "Travaholic",
         description: "Order payment",
@@ -107,24 +149,17 @@ export default function CheckoutPage() {
                 ...response,
                 order: {
                   customer: form,
-                  items: items.map((i) => ({
-                    slug: i.slug,
-                    name: i.name,
-                    price: i.price,
-                    quantity: i.quantity,
-                  })),
-                  subtotal,
-                  discountAmount: discount,
-                  total,
+                  items: cartItems,
                   isGift,
                   giftNote: isGift ? giftNote : null,
                   sessionKey: getSessionKey(),
+                  redeemMilesRupees: loyaltyDiscount,
                 },
               }),
             });
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok) throw new Error(verifyData.error ?? "Payment verification failed");
-            trackEvent("Purchase", { value: total });
+            trackEvent("Purchase", { value: createData.total });
             clear();
             router.push("/checkout/confirmed");
           } catch (err) {
@@ -166,10 +201,10 @@ export default function CheckoutPage() {
           })),
           subtotal,
           discountAmount: discount,
-          total,
           isGift,
           giftNote: isGift ? giftNote : null,
           sessionKey: getSessionKey(),
+          redeemMilesRupees: loyaltyDiscount,
         }),
       });
       trackEvent("Purchase", { value: total });
@@ -185,6 +220,7 @@ export default function CheckoutPage() {
       "",
       `Subtotal: ₹${subtotal.toLocaleString("en-IN")}`,
       ...(discount > 0 ? [`Discount: −₹${discount.toLocaleString("en-IN")}`] : []),
+      ...(loyaltyDiscount > 0 ? [`Travaholic Miles redeemed: −₹${loyaltyDiscount.toLocaleString("en-IN")}`] : []),
       `Total: ₹${total.toLocaleString("en-IN")}`,
       "",
       `Name: ${form.name}`,
@@ -227,7 +263,27 @@ export default function CheckoutPage() {
             : "We don't run this through a payment gateway yet — placing an order sends your details and cart straight to us on WhatsApp, and we'll confirm payment and delivery with you directly."}
         </p>
 
-        <div className="mt-10 space-y-2 border-y border-divider py-6">
+        <div className="mt-6 flex items-center justify-between border-t border-divider pt-4 text-body-s">
+          {account?.customer ? (
+            <>
+              <span className="text-secondary-text">
+                Logged in as <span className="text-ink">{account.customer.phone}</span>
+                {account.loyalty && account.loyalty.balance > 0 && (
+                  <> · {account.loyalty.balance.toLocaleString("en-IN")} Travaholic Miles</>
+                )}
+              </span>
+              <button type="button" onClick={logOut} className="text-caption text-secondary-text underline">
+                Log Out
+              </button>
+            </>
+          ) : (
+            <Link href="/account/login?redirect=/checkout" className="text-caption text-ink underline">
+              Log in for faster checkout &amp; Miles
+            </Link>
+          )}
+        </div>
+
+        <div className="mt-4 space-y-2 border-y border-divider py-6">
           {items.map((item) => (
             <div key={item.slug} className="flex items-center justify-between text-body-s">
               <span className="text-ink">
@@ -244,11 +300,31 @@ export default function CheckoutPage() {
               <span className="text-tan-gold">−₹{discount.toLocaleString("en-IN")}</span>
             </div>
           )}
+          {loyaltyDiscount > 0 && (
+            <div className="flex items-center justify-between text-body-s">
+              <span className="text-tan-gold">Travaholic Miles Redeemed</span>
+              <span className="text-tan-gold">−₹{loyaltyDiscount.toLocaleString("en-IN")}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-3 font-display text-heading-s text-ink">
             <span>Total</span>
             <span>₹{total.toLocaleString("en-IN")}</span>
           </div>
         </div>
+
+        {account?.loyalty && account.loyalty.maxRedeemableRupees > 0 && (
+          <label className="mt-4 flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={redeemMiles}
+              onChange={(e) => setRedeemMiles(e.target.checked)}
+              className="h-4 w-4 accent-ink"
+            />
+            <span className="font-sans text-body-s text-ink">
+              Redeem Travaholic Miles for ₹{account.loyalty.maxRedeemableRupees.toLocaleString("en-IN")} off
+            </span>
+          </label>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-10 space-y-6">
           <div>

@@ -16,6 +16,8 @@ export const SETTINGS_KEYS = [
   "AGENT_ENABLED",
   "AGENT_MAX_DAILY_BUDGET_RUPEES",
   "MILES_PER_CAP",
+  "MILES_REDEMPTION_THRESHOLD",
+  "MILES_REDEMPTION_VALUE_RUPEES",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

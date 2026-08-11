@@ -4,16 +4,16 @@ import { verifyRazorpaySignature } from "@/lib/razorpay";
 import { sendInvoiceEmail } from "@/lib/email";
 import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-notify";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
+import { computeTrustedOrderTotal } from "@/lib/order-pricing";
+import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 
 type OrderPayload = {
   customer: { name: string; phone: string; email: string; address: string };
-  items: { slug: string; name: string; price: number; quantity: number }[];
-  subtotal: number;
-  discountAmount?: number;
-  total?: number;
+  items: { slug: string; quantity: number }[];
   isGift?: boolean;
   giftNote?: string | null;
   sessionKey?: string;
+  redeemMilesRupees?: number;
 };
 
 export async function POST(request: Request) {
@@ -36,10 +36,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Payment signature verification failed" }, { status: 400 });
     }
 
-    const supabase = getSupabaseServerClient();
-    const discountAmount = payload.discountAmount ?? 0;
-    const total = payload.total ?? payload.subtotal - discountAmount;
+    // Recomputed independently of whatever the client sent — this must match
+    // what create-order charged, since both derive from the same trusted
+    // source (catalogue prices, the active discount rule, the ledger).
+    const pricing = await computeTrustedOrderTotal(payload.items, payload.redeemMilesRupees);
 
+    const supabase = getSupabaseServerClient();
     const { data: savedOrder, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -47,11 +49,13 @@ export async function POST(request: Request) {
         customer_phone: payload.customer.phone,
         customer_email: payload.customer.email,
         delivery_address: payload.customer.address,
-        subtotal: payload.subtotal,
-        discount_amount: discountAmount,
-        total,
+        subtotal: pricing.subtotal,
+        discount_amount: pricing.discountAmount,
+        loyalty_discount_amount: pricing.loyaltyDiscountAmount,
+        total: pricing.total,
         is_gift: payload.isGift ?? false,
         gift_note: payload.giftNote ?? null,
+        customer_id: pricing.customer?.id ?? null,
         status: "confirmed",
         payment_status: "paid",
         razorpay_order_id,
@@ -62,7 +66,7 @@ export async function POST(request: Request) {
 
     if (orderError) throw orderError;
 
-    const orderItems = payload.items.map((item) => ({
+    const orderItems = pricing.items.map((item) => ({
       order_id: savedOrder.id,
       chapter_slug: item.slug,
       chapter_name: item.name,
@@ -73,7 +77,7 @@ export async function POST(request: Request) {
     const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
     if (itemsError) throw itemsError;
 
-    for (const item of payload.items) {
+    for (const item of pricing.items) {
       const { data: inv } = await supabase
         .from("inventory")
         .select("stock_on_hand")
@@ -87,6 +91,14 @@ export async function POST(request: Request) {
       }
     }
 
+    if (pricing.customer) {
+      const capsBought = pricing.items.reduce((sum, item) => sum + item.quantity, 0);
+      if (pricing.loyaltyDiscountAmount > 0) {
+        await redeemMilesForOrder(pricing.customer.id, savedOrder.id, pricing.loyaltyDiscountAmount);
+      }
+      await earnMilesForOrder(pricing.customer.id, savedOrder.id, capsBought);
+    }
+
     // Best-effort — a failed email/WhatsApp send shouldn't fail the order.
     await Promise.allSettled([
       sendInvoiceEmail(savedOrder, orderItems),
@@ -97,7 +109,7 @@ export async function POST(request: Request) {
       id: savedOrder.id,
       customer_email: savedOrder.customer_email,
       customer_phone: savedOrder.customer_phone,
-      total,
+      total: pricing.total,
     });
 
     return NextResponse.json({ orderId: savedOrder.id });

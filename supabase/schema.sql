@@ -281,3 +281,72 @@ create table if not exists agent_actions (
   after_value text,
   created_at timestamptz not null default now()
 );
+
+-- ============================================================
+-- Customer accounts: phone + OTP login, saved addresses, and a
+-- Travaholic Miles loyalty ledger.
+-- ============================================================
+
+-- One row per real customer, keyed by phone (the OTP identity). Created the
+-- first time someone verifies an OTP — there's no separate signup step.
+create table if not exists customers (
+  id uuid primary key default gen_random_uuid(),
+  phone text unique not null,
+  name text,
+  email text,
+  newsletter_subscribed boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Short-lived one-time codes for phone login. A phone can have several rows
+-- over time (one per request) — only the newest unconsumed, unexpired one
+-- for that phone is ever valid.
+create table if not exists otp_codes (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null,
+  code text not null,
+  expires_at timestamptz not null,
+  consumed boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists otp_codes_phone_idx on otp_codes (phone);
+
+-- Opaque bearer tokens set as an httpOnly cookie after OTP verification —
+-- deliberately not a JWT, so a session can be revoked by deleting one row
+-- instead of waiting out an expiry.
+create table if not exists customer_sessions (
+  token text primary key,
+  customer_id uuid not null references customers (id) on delete cascade,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists customer_addresses (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references customers (id) on delete cascade,
+  label text,
+  recipient_name text not null,
+  phone text not null,
+  address_line text not null,
+  city text,
+  state text,
+  pincode text,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- Every Miles movement, positive (earned on a purchase) or negative
+-- (redeemed at checkout) — balance is always sum(delta), never stored
+-- directly, so it can't drift out of sync with what actually happened.
+create table if not exists loyalty_ledger (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references customers (id) on delete cascade,
+  delta integer not null,
+  reason text not null,
+  order_id uuid references orders (id),
+  created_at timestamptz not null default now()
+);
+create index if not exists loyalty_ledger_customer_idx on loyalty_ledger (customer_id);
+
+alter table orders add column if not exists customer_id uuid references customers (id);
+alter table orders add column if not exists loyalty_discount_amount integer not null default 0;

@@ -95,3 +95,11 @@ export async function sendAbandonedCartWhatsApp(session: CartSessionForWhatsApp)
     { cartSessionId: session.id }
   );
 }
+
+/**
+ * Sends a login OTP via Interakt. Assumes an approved template named
+ * "login_otp" with one body variable: the 6-digit code.
+ */
+export async function sendOtpWhatsApp(phone: string, code: string) {
+  return sendInteraktTemplate(phone, "login_otp", [code], {});
+}

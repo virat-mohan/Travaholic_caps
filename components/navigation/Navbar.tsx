@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import { ShoppingBag, Menu, X, User } from "lucide-react";
 import { seriesOrder } from "@/lib/series";
 import { useCart } from "@/lib/cart";
 
@@ -59,6 +59,9 @@ export function Navbar() {
           >
             {menuOpen ? <X size={20} strokeWidth={1.5} /> : <Menu size={20} strokeWidth={1.5} />}
           </button>
+          <Link aria-label="Account" href="/account" className="text-cream">
+            <User size={18} strokeWidth={1.5} />
+          </Link>
           <Link aria-label="Cart" href="/cart" className="relative text-cream">
             <ShoppingBag size={18} strokeWidth={1.5} />
             {count > 0 && (
