@@ -350,3 +350,24 @@ create index if not exists loyalty_ledger_customer_idx on loyalty_ledger (custom
 
 alter table orders add column if not exists customer_id uuid references customers (id);
 alter table orders add column if not exists loyalty_discount_amount integer not null default 0;
+
+-- ============================================================
+-- Newsletter: guest signups (footer form) plus logged-in customers who
+-- opted in — /admin/newsletter sends new Journal articles to the union of
+-- both, deduplicated by email.
+-- ============================================================
+
+create table if not exists newsletter_subscribers (
+  id uuid primary key default gen_random_uuid(),
+  email text unique not null,
+  subscribed_at timestamptz not null default now()
+);
+
+-- One row per Journal article ever sent, keyed by its static slug from
+-- lib/journal.ts — prevents double-sending and is what /admin/newsletter
+-- reads to show "sent" vs "not sent yet".
+create table if not exists journal_newsletter_sends (
+  article_slug text primary key,
+  recipient_count integer not null default 0,
+  sent_at timestamptz not null default now()
+);

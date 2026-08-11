@@ -13,6 +13,7 @@ const NAV_SECTIONS = [
     label: "Content",
     links: [
       { href: "/admin/journal-drafts", label: "Journal Draft Generator" },
+      { href: "/admin/newsletter", label: "Newsletter" },
       { href: "/admin/invoice-preview", label: "Invoice Preview" },
     ],
   },
