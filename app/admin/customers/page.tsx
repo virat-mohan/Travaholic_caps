@@ -20,25 +20,32 @@ function formatDate(iso: string) {
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [milesPerCap, setMilesPerCap] = useState(100);
+  const [redemptionThreshold, setRedemptionThreshold] = useState(500);
+  const [redemptionValueRupees, setRedemptionValueRupees] = useState(100);
   const [loading, setLoading] = useState(true);
 
   function load() {
     fetch("/api/admin/customers")
       .then((res) => res.json())
-      .then((data) => {
-        setCustomers(data.customers ?? []);
-        setMilesPerCap(data.milesPerCap ?? 100);
-      })
+      .then((data) => setCustomers(data.customers ?? []))
       .finally(() => setLoading(false));
+
+    fetch("/api/admin/loyalty-config")
+      .then((res) => res.json())
+      .then((data) => {
+        setMilesPerCap(data.milesPerCap ?? 100);
+        setRedemptionThreshold(data.redemptionThreshold ?? 500);
+        setRedemptionValueRupees(data.redemptionValueRupees ?? 100);
+      });
   }
 
   useEffect(load, []);
 
-  async function saveMilesPerCap() {
+  async function saveLoyaltyConfig(patch: Record<string, number>) {
     await fetch("/api/admin/loyalty-config", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ milesPerCap }),
+      body: JSON.stringify(patch),
     });
     load();
   }
@@ -50,20 +57,46 @@ export default function CustomersPage() {
       </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Customers</h1>
       <p className="mt-2 max-w-xl text-body-s text-secondary-text">
-        Grouped by phone number — every customer we have is only identifiable through their orders
-        right now, since there&apos;s no customer login yet. Miles are a running total based on
-        caps bought; the redemption side (discount/free cap thresholds) isn&apos;t wired up yet.
+        Grouped by phone number. Miles shown here are earned by anyone who&apos;s ever bought
+        something — only customers who&apos;ve logged in via /account can actually redeem them at
+        checkout, since redemption needs an account to hold the ledger.
       </p>
 
-      <div className="mt-6 flex items-center gap-3 border-t border-divider pt-6">
-        <label className="text-caption text-secondary-text">Travaholic Miles per cap bought</label>
-        <input
-          type="number"
-          value={milesPerCap}
-          onChange={(e) => setMilesPerCap(Number(e.target.value))}
-          onBlur={saveMilesPerCap}
-          className="w-24 border border-divider bg-surface px-2 py-1 text-body-s text-ink"
-        />
+      <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-divider pt-6">
+        <div className="flex items-center gap-3">
+          <label className="text-caption text-secondary-text">Miles earned per cap bought</label>
+          <input
+            type="number"
+            value={milesPerCap}
+            onChange={(e) => setMilesPerCap(Number(e.target.value))}
+            onBlur={() => saveLoyaltyConfig({ milesPerCap })}
+            className="w-24 border border-divider bg-surface px-2 py-1 text-body-s text-ink"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-caption text-secondary-text">Miles per redemption</label>
+          <input
+            type="number"
+            value={redemptionThreshold}
+            onChange={(e) => setRedemptionThreshold(Number(e.target.value))}
+            onBlur={() => saveLoyaltyConfig({ redemptionThreshold })}
+            className="w-24 border border-divider bg-surface px-2 py-1 text-body-s text-ink"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-caption text-secondary-text">Worth ₹</label>
+          <input
+            type="number"
+            value={redemptionValueRupees}
+            onChange={(e) => setRedemptionValueRupees(Number(e.target.value))}
+            onBlur={() => saveLoyaltyConfig({ redemptionValueRupees })}
+            className="w-24 border border-divider bg-surface px-2 py-1 text-body-s text-ink"
+          />
+        </div>
+        <p className="text-caption text-secondary-text">
+          e.g. every {redemptionThreshold.toLocaleString("en-IN")} Miles = ₹
+          {redemptionValueRupees.toLocaleString("en-IN")} off at checkout.
+        </p>
       </div>
 
       <div className="mt-8 overflow-x-auto">
