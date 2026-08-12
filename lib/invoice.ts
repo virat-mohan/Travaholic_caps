@@ -36,8 +36,10 @@ export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[
     .join("");
 
   return `
-    <div style="max-width:600px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
-      <img src="${logoUrl}" alt="${brand.brandName}" width="120" style="display:block;margin:0 auto 24px;" />
+    <div style="max-width:600px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="120" style="display:inline-block;" />
+      </div>
       <p style="color:#666;font-size:13px;text-align:center;">Invoice for Order #${order.id.slice(0, 8).toUpperCase()} · ${date}</p>
 
       <table style="width:100%;margin-top:24px;border-collapse:collapse;font-size:14px;">

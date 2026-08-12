@@ -12,7 +12,21 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
   }
 
   try {
-    const html = await renderInvoiceHtml(order, items);
+    const invoiceHtml = await renderInvoiceHtml(order, items);
+    // Explicit color-scheme meta tags stop Apple/iOS Mail's automatic
+    // dark-mode inversion from flipping the logo's black text to white —
+    // without this, the email fragment alone isn't enough.
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light only" />
+</head>
+<body style="background-color:#ffffff;margin:0;padding:24px 0;">
+  ${invoiceHtml}
+</body>
+</html>`;
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
