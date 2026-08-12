@@ -2,6 +2,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { chapters } from "@/lib/chapters";
 import { InventoryRow } from "@/components/admin/InventoryRow";
 import { OrderStatusCell } from "@/components/admin/OrderStatusCell";
+import { ShipmentCell } from "@/components/admin/ShipmentCell";
 import { DiscountRulesEditor } from "@/components/admin/DiscountRulesEditor";
 
 // This page reads live, frequently-changing data (orders, stock) and needs
@@ -18,7 +19,23 @@ function formatDate(iso: string) {
 }
 
 export default async function AdminDashboardPage() {
-  let orders: { id: string; created_at: string; customer_name: string; customer_phone: string; total: number; subtotal: number; discount_amount: number; status: string; shipment_status: string | null; refund_status: string | null; is_gift: boolean; gift_note: string | null }[] = [];
+  let orders: {
+    id: string;
+    created_at: string;
+    customer_name: string;
+    customer_phone: string;
+    total: number;
+    subtotal: number;
+    discount_amount: number;
+    status: string;
+    shipment_status: string | null;
+    refund_status: string | null;
+    is_gift: boolean;
+    gift_note: string | null;
+    shiprocket_shipment_id: string | null;
+    shiprocket_awb_code: string | null;
+    courier_name: string | null;
+  }[] = [];
   let inventory: { chapter_slug: string; stock_on_hand: number }[] = [];
   let rules: { id: string; name: string; buy_quantity: number; discount_percent: number; active: boolean }[] = [];
   let configError = false;
@@ -28,7 +45,9 @@ export default async function AdminDashboardPage() {
     const [ordersRes, inventoryRes, rulesRes] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, status, shipment_status, refund_status, is_gift, gift_note")
+        .select(
+          "id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, status, shipment_status, refund_status, is_gift, gift_note, shiprocket_shipment_id, shiprocket_awb_code, courier_name"
+        )
         .order("created_at", { ascending: false })
         .limit(50),
       supabase.from("inventory").select("chapter_slug, stock_on_hand").order("chapter_slug"),
@@ -78,6 +97,7 @@ export default async function AdminDashboardPage() {
                 <th className="py-2 pr-4">Total</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4">Shipment</th>
+                <th className="py-2 pr-4">Shipping</th>
                 <th className="py-2 pr-4">Refund</th>
                 <th className="py-2 pr-4">Gift</th>
               </tr>
@@ -110,6 +130,14 @@ export default async function AdminDashboardPage() {
                     />
                   </td>
                   <td className="py-3">
+                    <ShipmentCell
+                      orderId={o.id}
+                      shipmentId={o.shiprocket_shipment_id}
+                      awbCode={o.shiprocket_awb_code}
+                      courierName={o.courier_name}
+                    />
+                  </td>
+                  <td className="py-3">
                     <OrderStatusCell
                       orderId={o.id}
                       field="refundStatus"
@@ -123,7 +151,7 @@ export default async function AdminDashboardPage() {
               ))}
               {(!orders || orders.length === 0) && (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-body-s text-secondary-text">
+                  <td colSpan={11} className="py-8 text-center text-body-s text-secondary-text">
                     No orders yet.
                   </td>
                 </tr>

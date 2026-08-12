@@ -392,3 +392,17 @@ create table if not exists imported_customer_records (
   imported_at timestamptz not null default now()
 );
 create index if not exists imported_customer_records_phone_idx on imported_customer_records (phone);
+
+-- ============================================================
+-- Shiprocket delivery. Structured address fields — Shiprocket's create-order
+-- API requires city/state/pincode/country as separate fields, which the
+-- original delivery_address free-text blob can't reliably supply. New
+-- orders collect these at checkout going forward; older rows are left null
+-- and shipping for them has to be created manually in Shiprocket directly.
+-- ============================================================
+alter table orders add column if not exists delivery_city text;
+alter table orders add column if not exists delivery_state text;
+alter table orders add column if not exists delivery_pincode text;
+alter table orders add column if not exists shiprocket_shipment_id text;
+alter table orders add column if not exists shiprocket_awb_code text;
+alter table orders add column if not exists courier_name text;

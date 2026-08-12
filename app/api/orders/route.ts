@@ -5,7 +5,15 @@ import { getCurrentCustomer } from "@/lib/auth";
 import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 
 type OrderPayload = {
-  customer: { name: string; phone: string; email: string; address: string };
+  customer: {
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
   items: { slug: string; name: string; price: number; quantity: number }[];
   subtotal: number;
   discountAmount?: number;
@@ -51,6 +59,9 @@ export async function POST(request: Request) {
         customer_phone: body.customer.phone,
         customer_email: body.customer.email,
         delivery_address: body.customer.address,
+        delivery_city: body.customer.city ?? null,
+        delivery_state: body.customer.state ?? null,
+        delivery_pincode: body.customer.pincode ?? null,
         subtotal: body.subtotal,
         discount_amount: discountAmount,
         loyalty_discount_amount: loyaltyDiscountAmount,

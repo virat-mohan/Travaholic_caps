@@ -8,7 +8,15 @@ import { computeTrustedOrderTotal } from "@/lib/order-pricing";
 import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 
 type OrderPayload = {
-  customer: { name: string; phone: string; email: string; address: string };
+  customer: {
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
   items: { slug: string; quantity: number }[];
   isGift?: boolean;
   giftNote?: string | null;
@@ -49,6 +57,9 @@ export async function POST(request: Request) {
         customer_phone: payload.customer.phone,
         customer_email: payload.customer.email,
         delivery_address: payload.customer.address,
+        delivery_city: payload.customer.city ?? null,
+        delivery_state: payload.customer.state ?? null,
+        delivery_pincode: payload.customer.pincode ?? null,
         subtotal: pricing.subtotal,
         discount_amount: pricing.discountAmount,
         loyalty_discount_amount: pricing.loyaltyDiscountAmount,

@@ -243,6 +243,29 @@ export default function AccountPage() {
             onChange={(e) => setNewAddress((a) => ({ ...a, addressLine: e.target.value }))}
             className="w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
           />
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              required
+              placeholder="City"
+              value={newAddress.city}
+              onChange={(e) => setNewAddress((a) => ({ ...a, city: e.target.value }))}
+              className="w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+            />
+            <input
+              required
+              placeholder="State"
+              value={newAddress.state}
+              onChange={(e) => setNewAddress((a) => ({ ...a, state: e.target.value }))}
+              className="w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+            />
+          </div>
+          <input
+            required
+            placeholder="Pincode"
+            value={newAddress.pincode}
+            onChange={(e) => setNewAddress((a) => ({ ...a, pincode: e.target.value }))}
+            className="w-full max-w-[200px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+          />
           <button
             type="submit"
             disabled={addingAddress}

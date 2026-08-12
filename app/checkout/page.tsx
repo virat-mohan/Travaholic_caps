@@ -26,6 +26,9 @@ type Account = {
     recipient_name: string;
     phone: string;
     address_line: string;
+    city: string | null;
+    state: string | null;
+    pincode: string | null;
     is_default: boolean;
   }[];
   loyalty: { balance: number; maxRedeemableRupees: number; threshold: number } | null;
@@ -36,7 +39,15 @@ export default function CheckoutPage() {
   const discountRule = useDiscountRule();
   const discount = calculateDiscount(items, discountRule);
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+  });
   const [isGift, setIsGift] = useState(false);
   const [giftNote, setGiftNote] = useState("");
   const [razorpay, setRazorpay] = useState<{ enabled: boolean; keyId: string | null }>({
@@ -70,6 +81,9 @@ export default function CheckoutPage() {
             phone: f.phone || data.customer?.phone || defaultAddress?.phone || "",
             email: f.email || data.customer?.email || "",
             address: f.address || defaultAddress?.address_line || "",
+            city: f.city || defaultAddress?.city || "",
+            state: f.state || defaultAddress?.state || "",
+            pincode: f.pincode || defaultAddress?.pincode || "",
           }));
         }
       })
@@ -226,7 +240,7 @@ export default function CheckoutPage() {
       `Name: ${form.name}`,
       `Phone: ${form.phone}`,
       `Email: ${form.email}`,
-      `Address: ${form.address}`,
+      `Address: ${form.address}, ${form.city}, ${form.state} ${form.pincode}`,
       ...(isGift ? ["", "This is a gift.", `Gift note: ${giftNote || "(none)"}`] : []),
     ];
 
@@ -372,9 +386,47 @@ export default function CheckoutPage() {
             <textarea
               required
               rows={3}
+              placeholder="House/flat, street, area"
               value={form.address}
               onChange={update("address")}
-              className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+              className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                City
+              </label>
+              <input
+                required
+                value={form.city}
+                onChange={update("city")}
+                className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+              />
+            </div>
+            <div>
+              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                State
+              </label>
+              <input
+                required
+                value={form.state}
+                onChange={update("state")}
+                className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+              Pincode
+            </label>
+            <input
+              required
+              value={form.pincode}
+              onChange={update("pincode")}
+              className="mt-3 w-full max-w-[200px] border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
             />
           </div>
 
