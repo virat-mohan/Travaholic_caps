@@ -18,6 +18,8 @@ export const SETTINGS_KEYS = [
   "MILES_PER_CAP",
   "MILES_REDEMPTION_THRESHOLD",
   "MILES_REDEMPTION_VALUE_RUPEES",
+  "MSG91_AUTH_KEY",
+  "MSG91_OTP_TEMPLATE_ID",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

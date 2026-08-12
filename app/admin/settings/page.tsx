@@ -15,6 +15,8 @@ const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "IMAGE_GEN_API_KEY", label: "Image Gen API Key (Gemini)", hint: "Google AI Studio API key — powers ad creative image and reel (Veo) generation." },
   { key: "META_PIXEL_ID", label: "Meta Pixel ID", hint: "Enables the Meta pixel + server-side Conversions API mirror on the site." },
   { key: "CRON_SECRET", label: "Cron Secret", hint: "Protects /api/cron/* routes — set this once you wire up Vercel Cron or another scheduler." },
+  { key: "MSG91_AUTH_KEY", label: "MSG91 Auth Key", hint: "From MSG91 dashboard → API keys. Used for login OTP delivery (WhatsApp with automatic SMS fallback)." },
+  { key: "MSG91_OTP_TEMPLATE_ID", label: "MSG91 OTP Template/Flow ID", hint: "The Flow ID for a template with one variable (VAR1) for the code — set its channel routing to WhatsApp→SMS in the MSG91 dashboard." },
 ];
 
 export default function AdminSettingsPage() {
