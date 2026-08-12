@@ -225,14 +225,17 @@ create table if not exists tracking_events (
 create index if not exists tracking_events_created_at_idx on tracking_events (created_at);
 
 -- One row per WhatsApp send (order confirmation OR abandoned-cart retarget),
--- so /admin/reports can show open rate (delivered/read, via the Interakt
--- webhook) and conversion rate (converted, flipped by the order routes when
--- the linked cart_session becomes a real order) — not just "message sent."
+-- so /admin/reports can show open rate (delivered/read, via the Interakt or
+-- MSG91 webhook) and conversion rate (converted, flipped by the order routes
+-- when the linked cart_session becomes a real order) — not just "message
+-- sent." provider distinguishes which webhook a given message_id belongs to.
 create table if not exists whatsapp_messages (
   id uuid primary key default gen_random_uuid(),
   cart_session_id uuid references cart_sessions (id),
   order_id uuid references orders (id),
   interakt_message_id text,
+  msg91_message_id text,
+  provider text not null default 'interakt', -- interakt | msg91
   template_name text not null,
   status text not null default 'sent', -- sent | delivered | read | failed
   sent_at timestamptz not null default now(),

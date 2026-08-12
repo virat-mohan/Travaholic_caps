@@ -1,30 +1,28 @@
 import { getSetting } from "@/lib/settings";
 
-/**
- * Sends a login OTP via MSG91's Omnichannel Flow API — one call attempts
- * WhatsApp first with automatic SMS fallback if the number isn't on
- * WhatsApp or doesn't respond, all controlled by how MSG91_OTP_TEMPLATE_ID
- * is configured in the MSG91 dashboard (create a Flow there with one
- * variable, VAR1, for the code, and set its channel routing to
- * WhatsApp→SMS). Covers India and international numbers through the same
- * endpoint. Best-effort — returns false rather than throwing so the caller
- * can fall back to another channel.
- */
-export async function sendOtpViaMsg91(phone: string, code: string) {
-  const [authKey, templateId] = await Promise.all([
-    getSetting("MSG91_AUTH_KEY"),
-    getSetting("MSG91_OTP_TEMPLATE_ID"),
-  ]);
-  if (!authKey || !templateId) {
-    console.log("MSG91 not configured — skipping MSG91 OTP send");
-    return false;
-  }
-
+function toMobile(phone: string) {
   const digits = phone.replace(/\D/g, "");
   // MSG91 expects the number with country code, no leading +. Assume India
   // (91) for a bare 10-digit number; pass through anything that already
   // includes a country code.
-  const mobile = digits.length === 10 ? `91${digits}` : digits;
+  return digits.length === 10 ? `91${digits}` : digits;
+}
+
+/**
+ * Sends a WhatsApp template via MSG91's Omnichannel Flow API — one call
+ * attempts WhatsApp first with automatic SMS fallback if the number isn't
+ * reachable there, covering India and international numbers through the
+ * same endpoint. `variables` map positionally to VAR1, VAR2, ... in the
+ * Flow's template. Best-effort — returns { sent: false } rather than
+ * throwing so the caller can fall back to another provider.
+ */
+export async function sendMsg91Flow(templateId: string | null, phone: string, variables: string[]) {
+  const authKey = await getSetting("MSG91_AUTH_KEY");
+  if (!authKey || !templateId) {
+    return { sent: false as const };
+  }
+
+  const varFields = Object.fromEntries(variables.map((v, i) => [`VAR${i + 1}`, v]));
 
   try {
     const res = await fetch("https://control.msg91.com/api/v5/flow/", {
@@ -36,17 +34,28 @@ export async function sendOtpViaMsg91(phone: string, code: string) {
       body: JSON.stringify({
         template_id: templateId,
         short_url: "0",
-        recipients: [{ mobiles: mobile, VAR1: code }],
+        recipients: [{ mobiles: toMobile(phone), ...varFields }],
       }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || data?.type === "error") {
-      console.error("MSG91 OTP send failed", res.status, data);
-      return false;
+      console.error("MSG91 send failed", res.status, data);
+      return { sent: false as const };
     }
-    return true;
+    // Exact response shape for message-id tracking hasn't been verified
+    // against a live key yet — check real payloads once MSG91 is active and
+    // adjust this lookup if delivery/read tracking doesn't populate.
+    const messageId = data?.request_id ?? data?.data?.[0]?.message_id ?? null;
+    return { sent: true as const, messageId: messageId ? String(messageId) : undefined };
   } catch (err) {
-    console.error("MSG91 OTP send failed", err);
-    return false;
+    console.error("MSG91 send failed", err);
+    return { sent: false as const };
   }
+}
+
+/** Login OTP — one variable (the code). */
+export async function sendOtpViaMsg91(phone: string, code: string) {
+  const templateId = await getSetting("MSG91_OTP_TEMPLATE_ID");
+  const result = await sendMsg91Flow(templateId, phone, [code]);
+  return result.sent;
 }
