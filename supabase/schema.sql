@@ -387,6 +387,7 @@ create table if not exists imported_customer_records (
   purchase_date date,
   purchase_value integer,
   quantity integer,
+  order_id text, -- the source system's order id, if the export had one (one row per order, not per line item)
   source_file text,
   imported_at timestamptz not null default now()
 );
