@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { CustomerImport } from "@/components/admin/CustomerImport";
 
 type Customer = {
   phone: string;
@@ -11,9 +12,11 @@ type Customer = {
   totalSpent: number;
   lastOrderAt: string;
   miles: number;
+  importedRecords: number;
 };
 
 function formatDate(iso: string) {
+  if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -23,6 +26,11 @@ export default function CustomersPage() {
   const [redemptionThreshold, setRedemptionThreshold] = useState(500);
   const [redemptionValueRupees, setRedemptionValueRupees] = useState(100);
   const [loading, setLoading] = useState(true);
+
+  const [minSpend, setMinSpend] = useState("");
+  const [minOrders, setMinOrders] = useState("");
+  const [sinceDate, setSinceDate] = useState("");
+  const [untilDate, setUntilDate] = useState("");
 
   function load() {
     fetch("/api/admin/customers")
@@ -50,6 +58,23 @@ export default function CustomersPage() {
     load();
   }
 
+  const filtered = useMemo(() => {
+    return customers.filter((c) => {
+      if (minSpend && c.totalSpent < Number(minSpend)) return false;
+      if (minOrders && c.orderCount < Number(minOrders)) return false;
+      if (sinceDate && (!c.lastOrderAt || c.lastOrderAt.slice(0, 10) < sinceDate)) return false;
+      if (untilDate && (!c.lastOrderAt || c.lastOrderAt.slice(0, 10) > untilDate)) return false;
+      return true;
+    });
+  }, [customers, minSpend, minOrders, sinceDate, untilDate]);
+
+  function clearFilters() {
+    setMinSpend("");
+    setMinOrders("");
+    setSinceDate("");
+    setUntilDate("");
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1200px] px-6 pt-28 pb-24 md:px-12">
       <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
@@ -57,9 +82,9 @@ export default function CustomersPage() {
       </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Customers</h1>
       <p className="mt-2 max-w-xl text-body-s text-secondary-text">
-        Grouped by phone number. Miles shown here are earned by anyone who&apos;s ever bought
-        something — only customers who&apos;ve logged in via /account can actually redeem them at
-        checkout, since redemption needs an account to hold the ledger.
+        Grouped by phone number — real orders merged with any imported CSV history. Miles are
+        earned by anyone who&apos;s ever bought something; only customers who&apos;ve logged in via
+        /account can actually redeem them at checkout.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-divider pt-6">
@@ -99,8 +124,65 @@ export default function CustomersPage() {
         </p>
       </div>
 
-      <div className="mt-8 overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
+      <CustomerImport onImported={load} />
+
+      <div className="mt-10 flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-divider pt-6">
+        <div>
+          <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">
+            Min Total Spent ₹
+          </label>
+          <input
+            type="number"
+            value={minSpend}
+            onChange={(e) => setMinSpend(e.target.value)}
+            className="mt-1 w-32 border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+          />
+        </div>
+        <div>
+          <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">
+            Min Number Of Purchases
+          </label>
+          <input
+            type="number"
+            value={minOrders}
+            onChange={(e) => setMinOrders(e.target.value)}
+            className="mt-1 w-32 border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+          />
+        </div>
+        <div>
+          <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">
+            Last Purchase After
+          </label>
+          <input
+            type="date"
+            value={sinceDate}
+            onChange={(e) => setSinceDate(e.target.value)}
+            className="mt-1 border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+          />
+        </div>
+        <div>
+          <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">
+            Last Purchase Before
+          </label>
+          <input
+            type="date"
+            value={untilDate}
+            onChange={(e) => setUntilDate(e.target.value)}
+            className="mt-1 border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+          />
+        </div>
+        {(minSpend || minOrders || sinceDate || untilDate) && (
+          <button onClick={clearFilters} className="text-caption text-secondary-text underline">
+            Clear Filters
+          </button>
+        )}
+        <p className="text-caption text-secondary-text">
+          Showing {filtered.length} of {customers.length}
+        </p>
+      </div>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="w-full min-w-[1000px] text-left">
           <thead>
             <tr className="border-b border-divider text-caption uppercase tracking-[0.05em] text-secondary-text">
               <th className="py-2 pr-4">Name</th>
@@ -111,33 +193,41 @@ export default function CustomersPage() {
               <th className="py-2 pr-4">Total Spent</th>
               <th className="py-2 pr-4">Last Order</th>
               <th className="py-2 pr-4">Miles</th>
+              <th className="py-2 pr-4">Source</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-body-s text-secondary-text">
+                <td colSpan={9} className="py-8 text-center text-body-s text-secondary-text">
                   Loading...
                 </td>
               </tr>
-            ) : customers.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-body-s text-secondary-text">
-                  No orders yet.
+                <td colSpan={9} className="py-8 text-center text-body-s text-secondary-text">
+                  {customers.length === 0 ? "No customers yet." : "No customers match these filters."}
                 </td>
               </tr>
             ) : (
-              customers.map((c) => (
+              filtered.map((c) => (
                 <tr key={c.phone} className="border-b border-divider">
-                  <td className="py-3 font-sans text-body-s text-ink">{c.name}</td>
+                  <td className="py-3 font-sans text-body-s text-ink">{c.name || "—"}</td>
                   <td className="py-3 text-caption text-secondary-text">{c.phone}</td>
-                  <td className="py-3 text-caption text-secondary-text">{c.email}</td>
+                  <td className="py-3 text-caption text-secondary-text">{c.email || "—"}</td>
                   <td className="py-3 text-body-s text-ink">{c.orderCount}</td>
                   <td className="py-3 text-body-s text-ink">{c.capsBought}</td>
                   <td className="py-3 text-body-s text-ink">₹{c.totalSpent.toLocaleString("en-IN")}</td>
                   <td className="py-3 text-caption text-secondary-text">{formatDate(c.lastOrderAt)}</td>
                   <td className="py-3 font-display text-body-s text-tan-gold">
                     {c.miles.toLocaleString("en-IN")}
+                  </td>
+                  <td className="py-3 text-micro uppercase tracking-[0.03em] text-secondary-text">
+                    {c.importedRecords > 0
+                      ? c.importedRecords === c.orderCount
+                        ? "Imported"
+                        : "Mixed"
+                      : "Site"}
                   </td>
                 </tr>
               ))

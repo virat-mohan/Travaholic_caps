@@ -371,3 +371,23 @@ create table if not exists journal_newsletter_sends (
   recipient_count integer not null default 0,
   sent_at timestamptz not null default now()
 );
+
+-- ============================================================
+-- Legacy customer data imported from CSV via /admin/customers. Kept
+-- separate from the real `orders` table on purpose — an imported row never
+-- touched inventory, discount rules, or payment, so it must never be
+-- mistaken for a real order. The customer master view in /admin/customers
+-- merges this with real orders at read time, deduplicated by phone.
+-- ============================================================
+create table if not exists imported_customer_records (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  phone text,
+  email text,
+  purchase_date date,
+  purchase_value integer,
+  quantity integer,
+  source_file text,
+  imported_at timestamptz not null default now()
+);
+create index if not exists imported_customer_records_phone_idx on imported_customer_records (phone);

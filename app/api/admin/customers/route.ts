@@ -2,16 +2,23 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getSetting } from "@/lib/settings";
 
+function normalizePhone(raw: string | null | undefined) {
+  return (raw ?? "").replace(/\D/g, "").slice(-10);
+}
+
 export async function GET() {
   try {
     const supabase = getSupabaseServerClient();
     const milesPerCapSetting = await getSetting("MILES_PER_CAP");
     const milesPerCap = milesPerCapSetting ? Number(milesPerCapSetting) : 100;
 
-    const { data: orders, error } = await supabase
-      .from("orders")
-      .select("id, customer_name, customer_phone, customer_email, total, created_at")
-      .order("created_at", { ascending: false });
+    const [{ data: orders, error }, { data: imported }] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("id, customer_name, customer_phone, customer_email, total, created_at")
+        .order("created_at", { ascending: false }),
+      supabase.from("imported_customer_records").select("*"),
+    ]);
     if (error) throw error;
 
     const orderIds = (orders ?? []).map((o) => o.id);
@@ -32,31 +39,77 @@ export async function GET() {
       capsBought: number;
       totalSpent: number;
       lastOrderAt: string;
+      firstOrderAt: string;
       miles: number;
+      importedRecords: number;
     };
     const byPhone = new Map<string, CustomerRow>();
 
-    for (const order of orders ?? []) {
-      const key = order.customer_phone || order.customer_email;
-      const caps = capsByOrder.get(order.id) ?? 0;
-      const existing = byPhone.get(key);
+    function upsert(
+      phone: string,
+      patch: {
+        name?: string | null;
+        email?: string | null;
+        orderDelta?: number;
+        capsDelta?: number;
+        spendDelta?: number;
+        date?: string | null;
+        importedDelta?: number;
+      }
+    ) {
+      if (!phone) return;
+      const existing = byPhone.get(phone);
       if (existing) {
-        existing.orderCount += 1;
-        existing.capsBought += caps;
-        existing.totalSpent += order.total ?? 0;
-        if (order.created_at > existing.lastOrderAt) existing.lastOrderAt = order.created_at;
+        existing.orderCount += patch.orderDelta ?? 0;
+        existing.capsBought += patch.capsDelta ?? 0;
+        existing.totalSpent += patch.spendDelta ?? 0;
+        existing.importedRecords += patch.importedDelta ?? 0;
+        if (!existing.name && patch.name) existing.name = patch.name;
+        if (!existing.email && patch.email) existing.email = patch.email;
+        if (patch.date) {
+          if (!existing.lastOrderAt || patch.date > existing.lastOrderAt) existing.lastOrderAt = patch.date;
+          if (!existing.firstOrderAt || patch.date < existing.firstOrderAt) existing.firstOrderAt = patch.date;
+        }
       } else {
-        byPhone.set(key, {
-          phone: order.customer_phone,
-          name: order.customer_name,
-          email: order.customer_email,
-          orderCount: 1,
-          capsBought: caps,
-          totalSpent: order.total ?? 0,
-          lastOrderAt: order.created_at,
+        byPhone.set(phone, {
+          phone,
+          name: patch.name ?? "",
+          email: patch.email ?? "",
+          orderCount: patch.orderDelta ?? 0,
+          capsBought: patch.capsDelta ?? 0,
+          totalSpent: patch.spendDelta ?? 0,
+          lastOrderAt: patch.date ?? "",
+          firstOrderAt: patch.date ?? "",
           miles: 0,
+          importedRecords: patch.importedDelta ?? 0,
         });
       }
+    }
+
+    for (const order of orders ?? []) {
+      const phone = normalizePhone(order.customer_phone);
+      const caps = capsByOrder.get(order.id) ?? 0;
+      upsert(phone, {
+        name: order.customer_name,
+        email: order.customer_email,
+        orderDelta: 1,
+        capsDelta: caps,
+        spendDelta: order.total ?? 0,
+        date: order.created_at,
+      });
+    }
+
+    for (const record of imported ?? []) {
+      const phone = normalizePhone(record.phone);
+      upsert(phone, {
+        name: record.name,
+        email: record.email,
+        orderDelta: 1,
+        capsDelta: record.quantity ?? 0,
+        spendDelta: record.purchase_value ?? 0,
+        date: record.purchase_date,
+        importedDelta: 1,
+      });
     }
 
     const customers = [...byPhone.values()]
