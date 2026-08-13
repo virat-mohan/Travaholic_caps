@@ -6,7 +6,6 @@ const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "RAZORPAY_KEY_ID", label: "Razorpay Key ID", hint: "Test or live Key ID from Razorpay → Settings → API Keys." },
   { key: "RAZORPAY_KEY_SECRET", label: "Razorpay Key Secret", hint: "Paired secret for the Key ID above." },
   { key: "RESEND_API_KEY", label: "Resend API Key", hint: "For emailing invoices/order confirmations." },
-  { key: "INTERAKT_API_KEY", label: "Interakt API Key", hint: "For automatic WhatsApp order confirmations." },
   { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key", hint: "Powers Claude-generated Journal drafts and ad briefs." },
   { key: "META_ACCESS_TOKEN", label: "Meta Access Token", hint: "From Meta Business Manager, for the ad account and Instagram account below." },
   { key: "META_AD_ACCOUNT_ID", label: "Meta Ad Account ID", hint: "e.g. act_1234567890" },

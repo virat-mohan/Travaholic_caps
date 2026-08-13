@@ -1,7 +1,6 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { sendOtpWhatsApp } from "@/lib/whatsapp-notify";
 import { sendOtpViaMsg91 } from "@/lib/msg91";
 
 export const SESSION_COOKIE_NAME = "travaholic_session";
@@ -22,10 +21,9 @@ function normalizePhone(phone: string) {
 }
 
 /**
- * Generates a 6-digit code, stores it, and sends it — MSG91 first (its
- * Omnichannel Flow API tries WhatsApp then falls back to SMS on its own,
- * and covers international numbers), falling back to the Interakt WhatsApp
- * template if MSG91 isn't configured yet.
+ * Generates a 6-digit code, stores it, and sends it via MSG91's Omnichannel
+ * Flow API (tries WhatsApp then falls back to SMS on its own, covers
+ * international numbers through the same call).
  */
 export async function requestOtp(rawPhone: string) {
   const phone = normalizePhone(rawPhone);
@@ -41,11 +39,10 @@ export async function requestOtp(rawPhone: string) {
   });
   if (error) throw error;
 
-  let sent = await sendOtpViaMsg91(phone, code);
-  if (!sent) sent = await sendOtpWhatsApp(phone, code);
+  const sent = await sendOtpViaMsg91(phone, code);
   if (!sent) {
-    // Neither provider configured yet — surface the code so the flow is
-    // still testable end-to-end without any messaging set up.
+    // MSG91 not configured yet — surface the code so the flow is still
+    // testable end-to-end without messaging set up.
     console.log(`[dev only] OTP for ${phone}: ${code}`);
   }
 
