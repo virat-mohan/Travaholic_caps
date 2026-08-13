@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getSetting } from "@/lib/settings";
 import { getBrandProfile } from "@/lib/brand";
+import { sendEmail } from "@/lib/email";
 import type { JournalArticle } from "@/lib/journal";
 
 /** Every subscribed email — guest footer signups union logged-in customers who opted in, deduplicated. */
@@ -39,14 +40,14 @@ function renderArticleEmailHtml(article: JournalArticle, brand: Awaited<ReturnTy
 }
 
 /**
- * Sends a Journal article to every subscriber via Resend. Best-effort per
- * recipient — one bad address doesn't stop the rest of the send. Returns
- * how many actually went out, which the caller records so an article never
- * gets sent twice.
+ * Sends a Journal article to every subscriber. Best-effort per recipient —
+ * one bad address doesn't stop the rest of the send. Returns how many
+ * actually went out, which the caller records so an article never gets
+ * sent twice.
  */
 export async function sendJournalArticleToSubscribers(article: JournalArticle) {
-  const apiKey = await getSetting("RESEND_API_KEY");
-  if (!apiKey) throw new Error("RESEND_API_KEY is not set — add it in /admin/settings first");
+  const apiKey = await getSetting("BREVO_API_KEY");
+  if (!apiKey) throw new Error("BREVO_API_KEY is not set — add it in /admin/settings first");
 
   const [emails, brand] = await Promise.all([getSubscriberEmails(), getBrandProfile()]);
   if (emails.length === 0) return 0;
@@ -55,22 +56,7 @@ export async function sendJournalArticleToSubscribers(article: JournalArticle) {
   let sent = 0;
 
   for (const email of emails) {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: `${brand.brandName} <journal@travaholic.in>`,
-          to: email,
-          subject: article.title,
-          html,
-        }),
-      });
-      if (res.ok) sent++;
-      else console.error("Resend newsletter send failed for", email, res.status, await res.text());
-    } catch (err) {
-      console.error("Resend newsletter send failed for", email, err);
-    }
+    if (await sendEmail(email, article.title, html)) sent++;
   }
 
   return sent;

@@ -24,35 +24,36 @@ function wrapEmailHtml(bodyHtml: string) {
 </html>`;
 }
 
-/** Low-level Resend send — every other function in this file goes through this one. */
-async function sendEmail(to: string, subject: string, bodyHtml: string) {
-  const apiKey = await getSetting("RESEND_API_KEY");
+/** Low-level Brevo send — every other function in this file (and lib/newsletter.ts) goes through this one. */
+export async function sendEmail(to: string, subject: string, bodyHtml: string) {
+  const apiKey = await getSetting("BREVO_API_KEY");
   if (!apiKey) {
-    console.log(`RESEND_API_KEY not set — skipping email "${subject}" to ${to}`);
+    console.log(`BREVO_API_KEY not set — skipping email "${subject}" to ${to}`);
     return false;
   }
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        "api-key": apiKey,
+        Accept: "application/json",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Travaholic <orders@travaholic.in>",
-        to,
+        sender: { name: "Travaholic", email: "orders@travaholic.in" },
+        to: [{ email: to }],
         subject,
-        html: wrapEmailHtml(bodyHtml),
+        htmlContent: wrapEmailHtml(bodyHtml),
       }),
     });
     if (!res.ok) {
-      console.error("Resend send failed", subject, res.status, await res.text());
+      console.error("Brevo send failed", subject, res.status, await res.text());
       return false;
     }
     return true;
   } catch (err) {
-    console.error("Resend send failed", subject, err);
+    console.error("Brevo send failed", subject, err);
     return false;
   }
 }

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "RAZORPAY_KEY_ID", label: "Razorpay Key ID", hint: "Test or live Key ID from Razorpay → Settings → API Keys." },
   { key: "RAZORPAY_KEY_SECRET", label: "Razorpay Key Secret", hint: "Paired secret for the Key ID above." },
-  { key: "RESEND_API_KEY", label: "Resend API Key", hint: "For emailing invoices/order confirmations." },
+  { key: "BREVO_API_KEY", label: "Brevo API Key", hint: "From Brevo → Settings → SMTP & API → API Keys. Powers every customer email — OTP, order confirmation, abandoned cart, newsletter." },
   { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key", hint: "Powers Claude-generated Journal drafts and ad briefs." },
   { key: "META_ACCESS_TOKEN", label: "Meta Access Token", hint: "From Meta Business Manager, for the ad account and Instagram account below." },
   { key: "META_AD_ACCOUNT_ID", label: "Meta Ad Account ID", hint: "e.g. act_1234567890" },
