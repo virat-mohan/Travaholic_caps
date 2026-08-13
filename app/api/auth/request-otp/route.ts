@@ -3,10 +3,12 @@ import { requestOtp } from "@/lib/auth";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  if (!body?.phone) return NextResponse.json({ error: "Missing phone" }, { status: 400 });
+  if (!body?.phone || !body?.email) {
+    return NextResponse.json({ error: "Missing phone or email" }, { status: 400 });
+  }
 
   try {
-    await requestOtp(body.phone);
+    await requestOtp(body.phone, body.email);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Failed to send OTP", err);

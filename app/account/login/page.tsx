@@ -10,6 +10,7 @@ function LoginForm() {
 
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ function LoginForm() {
       const res = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, email }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not send code");
@@ -62,7 +63,7 @@ function LoginForm() {
         Log In.
       </h1>
       <p className="mt-4 text-body-s text-secondary-text">
-        No password — we&apos;ll send a code to your WhatsApp.
+        No password — we&apos;ll email you a code.
       </p>
 
       {step === "phone" ? (
@@ -80,6 +81,20 @@ function LoginForm() {
               className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
             />
           </div>
+          <div>
+            <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+              Email
+            </label>
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@email.com"
+              className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+            />
+            <p className="mt-2 text-micro text-secondary-text/70">We&apos;ll send your login code here.</p>
+          </div>
           {error && <p className="text-body-s text-paint-orange">{error}</p>}
           <button
             type="submit"
@@ -92,7 +107,7 @@ function LoginForm() {
       ) : (
         <form onSubmit={verifyCode} className="mt-10 space-y-6">
           <p className="text-body-s text-secondary-text">
-            Enter the 6-digit code sent to {phone}.
+            Enter the 6-digit code sent to {email}.
           </p>
           <div>
             <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">

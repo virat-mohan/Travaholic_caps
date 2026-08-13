@@ -308,6 +308,7 @@ create table if not exists customers (
 create table if not exists otp_codes (
   id uuid primary key default gen_random_uuid(),
   phone text not null,
+  email text, -- delivery channel while WhatsApp/SMS is still being set up
   code text not null,
   expires_at timestamptz not null,
   consumed boolean not null default false,

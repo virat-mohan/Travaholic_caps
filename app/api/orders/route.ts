@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
 import { getCurrentCustomer } from "@/lib/auth";
 import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
+import { sendInvoiceEmail } from "@/lib/email";
 
 type OrderPayload = {
   customer: {
@@ -116,6 +117,16 @@ export async function POST(request: Request) {
       customer_phone: order.customer_phone,
       total,
     });
+
+    // Best-effort — a failed email must never fail the order itself.
+    await sendInvoiceEmail(
+      order,
+      body.items.map((item) => ({
+        chapter_name: item.name,
+        unit_price: item.price,
+        quantity: item.quantity,
+      }))
+    );
 
     return NextResponse.json({ orderId: order.id });
   } catch (err) {

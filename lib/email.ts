@@ -1,22 +1,17 @@
 import { getSetting } from "@/lib/settings";
 import { renderInvoiceHtml } from "@/lib/invoice";
+import { getBrandProfile } from "@/lib/brand";
 
 type InvoiceOrder = Parameters<typeof renderInvoiceHtml>[0];
 type InvoiceItem = Parameters<typeof renderInvoiceHtml>[1][number];
 
-export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]) {
-  const apiKey = await getSetting("RESEND_API_KEY");
-  if (!apiKey) {
-    console.log("RESEND_API_KEY not set — skipping invoice email for order", order.id);
-    return;
-  }
-
-  try {
-    const invoiceHtml = await renderInvoiceHtml(order, items);
-    // Explicit color-scheme meta tags stop Apple/iOS Mail's automatic
-    // dark-mode inversion from flipping the logo's black text to white —
-    // without this, the email fragment alone isn't enough.
-    const html = `<!doctype html>
+/**
+ * Wraps a body fragment in a full HTML document forcing light-mode
+ * rendering — without the explicit color-scheme meta tags, Apple/iOS Mail's
+ * automatic dark-mode inversion flips black text/logos to white.
+ */
+function wrapEmailHtml(bodyHtml: string) {
+  return `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -24,9 +19,20 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
   <meta name="supported-color-schemes" content="light only" />
 </head>
 <body style="background-color:#ffffff;margin:0;padding:24px 0;">
-  ${invoiceHtml}
+  ${bodyHtml}
 </body>
 </html>`;
+}
+
+/** Low-level Resend send — every other function in this file goes through this one. */
+async function sendEmail(to: string, subject: string, bodyHtml: string) {
+  const apiKey = await getSetting("RESEND_API_KEY");
+  if (!apiKey) {
+    console.log(`RESEND_API_KEY not set — skipping email "${subject}" to ${to}`);
+    return false;
+  }
+
+  try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -35,15 +41,74 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
       },
       body: JSON.stringify({
         from: "Travaholic <orders@travaholic.in>",
-        to: order.customer_email,
-        subject: `Your Travaholic Invoice — Order #${order.id.slice(0, 8).toUpperCase()}`,
-        html,
+        to,
+        subject,
+        html: wrapEmailHtml(bodyHtml),
       }),
     });
     if (!res.ok) {
-      console.error("Resend invoice email failed", res.status, await res.text());
+      console.error("Resend send failed", subject, res.status, await res.text());
+      return false;
     }
+    return true;
   } catch (err) {
-    console.error("Resend invoice email failed", err);
+    console.error("Resend send failed", subject, err);
+    return false;
   }
+}
+
+export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]) {
+  const invoiceHtml = await renderInvoiceHtml(order, items);
+  await sendEmail(
+    order.customer_email,
+    `Your Travaholic Invoice — Order #${order.id.slice(0, 8).toUpperCase()}`,
+    invoiceHtml
+  );
+}
+
+/** Login OTP by email — the active channel while WhatsApp/SMS delivery is still being set up. */
+export async function sendOtpEmail(email: string, code: string) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-color-v2.png`;
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;text-align:center;">
+      <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;margin-bottom:24px;" />
+      <p style="font-size:14px;color:#666;">Your login code is</p>
+      <p style="font-size:36px;font-weight:bold;letter-spacing:0.15em;margin:8px 0 24px;">${code}</p>
+      <p style="font-size:13px;color:#999;">This code expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
+    </div>
+  `;
+  return sendEmail(email, `${code} is your ${brand.brandName} login code`, html);
+}
+
+type CartSessionForEmail = {
+  customer_name: string | null;
+  customer_email: string | null;
+  items: { name: string; quantity: number }[];
+};
+
+/** Abandoned-cart nudge by email — mirrors sendAbandonedCartWhatsApp for customers without/before WhatsApp delivery. */
+export async function sendAbandonedCartEmail(session: CartSessionForEmail) {
+  if (!session.customer_email) return false;
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-color-v2.png`;
+  const cartUrl = `${brand.siteUrl.replace(/\/$/, "")}/cart`;
+  const itemLines = session.items
+    .map((i) => `<li style="margin-bottom:4px;">${i.quantity} × ${i.name}</li>`)
+    .join("");
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
+      <div style="text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;margin-bottom:24px;" />
+      </div>
+      <p style="font-size:16px;">Hi ${session.customer_name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">You left something in your cart:</p>
+      <ul style="font-size:14px;color:#1a1a1a;padding-left:20px;">${itemLines}</ul>
+      <a href="${cartUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Finish Checking Out</a>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(session.customer_email, `You left something at ${brand.brandName}`, html);
 }
