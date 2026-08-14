@@ -308,13 +308,17 @@ create table if not exists customers (
 create table if not exists otp_codes (
   id uuid primary key default gen_random_uuid(),
   phone text not null,
-  email text, -- delivery channel while WhatsApp/SMS is still being set up
   code text not null,
   expires_at timestamptz not null,
   consumed boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index if not exists otp_codes_phone_idx on otp_codes (phone);
+-- Delivery channel while WhatsApp/SMS is still being set up. Added after
+-- otp_codes already existed in production, so this has to be a separate
+-- ALTER — CREATE TABLE IF NOT EXISTS is a no-op once the table is there,
+-- it won't retroactively add columns.
+alter table otp_codes add column if not exists email text;
 
 -- Opaque bearer tokens set as an httpOnly cookie after OTP verification —
 -- deliberately not a JWT, so a session can be revoked by deleting one row
