@@ -4,6 +4,31 @@ import { getBrandProfile } from "@/lib/brand";
 import { sendEmail } from "@/lib/email";
 import type { JournalArticle } from "@/lib/journal";
 
+/**
+ * Applies the newsletter opt-in/out checkbox from checkout — for a logged-in
+ * customer, updates their subscribed flag directly; for a guest (no
+ * account), upserts/removes them from the standalone subscribers table
+ * (the only place a guest's preference can live).
+ */
+export async function applyNewsletterOptIn(customerId: string | null, email: string | null, optIn: boolean) {
+  if (!email && !customerId) return;
+  const supabase = getSupabaseServerClient();
+
+  try {
+    if (customerId) {
+      await supabase.from("customers").update({ newsletter_subscribed: optIn }).eq("id", customerId);
+    } else if (email) {
+      if (optIn) {
+        await supabase.from("newsletter_subscribers").upsert({ email: email.toLowerCase() }, { onConflict: "email" });
+      } else {
+        await supabase.from("newsletter_subscribers").delete().eq("email", email.toLowerCase());
+      }
+    }
+  } catch (err) {
+    console.error("Failed to apply newsletter opt-in", err);
+  }
+}
+
 /** Every subscribed email — guest footer signups union logged-in customers who opted in, deduplicated. */
 export async function getSubscriberEmails(): Promise<string[]> {
   const supabase = getSupabaseServerClient();

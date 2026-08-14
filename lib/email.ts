@@ -73,8 +73,10 @@ export async function sendOtpEmail(email: string, code: string) {
   const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-color-v2.png`;
 
   const html = `
-    <div style="max-width:480px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;text-align:center;">
-      <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;margin-bottom:24px;" />
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;text-align:center;">
+      <div style="background-color:#ffffff;padding:16px 0;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
       <p style="font-size:14px;color:#666;">Your login code is</p>
       <p style="font-size:36px;font-weight:bold;letter-spacing:0.15em;margin:8px 0 24px;">${code}</p>
       <p style="font-size:13px;color:#999;">This code expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
@@ -100,9 +102,9 @@ export async function sendAbandonedCartEmail(session: CartSessionForEmail) {
     .join("");
 
   const html = `
-    <div style="max-width:480px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
-      <div style="text-align:center;">
-        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;margin-bottom:24px;" />
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
       </div>
       <p style="font-size:16px;">Hi ${session.customer_name ?? "there"},</p>
       <p style="font-size:14px;color:#444;line-height:1.6;">You left something in your cart:</p>

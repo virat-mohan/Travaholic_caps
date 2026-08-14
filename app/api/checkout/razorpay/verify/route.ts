@@ -6,6 +6,7 @@ import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-notify";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
 import { computeTrustedOrderTotal } from "@/lib/order-pricing";
 import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
+import { applyNewsletterOptIn } from "@/lib/newsletter";
 
 type OrderPayload = {
   customer: {
@@ -22,6 +23,7 @@ type OrderPayload = {
   giftNote?: string | null;
   sessionKey?: string;
   redeemMilesRupees?: number;
+  newsletterOptIn?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -110,10 +112,14 @@ export async function POST(request: Request) {
       await earnMilesForOrder(pricing.customer.id, savedOrder.id, capsBought);
     }
 
+    if (payload.newsletterOptIn != null) {
+      await applyNewsletterOptIn(pricing.customer?.id ?? null, savedOrder.customer_email, payload.newsletterOptIn);
+    }
+
     // Best-effort — a failed email/WhatsApp send shouldn't fail the order.
     await Promise.allSettled([
       sendInvoiceEmail(savedOrder, orderItems),
-      sendOrderConfirmationWhatsApp(savedOrder),
+      sendOrderConfirmationWhatsApp(savedOrder, orderItems),
     ]);
 
     await markCartSessionConverted(payload.sessionKey, {

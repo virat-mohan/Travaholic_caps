@@ -8,6 +8,7 @@ import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { AddToCartButton } from "@/components/chapter/AddToCartButton";
+import { BuyNowButton } from "@/components/chapter/BuyNowButton";
 import { ViewContentTracker } from "@/components/tracking/ViewContentTracker";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
@@ -67,8 +68,13 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
               </p>
             )}
 
-            <div className="mt-10">
+            <div className="mt-10 flex flex-wrap gap-4">
               <AddToCartButton
+                chapter={chapter}
+                image={chapterImageSrc(chapter.folder, chapter.primary)}
+                disabled={stockLabel === "out-of-stock"}
+              />
+              <BuyNowButton
                 chapter={chapter}
                 image={chapterImageSrc(chapter.folder, chapter.primary)}
                 disabled={stockLabel === "out-of-stock"}

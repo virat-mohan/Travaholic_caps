@@ -1,8 +1,10 @@
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendMsg91Flow } from "@/lib/msg91";
+import { generateAndUploadOrderCard } from "@/lib/order-card";
 
 type OrderForWhatsApp = { id: string; customer_name: string; customer_phone: string; total: number };
+type OrderItemForCard = { chapter_name: string; quantity: number };
 type CartSessionForWhatsApp = {
   id: string;
   customer_name: string | null;
@@ -34,9 +36,10 @@ async function sendTemplate(
   templateName: string,
   msg91TemplateId: string | null,
   variables: string[],
-  logAgainst: { cartSessionId?: string; orderId?: string }
+  logAgainst: { cartSessionId?: string; orderId?: string },
+  mediaUrl?: string
 ) {
-  const result = await sendMsg91Flow(msg91TemplateId, phone, variables);
+  const result = await sendMsg91Flow(msg91TemplateId, phone, variables, mediaUrl);
   if (result.sent) {
     await logSend(result.messageId, templateName, logAgainst);
     return true;
@@ -45,20 +48,36 @@ async function sendTemplate(
 }
 
 /**
- * Sends an order-confirmation WhatsApp message via MSG91. Needs a Flow with
- * three variables in order: customer name, order number, total — set its ID
- * as MSG91_ORDER_CONFIRMATION_TEMPLATE_ID in /admin/settings.
+ * Sends an order-confirmation WhatsApp message via MSG91, with a branded
+ * "Order Confirmed" card (generated via @vercel/og) as the template's header
+ * image — WhatsApp doesn't render HTML, so an image + formatted text is the
+ * closest equivalent to a designed email. Needs a Flow with an image header
+ * and three body variables in order: customer name, order number, total —
+ * set its ID as MSG91_ORDER_CONFIRMATION_TEMPLATE_ID in /admin/settings.
  */
-export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp) {
+export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp, items: OrderItemForCard[] = []) {
   const msg91TemplateId = await getSetting("MSG91_ORDER_CONFIRMATION_TEMPLATE_ID");
   const variables = [
     order.customer_name,
     order.id.slice(0, 8).toUpperCase(),
     `₹${order.total.toLocaleString("en-IN")}`,
   ];
-  await sendTemplate(order.customer_phone, "order_confirmation", msg91TemplateId, variables, {
-    orderId: order.id,
-  });
+
+  let cardUrl: string | undefined;
+  try {
+    cardUrl = await generateAndUploadOrderCard(order, items);
+  } catch (err) {
+    console.error("Failed to generate order confirmation card — sending without it", err);
+  }
+
+  await sendTemplate(
+    order.customer_phone,
+    "order_confirmation",
+    msg91TemplateId,
+    variables,
+    { orderId: order.id },
+    cardUrl
+  );
 }
 
 /**

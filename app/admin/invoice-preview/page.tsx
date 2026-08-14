@@ -27,12 +27,29 @@ export default async function InvoicePreviewPage() {
       </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Invoice Email Preview</h1>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
-        This is exactly the HTML that gets emailed via Resend after a Razorpay payment is verified —
-        shown here with sample data since no paid orders exist yet.
+        This is exactly the HTML that gets emailed via Brevo after an order is placed — shown here
+        with sample data since no paid orders exist yet.
       </p>
       <div className="mt-10 border border-divider bg-white p-8">
         <div dangerouslySetInnerHTML={{ __html: html }} />
       </div>
+
+      <h2 className="mt-16 font-display text-heading-l uppercase text-ink">
+        WhatsApp Order Card
+      </h2>
+      <p className="mt-2 max-w-lg text-body-s text-secondary-text">
+        The header image attached to the order-confirmation WhatsApp template — WhatsApp
+        doesn&apos;t render HTML, so this image plus the template&apos;s plain-text body is the
+        closest equivalent to a designed confirmation.
+      </p>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/api/og/order-confirmation/sample"
+        alt="Sample WhatsApp order confirmation card"
+        width={400}
+        height={400}
+        className="mt-6 border border-divider"
+      />
     </main>
   );
 }

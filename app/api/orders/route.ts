@@ -4,6 +4,7 @@ import { markCartSessionConverted } from "@/lib/cart-session-convert";
 import { getCurrentCustomer } from "@/lib/auth";
 import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { sendInvoiceEmail } from "@/lib/email";
+import { applyNewsletterOptIn } from "@/lib/newsletter";
 
 type OrderPayload = {
   customer: {
@@ -22,6 +23,7 @@ type OrderPayload = {
   giftNote?: string | null;
   sessionKey?: string;
   redeemMilesRupees?: number;
+  newsletterOptIn?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -117,6 +119,10 @@ export async function POST(request: Request) {
       customer_phone: order.customer_phone,
       total,
     });
+
+    if (body.newsletterOptIn != null) {
+      await applyNewsletterOptIn(customer?.id ?? null, order.customer_email, body.newsletterOptIn);
+    }
 
     // Best-effort — a failed email must never fail the order itself.
     await sendInvoiceEmail(

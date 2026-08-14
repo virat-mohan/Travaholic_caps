@@ -17,13 +17,25 @@ function toMobile(phone: string) {
  * returns { sent: false } rather than throwing so the caller can decide what
  * to do next.
  */
-export async function sendMsg91Flow(flowSlug: string | null, phone: string, variables: string[]) {
+export async function sendMsg91Flow(
+  flowSlug: string | null,
+  phone: string,
+  variables: string[],
+  mediaUrl?: string
+) {
   const authKey = await getSetting("MSG91_AUTH_KEY");
   if (!authKey || !flowSlug) {
     return { sent: false as const };
   }
 
   const varFields = Object.fromEntries(variables.map((v, i) => [`VAR${i + 1}`, v]));
+  // Media-header field placement isn't confirmed against a real
+  // media-attached template yet (only verified the plain-text OTP shape) —
+  // this is the common BSP pattern (a `media` object alongside `mobiles`),
+  // check a real send once the Order Confirmation Flow has an image header
+  // configured and adjust if MSG91 rejects or ignores it.
+  const to: Record<string, unknown> = { mobiles: toMobile(phone), variables: varFields };
+  if (mediaUrl) to.media = { url: mediaUrl };
 
   try {
     const res = await fetch(`https://control.msg91.com/api/v5/oneapi/api/flow/${flowSlug}/run`, {
@@ -34,12 +46,7 @@ export async function sendMsg91Flow(flowSlug: string | null, phone: string, vari
       },
       body: JSON.stringify({
         data: {
-          sendTo: [
-            {
-              to: [{ mobiles: toMobile(phone), variables: varFields }],
-              variables: [],
-            },
-          ],
+          sendTo: [{ to: [to], variables: [] }],
         },
       }),
     });
