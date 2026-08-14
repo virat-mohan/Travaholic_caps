@@ -10,7 +10,7 @@ const SESSION_TTL_DAYS = 30;
 
 export type Customer = {
   id: string;
-  phone: string;
+  phone: string | null;
   name: string | null;
   email: string | null;
   newsletter_subscribed: boolean;
@@ -22,15 +22,19 @@ function normalizePhone(phone: string) {
 }
 
 /**
- * Generates a 6-digit code, stores it, and sends it — email is the primary
- * channel right now (WhatsApp/SMS via MSG91 is still being set up, so it's
- * attempted best-effort alongside but not relied on). Email is required for
- * this reason; phone stays the account's actual identity.
+ * Generates a 6-digit code, stores it, and sends it. Only one of
+ * phone/email is actually required — whichever is given is where the code
+ * goes (email via Brevo, phone via MSG91, both attempted if both given).
+ * Checkout collects a phone/address on every order regardless of account,
+ * so an email-only account never blocks shipping later.
  */
-export async function requestOtp(rawPhone: string, email: string) {
-  const phone = normalizePhone(rawPhone);
-  if (phone.length !== 10) throw new Error("Enter a valid 10-digit phone number");
-  if (!email || !email.includes("@")) throw new Error("Enter a valid email address");
+export async function requestOtp(rawPhone: string | null, rawEmail: string | null) {
+  const phone = rawPhone ? normalizePhone(rawPhone) : null;
+  const email = rawEmail?.trim() || null;
+
+  if (phone && phone.length !== 10) throw new Error("Enter a valid 10-digit phone number");
+  if (email && !email.includes("@")) throw new Error("Enter a valid email address");
+  if (!phone && !email) throw new Error("Enter a phone number or an email address");
 
   const code = String(crypto.randomInt(100000, 999999));
   const supabase = getSupabaseServerClient();
@@ -44,14 +48,14 @@ export async function requestOtp(rawPhone: string, email: string) {
   if (error) throw error;
 
   const [emailSent, whatsappSent] = await Promise.all([
-    sendOtpEmail(email, code),
-    sendOtpViaMsg91(phone, code),
+    email ? sendOtpEmail(email, code) : Promise.resolve(false),
+    phone ? sendOtpViaMsg91(phone, code) : Promise.resolve(false),
   ]);
   const sent = emailSent || whatsappSent;
   if (!sent) {
-    // Nothing configured yet — surface the code so the flow is still
-    // testable end-to-end without messaging set up.
-    console.log(`[dev only] OTP for ${phone} / ${email}: ${code}`);
+    // Nothing configured yet (or delivery failed) — surface the code so the
+    // flow is still testable end-to-end.
+    console.log(`[dev only] OTP for ${phone ?? "(no phone)"} / ${email ?? "(no email)"}: ${code}`);
   }
 
   return { sent };
@@ -61,45 +65,59 @@ export async function requestOtp(rawPhone: string, email: string) {
  * Verifies a code, creating the customer record on first-ever login, and
  * returns a session token to set as an httpOnly cookie. Never throws for
  * "wrong code" — returns null so the caller can show a normal error instead
- * of a 500.
+ * of a 500. Looks the OTP row up by whichever of phone/email was actually
+ * used to request it (echoed back by the client) plus the code itself.
  */
-export async function verifyOtp(rawPhone: string, code: string) {
-  const phone = normalizePhone(rawPhone);
+export async function verifyOtp(rawPhone: string | null, rawEmail: string | null, code: string) {
+  const phone = rawPhone ? normalizePhone(rawPhone) : null;
+  const email = rawEmail?.trim() || null;
+  if (!phone && !email) return null;
+
   const supabase = getSupabaseServerClient();
 
-  const { data: otp } = await supabase
-    .from("otp_codes")
-    .select("id, email, expires_at, consumed")
-    .eq("phone", phone)
-    .eq("code", code)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  let query = supabase.from("otp_codes").select("id, phone, email, expires_at, consumed").eq("code", code);
+  query = phone ? query.eq("phone", phone) : query.eq("email", email as string);
+
+  const { data: otp } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
 
   if (!otp || otp.consumed || new Date(otp.expires_at) < new Date()) return null;
 
   await supabase.from("otp_codes").update({ consumed: true }).eq("id", otp.id);
 
-  const { data: existing } = await supabase
-    .from("customers")
-    .select("*")
-    .eq("phone", phone)
-    .maybeSingle();
+  // Look up by phone first (if given), then email — an existing account
+  // matching either counts as "found." A rare edge case (someone previously
+  // signed up phone-only under one record and email-only under another,
+  // then logs in with both) isn't merged here — that'd need a dedicated
+  // account-merge flow, out of scope for now.
+  let existing: Customer | null = null;
+  if (otp.phone) {
+    const { data } = await supabase.from("customers").select("*").eq("phone", otp.phone).maybeSingle();
+    existing = data as Customer | null;
+  }
+  if (!existing && otp.email) {
+    const { data } = await supabase.from("customers").select("*").eq("email", otp.email).maybeSingle();
+    existing = data as Customer | null;
+  }
 
-  let customer = existing as Customer | null;
+  let customer = existing;
   if (!customer) {
     const { data: created, error } = await supabase
       .from("customers")
-      .insert({ phone, email: otp.email ?? null })
+      .insert({ phone: otp.phone ?? null, email: otp.email ?? null })
       .select()
       .single();
     if (error) throw error;
     customer = created as Customer;
-  } else if (otp.email && otp.email !== customer.email) {
-    // Keep the email on file current — this is the only place it's
-    // reliably re-collected on every login.
-    await supabase.from("customers").update({ email: otp.email }).eq("id", customer.id);
-    customer = { ...customer, email: otp.email };
+  } else {
+    // Keep contact info current — this is the most reliable place it's
+    // re-collected, on every login.
+    const patch: Record<string, string> = {};
+    if (otp.email && otp.email !== customer.email) patch.email = otp.email;
+    if (otp.phone && otp.phone !== customer.phone) patch.phone = otp.phone;
+    if (Object.keys(patch).length > 0) {
+      await supabase.from("customers").update(patch).eq("id", customer.id);
+      customer = { ...customer, ...patch };
+    }
   }
 
   const token = crypto.randomBytes(32).toString("hex");

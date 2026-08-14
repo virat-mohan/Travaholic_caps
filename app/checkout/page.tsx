@@ -20,7 +20,7 @@ declare global {
 }
 
 type Account = {
-  customer: { id: string; phone: string; name: string | null; email: string | null; newsletter_subscribed: boolean } | null;
+  customer: { id: string; phone: string | null; name: string | null; email: string | null; newsletter_subscribed: boolean } | null;
   addresses: {
     id: string;
     recipient_name: string;
@@ -281,7 +281,10 @@ export default function CheckoutPage() {
           {account?.customer ? (
             <>
               <span className="text-secondary-text">
-                Logged in as <span className="text-ink">{account.customer.phone}</span>
+                Logged in as{" "}
+                <span className="text-ink">
+                  {account.customer.phone || account.customer.email}
+                </span>
                 {account.loyalty && account.loyalty.balance > 0 && (
                   <> · {account.loyalty.balance.toLocaleString("en-IN")} Travaholic Miles</>
                 )}

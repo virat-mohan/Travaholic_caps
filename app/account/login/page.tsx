@@ -17,13 +17,17 @@ function LoginForm() {
 
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
+    if (!phone.trim() && !email.trim()) {
+      setError("Enter a phone number or an email address.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, email }),
+        body: JSON.stringify({ phone: phone.trim() || null, email: email.trim() || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not send code");
@@ -43,7 +47,7 @@ function LoginForm() {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, code }),
+        body: JSON.stringify({ phone: phone.trim() || null, email: email.trim() || null, code }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not verify code");
@@ -63,7 +67,7 @@ function LoginForm() {
         Log In.
       </h1>
       <p className="mt-4 text-body-s text-secondary-text">
-        No password — we&apos;ll email you a code.
+        No password — enter your phone number or email, and we&apos;ll send you a code.
       </p>
 
       {step === "phone" ? (
@@ -73,7 +77,6 @@ function LoginForm() {
               Phone Number
             </label>
             <input
-              required
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -81,19 +84,22 @@ function LoginForm() {
               className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
             />
           </div>
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-divider" />
+            <span className="text-micro uppercase tracking-[0.1em] text-secondary-text">Or</span>
+            <div className="h-px flex-1 bg-divider" />
+          </div>
           <div>
             <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
               Email
             </label>
             <input
-              required
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@email.com"
               className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
             />
-            <p className="mt-2 text-micro text-secondary-text/70">We&apos;ll send your login code here.</p>
           </div>
           {error && <p className="text-body-s text-paint-orange">{error}</p>}
           <button
@@ -107,7 +113,7 @@ function LoginForm() {
       ) : (
         <form onSubmit={verifyCode} className="mt-10 space-y-6">
           <p className="text-body-s text-secondary-text">
-            Enter the 6-digit code sent to {email}.
+            Enter the 6-digit code sent to {email.trim() || phone.trim()}.
           </p>
           <div>
             <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
@@ -134,7 +140,7 @@ function LoginForm() {
             onClick={() => setStep("phone")}
             className="w-full text-center text-caption text-secondary-text underline"
           >
-            Use a different number
+            Start over
           </button>
         </form>
       )}

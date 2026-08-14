@@ -291,8 +291,11 @@ create table if not exists agent_actions (
 -- Travaholic Miles loyalty ledger.
 -- ============================================================
 
--- One row per real customer, keyed by phone (the OTP identity). Created the
--- first time someone verifies an OTP — there's no separate signup step.
+-- One row per real customer, identified by phone and/or email — only one is
+-- required at login, not both (checkout collects a phone/address separately
+-- on every order regardless of account, so this never blocks shipping).
+-- Created the first time someone verifies an OTP — there's no separate
+-- signup step.
 create table if not exists customers (
   id uuid primary key default gen_random_uuid(),
   phone text unique not null,
@@ -301,19 +304,27 @@ create table if not exists customers (
   newsletter_subscribed boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- phone used to be mandatory; email-only accounts are now allowed, so the
+-- NOT NULL + plain UNIQUE from the original CREATE TABLE have to be relaxed
+-- via ALTER (existing table, so the CREATE TABLE column list alone won't
+-- take effect — same lesson as otp_codes.email above).
+alter table customers alter column phone drop not null;
+alter table customers drop constraint if exists customers_phone_key;
+create unique index if not exists customers_phone_unique_idx on customers (phone) where phone is not null;
+create unique index if not exists customers_email_unique_idx on customers (email) where email is not null;
 
--- Short-lived one-time codes for phone login. A phone can have several rows
--- over time (one per request) — only the newest unconsumed, unexpired one
--- for that phone is ever valid.
+-- Short-lived one-time codes for login. A row can key off phone, email, or
+-- both — whichever the requester provided at least one of.
 create table if not exists otp_codes (
   id uuid primary key default gen_random_uuid(),
-  phone text not null,
+  phone text,
   code text not null,
   expires_at timestamptz not null,
   consumed boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index if not exists otp_codes_phone_idx on otp_codes (phone);
+alter table otp_codes alter column phone drop not null;
 -- Delivery channel while WhatsApp/SMS is still being set up. Added after
 -- otp_codes already existed in production, so this has to be a separate
 -- ALTER — CREATE TABLE IF NOT EXISTS is a no-op once the table is there,

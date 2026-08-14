@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Customer = { id: string; phone: string; name: string | null; email: string | null; newsletter_subscribed: boolean };
+type Customer = { id: string; phone: string | null; name: string | null; email: string | null; newsletter_subscribed: boolean };
 type Address = {
   id: string;
   label: string | null;
@@ -171,7 +171,7 @@ export default function AccountPage() {
               className="mt-2 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
             />
           </div>
-          <p className="text-caption text-secondary-text">Phone: {customer.phone}</p>
+          <p className="text-caption text-secondary-text">Phone: {customer.phone || "Not provided"}</p>
           <label className="flex items-center gap-3">
             <input
               type="checkbox"
