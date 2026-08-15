@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const NAV_SECTIONS = [
   {
@@ -46,6 +49,9 @@ const NAV_SECTIONS = [
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  if (pathname === "/admin/login") return <>{children}</>;
+
   return (
     <div className="flex min-h-screen w-full">
       <aside className="sticky top-0 hidden h-screen w-[22rem] shrink-0 flex-col overflow-y-auto border-r border-divider bg-surface px-5 pt-8 pb-10 md:flex">
