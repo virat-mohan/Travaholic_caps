@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { chapters as staticChapters, chapterImageSrc, SHARED_SPECS } from "@/lib/chapters";
 import { getAllChapters } from "@/lib/chapters-dynamic";
 import { getExplorerPostsForChapter } from "@/lib/community";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
+import { getBrandProfile } from "@/lib/brand";
 import { Product360Viewer } from "@/components/chapter/Product360Viewer";
 import { ChapterCard } from "@/components/chapter/ChapterCard";
 import { AddToCartButton } from "@/components/chapter/AddToCartButton";
@@ -16,6 +18,24 @@ import { seriesOrder } from "@/lib/series";
 
 export function generateStaticParams() {
   return staticChapters.map((c) => ({ slug: c.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const chapter = staticChapters.find((c) => c.slug === slug);
+  if (!chapter) return {};
+  const image = chapterImageSrc(chapter.folder, chapter.sideImage);
+  const description = `${chapter.name} — ${chapter.story}`.slice(0, 200);
+  return {
+    title: chapter.name,
+    description,
+    openGraph: { title: chapter.name, description, images: [image] },
+    twitter: { card: "summary_large_image", title: chapter.name, description, images: [image] },
+  };
 }
 
 export default async function ChapterPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -32,9 +52,65 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
   const stock = inventory[chapter.slug];
   const stockLabel = stockLabelFor(stock);
   const series = seriesOrder.find((s) => s.name === chapter.series);
+  const brand = await getBrandProfile();
+  const siteUrl = brand.siteUrl.replace(/\/$/, "");
+  const productImage = `${siteUrl}${chapterImageSrc(chapter.folder, chapter.sideImage)}`;
+
+  // Product + Breadcrumb structured data — the concrete facts (price,
+  // availability, brand) answer engines pull to respond to "how much is
+  // the Travaholic X cap" style queries without a human ever landing here.
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: chapter.name,
+    description: chapter.story,
+    image: productImage,
+    brand: { "@type": "Brand", name: brand.brandName },
+    offers: {
+      "@type": "Offer",
+      url: `${siteUrl}/chapter/${chapter.slug}`,
+      priceCurrency: "INR",
+      price: chapter.price,
+      availability:
+        stockLabel === "out-of-stock"
+          ? "https://schema.org/OutOfStock"
+          : "https://schema.org/InStock",
+    },
+  };
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Collection", item: siteUrl },
+      ...(series
+        ? [
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: chapter.series,
+              item: `${siteUrl}/series/${series.slug}`,
+            },
+          ]
+        : []),
+      {
+        "@type": "ListItem",
+        position: series ? 3 : 2,
+        name: chapter.name,
+        item: `${siteUrl}/chapter/${chapter.slug}`,
+      },
+    ],
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <ViewContentTracker chapterSlug={chapter.slug} value={chapter.price} />
       <main className="mx-auto w-full max-w-[1440px] px-6 pt-28 md:px-12 md:pt-36">
         <Breadcrumb
