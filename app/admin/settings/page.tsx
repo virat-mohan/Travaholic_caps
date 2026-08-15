@@ -2,25 +2,63 @@
 
 import { useEffect, useState } from "react";
 
-const FIELDS: { key: string; label: string; hint: string }[] = [
-  { key: "RAZORPAY_KEY_ID", label: "Razorpay Key ID", hint: "Test or live Key ID from Razorpay → Settings → API Keys." },
-  { key: "RAZORPAY_KEY_SECRET", label: "Razorpay Key Secret", hint: "Paired secret for the Key ID above." },
-  { key: "BREVO_API_KEY", label: "Brevo API Key", hint: "From Brevo → Settings → SMTP & API → API Keys. Powers every customer email — OTP, order confirmation, abandoned cart, newsletter." },
-  { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key", hint: "Powers Claude-generated Journal drafts and ad briefs." },
-  { key: "META_ACCESS_TOKEN", label: "Meta Access Token", hint: "From Meta Business Manager, for the ad account and Instagram account below." },
-  { key: "META_AD_ACCOUNT_ID", label: "Meta Ad Account ID", hint: "e.g. act_1234567890" },
-  { key: "META_PAGE_ID", label: "Meta Page ID", hint: "The Facebook Page linked to your ad account — required to create ad creatives." },
-  { key: "INSTAGRAM_BUSINESS_ACCOUNT_ID", label: "Instagram Business Account ID", hint: "For auto-posting approved Explorer photos as Instagram Stories." },
-  { key: "IMAGE_GEN_API_KEY", label: "Image Gen API Key (Gemini)", hint: "Google AI Studio API key — powers ad creative image and reel (Veo) generation." },
-  { key: "META_PIXEL_ID", label: "Meta Pixel ID", hint: "Enables the Meta pixel + server-side Conversions API mirror on the site." },
-  { key: "CRON_SECRET", label: "Cron Secret", hint: "Protects /api/cron/* routes — set this once you wire up Vercel Cron or another scheduler." },
-  { key: "MSG91_AUTH_KEY", label: "MSG91 Auth Key", hint: "From MSG91 dashboard → API keys. Shared by all MSG91 sends below." },
-  { key: "MSG91_OTP_TEMPLATE_ID", label: "MSG91 OTP Flow Slug", hint: "Not a numeric ID — the Flow's URL slug (e.g. \"login-otp\"), found via the </> \"View Code\" button on the Flow builder canvas. One variable (VAR1) for the code." },
-  { key: "MSG91_ORDER_CONFIRMATION_TEMPLATE_ID", label: "MSG91 Order Confirmation Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: customer name, order number, total." },
-  { key: "MSG91_ABANDONED_CART_TEMPLATE_ID", label: "MSG91 Abandoned Cart Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, item summary." },
-  { key: "SHIPROCKET_EMAIL", label: "Shiprocket Email", hint: "The login email for your Shiprocket account." },
-  { key: "SHIPROCKET_PASSWORD", label: "Shiprocket Password", hint: "Used to fetch an API token — Shiprocket doesn't issue separate API keys." },
-  { key: "SHIPROCKET_PICKUP_LOCATION", label: "Shiprocket Pickup Location", hint: "The exact pickup location nickname configured in your Shiprocket dashboard under Settings → Pickup Addresses." },
+type Field = { key: string; label: string; hint: string };
+
+const GROUPS: { label: string; fields: Field[] }[] = [
+  {
+    label: "Payments",
+    fields: [
+      { key: "RAZORPAY_KEY_ID", label: "Razorpay Key ID", hint: "Test or live Key ID from Razorpay → Settings → API Keys." },
+      { key: "RAZORPAY_KEY_SECRET", label: "Razorpay Key Secret", hint: "Paired secret for the Key ID above." },
+    ],
+  },
+  {
+    label: "Email",
+    fields: [
+      { key: "BREVO_API_KEY", label: "Brevo API Key", hint: "From Brevo → Settings → SMTP & API → API Keys. Powers every customer email — OTP, order confirmation, abandoned cart, newsletter." },
+    ],
+  },
+  {
+    label: "AI",
+    fields: [
+      { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key", hint: "Powers Claude-generated Journal drafts and ad briefs." },
+      { key: "IMAGE_GEN_API_KEY", label: "Image Gen API Key (Gemini)", hint: "Google AI Studio API key — powers ad creative image and reel (Veo) generation." },
+    ],
+  },
+  {
+    label: "Meta (Ads, Instagram, DM Bot)",
+    fields: [
+      { key: "META_ACCESS_TOKEN", label: "Meta Access Token", hint: "From Meta Business Manager, for the ad account and Instagram account below." },
+      { key: "META_AD_ACCOUNT_ID", label: "Meta Ad Account ID", hint: "e.g. act_1234567890" },
+      { key: "META_PAGE_ID", label: "Meta Page ID", hint: "The Facebook Page linked to your ad account — required to create ad creatives." },
+      { key: "INSTAGRAM_BUSINESS_ACCOUNT_ID", label: "Instagram Business Account ID", hint: "For auto-posting approved Explorer photos as Instagram Stories." },
+      { key: "META_WEBHOOK_VERIFY_TOKEN", label: "Meta Webhook Verify Token", hint: "Make up any random string, then paste the same value into Meta's App Dashboard → Webhooks → Verify Token when you subscribe to Instagram/Messenger events. Required for the DM/comment bot." },
+      { key: "META_PIXEL_ID", label: "Meta Pixel ID", hint: "Enables the Meta pixel + server-side Conversions API mirror on the site." },
+    ],
+  },
+  {
+    label: "MSG91 (WhatsApp / SMS)",
+    fields: [
+      { key: "MSG91_AUTH_KEY", label: "MSG91 Auth Key", hint: "From MSG91 dashboard → API keys. Shared by all MSG91 sends below." },
+      { key: "MSG91_OTP_TEMPLATE_ID", label: "MSG91 OTP Flow Slug", hint: "Not a numeric ID — the Flow's URL slug (e.g. \"login-otp\"), found via the </> \"View Code\" button on the Flow builder canvas. One variable (VAR1) for the code." },
+      { key: "MSG91_ORDER_CONFIRMATION_TEMPLATE_ID", label: "MSG91 Order Confirmation Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: customer name, order number, total." },
+      { key: "MSG91_ABANDONED_CART_TEMPLATE_ID", label: "MSG91 Abandoned Cart Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, item summary." },
+    ],
+  },
+  {
+    label: "Shiprocket",
+    fields: [
+      { key: "SHIPROCKET_EMAIL", label: "Shiprocket Email", hint: "The login email for your Shiprocket account." },
+      { key: "SHIPROCKET_PASSWORD", label: "Shiprocket Password", hint: "Used to fetch an API token — Shiprocket doesn't issue separate API keys." },
+      { key: "SHIPROCKET_PICKUP_LOCATION", label: "Shiprocket Pickup Location", hint: "The exact pickup location nickname configured in your Shiprocket dashboard under Settings → Pickup Addresses." },
+    ],
+  },
+  {
+    label: "System",
+    fields: [
+      { key: "CRON_SECRET", label: "Cron Secret", hint: "Protects /api/cron/* routes — set this once you wire up Vercel Cron or another scheduler." },
+    ],
+  },
 ];
 
 export default function AdminSettingsPage() {
@@ -50,7 +88,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[800px] px-6 pt-28 pb-24 md:px-12">
+    <main className="mx-auto w-full max-w-[1200px] px-6 pt-28 pb-24 md:px-12">
       <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
         Internal — not linked in navigation
       </p>
@@ -63,36 +101,45 @@ export default function AdminSettingsPage() {
       {loading ? (
         <p className="mt-8 text-body-s text-secondary-text">Loading...</p>
       ) : (
-        <div className="mt-10 space-y-8">
-          {FIELDS.map((f) => (
-            <div key={f.key} className="border-t border-divider pt-6">
-              <div className="flex items-center gap-3">
-                <p className="font-sans text-body-s uppercase tracking-[0.03em] text-ink">
-                  {f.label}
-                </p>
-                <span
-                  className={`text-micro uppercase tracking-[0.05em] ${
-                    present[f.key] ? "text-tan-gold" : "text-secondary-text"
-                  }`}
-                >
-                  {present[f.key] ? "● Configured" : "○ Not set"}
-                </span>
-              </div>
-              <p className="mt-1 text-caption text-secondary-text">{f.hint}</p>
-              <div className="mt-3 flex gap-3">
-                <input
-                  type="password"
-                  placeholder={present[f.key] ? "Enter a new value to replace it" : "Paste value here"}
-                  value={drafts[f.key] ?? ""}
-                  onChange={(e) => setDrafts((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                  className="flex-1 border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
-                />
-                <button
-                  onClick={() => save(f.key)}
-                  className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
-                >
-                  {savedKey === f.key ? "Saved ✓" : "Save"}
-                </button>
+        <div className="mt-10 space-y-10">
+          {GROUPS.map((group) => (
+            <div key={group.label} className="border-t border-divider pt-6">
+              <p className="mb-4 text-micro uppercase tracking-[0.15em] text-secondary-text">
+                {group.label}
+              </p>
+              <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
+                {group.fields.map((f) => (
+                  <div key={f.key}>
+                    <div className="flex items-center gap-3">
+                      <p className="font-sans text-body-s uppercase tracking-[0.03em] text-ink">
+                        {f.label}
+                      </p>
+                      <span
+                        className={`text-micro uppercase tracking-[0.05em] ${
+                          present[f.key] ? "text-tan-gold" : "text-secondary-text"
+                        }`}
+                      >
+                        {present[f.key] ? "● Configured" : "○ Not set"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-caption text-secondary-text">{f.hint}</p>
+                    <div className="mt-3 flex gap-3">
+                      <input
+                        type="password"
+                        placeholder={present[f.key] ? "Enter a new value to replace it" : "Paste value here"}
+                        value={drafts[f.key] ?? ""}
+                        onChange={(e) => setDrafts((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                        className="flex-1 border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+                      />
+                      <button
+                        onClick={() => save(f.key)}
+                        className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
+                      >
+                        {savedKey === f.key ? "Saved ✓" : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}

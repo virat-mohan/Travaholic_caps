@@ -42,6 +42,7 @@ export async function POST(request: Request) {
         cta: brief.cta,
         target_audience: brief.targetAudience,
         image_prompt: brief.imagePrompt,
+        hashtags: brief.hashtags,
       })
       .select()
       .single();
@@ -61,11 +62,12 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body?.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const patch: Record<string, string> = {};
+  const patch: Record<string, string | string[]> = {};
   if (body.headline != null) patch.headline = body.headline;
   if (body.primaryText != null) patch.primary_text = body.primaryText;
   if (body.cta != null) patch.cta = body.cta;
   if (body.targetAudience != null) patch.target_audience = body.targetAudience;
+  if (body.hashtags != null) patch.hashtags = body.hashtags;
   if (body.imageUrl != null) patch.image_url = body.imageUrl;
   if (body.imageSource != null) patch.image_source = body.imageSource;
   if (body.status != null) patch.status = body.status;

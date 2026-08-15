@@ -20,7 +20,10 @@ const NAV_SECTIONS = [
   },
   {
     label: "Customers",
-    links: [{ href: "/admin/customers", label: "Customers & Miles" }],
+    links: [
+      { href: "/admin/customers", label: "Customers & Miles" },
+      { href: "/admin/leads", label: "Leads" },
+    ],
   },
   {
     label: "Community",

@@ -20,6 +20,10 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const files = formData.getAll("files") as File[];
   const label = (formData.get("label") as string) ?? "";
+  const tags = ((formData.get("tags") as string) ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
 
   if (files.length === 0) {
     return NextResponse.json({ error: "No files provided" }, { status: 400 });
@@ -45,7 +49,7 @@ export async function POST(request: Request) {
 
       const { data, error } = await supabase
         .from("marketing_assets")
-        .insert({ url: publicUrlData.publicUrl, label: label || file.name })
+        .insert({ url: publicUrlData.publicUrl, label: label || file.name, tags })
         .select()
         .single();
       if (error) throw error;

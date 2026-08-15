@@ -10,6 +10,10 @@ export default function MarketingAssetsPage() {
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadLabel, setUploadLabel] = useState("");
+  const [uploadTags, setUploadTags] = useState("");
+  const [uploadFiles, setUploadFiles] = useState<FileList | null>(null);
 
   function load() {
     fetch("/api/admin/marketing-assets")
@@ -27,6 +31,24 @@ export default function MarketingAssetsPage() {
       load();
     } finally {
       setSeeding(false);
+    }
+  }
+
+  async function upload() {
+    if (!uploadFiles || uploadFiles.length === 0) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      Array.from(uploadFiles).forEach((f) => formData.append("files", f));
+      formData.append("label", uploadLabel);
+      formData.append("tags", uploadTags);
+      await fetch("/api/admin/marketing-assets", { method: "POST", body: formData });
+      setUploadLabel("");
+      setUploadTags("");
+      setUploadFiles(null);
+      load();
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -71,6 +93,52 @@ export default function MarketingAssetsPage() {
           Pulls in everything already in the brand/lifestyle/community/chapter folders, tagged by
           category.
         </p>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-end gap-3 border-t border-divider pt-6">
+        <div>
+          <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">
+            Upload Photos
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => setUploadFiles(e.target.files)}
+            className="mt-1 text-body-s text-ink file:mr-3 file:border file:border-ink file:bg-transparent file:px-3 file:py-1.5 file:font-sans file:text-caption file:font-bold file:uppercase file:tracking-[0.05em] file:text-ink"
+          />
+        </div>
+        <div>
+          <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">
+            Label (optional)
+          </label>
+          <input
+            type="text"
+            value={uploadLabel}
+            onChange={(e) => setUploadLabel(e.target.value)}
+            placeholder="e.g. Diwali shoot"
+            className="mt-1 w-40 border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+          />
+        </div>
+        <div>
+          <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">
+            Tags (comma-separated)
+          </label>
+          <input
+            type="text"
+            value={uploadTags}
+            onChange={(e) => setUploadTags(e.target.value)}
+            placeholder="e.g. lifestyle, festive"
+            className="mt-1 w-48 border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+          />
+        </div>
+        <button
+          onClick={upload}
+          disabled={uploading || !uploadFiles || uploadFiles.length === 0}
+          className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
+        >
+          {uploading ? "Uploading..." : "Upload"}
+        </button>
       </div>
 
       {allTags.length > 0 && (

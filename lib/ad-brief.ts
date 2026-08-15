@@ -8,6 +8,7 @@ export type AdBrief = {
   cta: string;
   targetAudience: string;
   imagePrompt: string;
+  hashtags: string[];
 };
 
 function extractJson(text: string) {
@@ -50,7 +51,8 @@ Return ONLY a JSON object, no commentary, in this exact shape:
   "primaryText": "string, 1-3 sentences, the actual ad body copy",
   "cta": "one of: SHOP_NOW, LEARN_MORE, SIGN_UP",
   "targetAudience": "one line describing who this ad should target (interests/demographics), for setting up Meta ad targeting",
-  "imagePrompt": "a detailed visual scene description for an image generator — describe the setting, lighting, mood and how the product should be worn/used. Do not describe any on-image text, headline or logo — the image should be a clean lifestyle photo with no text baked in."
+  "imagePrompt": "a detailed visual scene description for an image generator — describe the setting, lighting, mood and how the product should be worn/used. Do not describe any on-image text, headline or logo — the image should be a clean lifestyle photo with no text baked in.",
+  "hashtags": ["array of 8-15 relevant Instagram hashtags as plain strings without the # symbol, mixing broad reach tags (e.g. streetwear, travel) with niche/branded ones (e.g. the brand name, product name) — ready to prefix with # and post"]
 }`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -79,5 +81,6 @@ Return ONLY a JSON object, no commentary, in this exact shape:
     cta: parsed.cta,
     targetAudience: parsed.targetAudience,
     imagePrompt: parsed.imagePrompt,
+    hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags : [],
   };
 }

@@ -7,6 +7,7 @@ import { markCartSessionConverted } from "@/lib/cart-session-convert";
 import { computeTrustedOrderTotal } from "@/lib/order-pricing";
 import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
+import { recordGuestCheckoutLead } from "@/lib/leads";
 
 type OrderPayload = {
   customer: {
@@ -114,6 +115,15 @@ export async function POST(request: Request) {
 
     if (payload.newsletterOptIn != null) {
       await applyNewsletterOptIn(pricing.customer?.id ?? null, savedOrder.customer_email, payload.newsletterOptIn);
+    }
+
+    if (!pricing.customer) {
+      await recordGuestCheckoutLead({
+        name: payload.customer.name,
+        phone: payload.customer.phone,
+        email: payload.customer.email,
+        chapterName: pricing.items[0]?.name,
+      });
     }
 
     // Best-effort — a failed email/WhatsApp send shouldn't fail the order.

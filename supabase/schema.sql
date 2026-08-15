@@ -426,3 +426,58 @@ alter table orders add column if not exists delivery_pincode text;
 alter table orders add column if not exists shiprocket_shipment_id text;
 alter table orders add column if not exists shiprocket_awb_code text;
 alter table orders add column if not exists courier_name text;
+
+-- ============================================================
+-- Ad copy caption + hashtags, generated alongside the rest of an ad brief
+-- so nothing gets typed by hand right before a post/ad goes out.
+-- ============================================================
+alter table ad_briefs add column if not exists hashtags text[];
+
+-- ============================================================
+-- CRM: leads captured from the Meta DM/comment bot (and, going forward,
+-- other inbound channels) — deliberately separate from `customers`, since a
+-- lead hasn't bought anything yet. `source` and `lead_type` are what make
+-- this usable for lookalike audiences and retention marketing later:
+-- source answers "where did this person come from" (meta_dm, meta_comment,
+-- website, ...), lead_type answers "what do they want" (buying,
+-- collaborating, general_enquiry). A lead is linked to the real customer
+-- row once/if they actually place an order.
+-- ============================================================
+create table if not exists leads (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  phone text,
+  email text,
+  source text not null, -- meta_dm | meta_comment | website | other
+  lead_type text, -- buying | collaborating | general_enquiry
+  platform text, -- instagram | facebook, when source is meta_*
+  meta_user_id text, -- the sender's PSID/IGSID, for replying again later
+  note text, -- free-text enquiry detail, or the chapter they asked about
+  status text not null default 'new', -- new | contacted | converted | closed
+  converted_customer_id uuid references customers(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists leads_meta_user_id_idx on leads (meta_user_id);
+create index if not exists leads_status_idx on leads (status);
+
+-- ============================================================
+-- Meta DM bot conversation state — one row per (platform, sender), tracking
+-- where they are in the "what's your name -> phone/email -> buying or
+-- enquiring" flow so a reply a minute (or a day) later picks up where it
+-- left off instead of restarting the script.
+-- ============================================================
+create table if not exists bot_conversations (
+  id uuid primary key default gen_random_uuid(),
+  platform text not null, -- instagram | facebook
+  meta_user_id text not null,
+  state text not null default 'greeting', -- greeting | awaiting_intent | awaiting_chapter | awaiting_contact | done
+  profile_name text,
+  intent text, -- buying | collaborating | general_enquiry
+  chapter_slug text,
+  collected_phone text,
+  collected_email text,
+  lead_id uuid references leads(id),
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+create unique index if not exists bot_conversations_platform_user_idx on bot_conversations (platform, meta_user_id);

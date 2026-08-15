@@ -46,6 +46,7 @@ export async function createPausedMetaCampaign(brief: {
   imageUrl: string;
   landingUrl: string;
   dailyBudgetRupees: number;
+  hashtags?: string[];
 }) {
   const creds = await getMetaCredentials();
   if (!creds) {
@@ -79,12 +80,20 @@ export async function createPausedMetaCampaign(brief: {
   const imageHash = Object.values(imageUpload.images ?? {})[0] as { hash: string } | undefined;
   if (!imageHash) throw new Error("Meta did not return an image hash for the uploaded creative");
 
+  // Caption + hashtags are generated together in the ad brief so nothing
+  // gets typed by hand right before posting — appended here as the trailing
+  // hashtag block convention Instagram/Facebook copy normally uses.
+  const message =
+    brief.hashtags && brief.hashtags.length > 0
+      ? `${brief.primaryText}\n\n${brief.hashtags.map((h) => `#${h.replace(/^#/, "")}`).join(" ")}`
+      : brief.primaryText;
+
   const creative = await graphPost(`${account}/adcreatives`, creds.accessToken, {
     name: `${brief.headline} — Creative`,
     object_story_spec: {
       page_id: creds.pageId,
       link_data: {
-        message: brief.primaryText,
+        message,
         link: brief.landingUrl,
         image_hash: imageHash.hash,
         name: brief.headline,

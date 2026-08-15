@@ -11,6 +11,7 @@ type Brief = {
   primary_text: string;
   cta: string;
   target_audience: string;
+  hashtags: string[] | null;
   image_prompt: string;
   image_url: string | null;
   image_source: string | null;
@@ -287,6 +288,11 @@ export default function AdBriefsPage() {
                   <p className="mt-1 text-caption text-secondary-text">
                     Audience: {brief.target_audience}
                   </p>
+                  {brief.hashtags && brief.hashtags.length > 0 && (
+                    <p className="mt-2 text-caption text-secondary-text">
+                      {brief.hashtags.map((h) => `#${h}`).join(" ")}
+                    </p>
+                  )}
 
                   {brief.status !== "launched" && (
                     <div className="mt-4 flex items-center gap-3">

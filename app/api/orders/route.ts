@@ -5,6 +5,7 @@ import { getCurrentCustomer } from "@/lib/auth";
 import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { sendInvoiceEmail } from "@/lib/email";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
+import { recordGuestCheckoutLead } from "@/lib/leads";
 
 type OrderPayload = {
   customer: {
@@ -122,6 +123,15 @@ export async function POST(request: Request) {
 
     if (body.newsletterOptIn != null) {
       await applyNewsletterOptIn(customer?.id ?? null, order.customer_email, body.newsletterOptIn);
+    }
+
+    if (!customer) {
+      await recordGuestCheckoutLead({
+        name: body.customer.name,
+        phone: body.customer.phone,
+        email: body.customer.email,
+        chapterName: body.items[0]?.name,
+      });
     }
 
     // Best-effort — a failed email must never fail the order itself.

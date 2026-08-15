@@ -27,6 +27,7 @@ export async function POST(request: Request) {
       imageUrl: brief.image_url,
       landingUrl,
       dailyBudgetRupees: body.dailyBudgetRupees ?? 500,
+      hashtags: brief.hashtags ?? undefined,
     });
 
     const { error } = await supabase
