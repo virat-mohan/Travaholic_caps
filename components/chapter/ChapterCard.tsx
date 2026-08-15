@@ -26,8 +26,11 @@ export function ChapterCard({
     >
       <Link href={`/chapter/${chapter.slug}`} className="group block">
         <div className="relative aspect-square overflow-hidden rounded-lg bg-surface-alt">
+          {/* Deliberately sideImage, not chapter.primary — the hero image an
+              admin picks for the chapter page shouldn't change what shows up
+              here; every product's card should use the same side-angle shot. */}
           <Image
-            src={chapterImageSrc(chapter.folder, chapter.primary)}
+            src={chapterImageSrc(chapter.folder, chapter.sideImage)}
             alt={chapter.name}
             fill
             sizes="(min-width: 1024px) 25vw, 50vw"

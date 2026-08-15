@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
 import { chapters as staticChapters, chapterImageSrc, SHARED_SPECS } from "@/lib/chapters";
 import { getAllChapters } from "@/lib/chapters-dynamic";
@@ -12,6 +11,8 @@ import { BuyNowButton } from "@/components/chapter/BuyNowButton";
 import { ViewContentTracker } from "@/components/tracking/ViewContentTracker";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { seriesOrder } from "@/lib/series";
 
 export function generateStaticParams() {
   return staticChapters.map((c) => ({ slug: c.slug }));
@@ -30,22 +31,24 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
   const inventory = await getInventoryMap();
   const stock = inventory[chapter.slug];
   const stockLabel = stockLabelFor(stock);
+  const series = seriesOrder.find((s) => s.name === chapter.series);
 
   return (
     <>
       <ViewContentTracker chapterSlug={chapter.slug} value={chapter.price} />
       <main className="mx-auto w-full max-w-[1440px] px-6 pt-28 md:px-12 md:pt-36">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
+        <Breadcrumb
+          items={[
+            { label: "Collection", href: "/" },
+            { label: chapter.series, href: series ? `/series/${series.slug}` : undefined },
+            { label: chapter.name },
+          ]}
+        />
+        <div className="mt-6 grid grid-cols-1 gap-12 md:grid-cols-2">
           <Product360Viewer folder={chapter.folder} images={chapter.images} name={chapter.name} />
 
           <div className="md:pt-4">
-            <Link
-              href={`/series/${chapter.series.toLowerCase().replace(/\s+/g, "-")}`}
-              className="font-sans text-caption uppercase tracking-[0.15em] text-secondary-text"
-            >
-              {chapter.series}
-            </Link>
-            <h1 className="mt-2 font-display text-heading-xl uppercase text-ink">{chapter.name}</h1>
+            <h1 className="font-display text-heading-xl uppercase text-ink">{chapter.name}</h1>
             <p className="mt-3 font-sans text-body-l text-ink">
               ₹{chapter.price.toLocaleString("en-IN")}
             </p>

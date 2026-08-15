@@ -29,8 +29,10 @@ export function SeriesCard({
     >
       <Link href={`/series/${slug}`} className="group block">
         <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-charcoal md:aspect-[3/4]">
+          {/* sideImage, not representative.primary — same side-angle shot on
+              every series card regardless of that chapter's chosen hero image. */}
           <Image
-            src={chapterImageSrc(representative.folder, representative.primary)}
+            src={chapterImageSrc(representative.folder, representative.sideImage)}
             alt={name}
             fill
             sizes="(min-width: 1024px) 50vw, 100vw"

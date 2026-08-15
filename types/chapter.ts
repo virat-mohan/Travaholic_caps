@@ -16,8 +16,10 @@ export type Chapter = {
   folder: string;
   /** Filenames within that folder, in display order. */
   images: string[];
-  /** Filename of the angled hero shot used as the card/primary image. */
+  /** Filename of the hero shot shown on this Chapter's own detail page — admin-editable, doesn't affect anywhere else. */
   primary: string;
+  /** Filename of the side-profile shot used everywhere a product is browsed (homepage, series grids, explore globe) — fixed per Chapter, independent of `primary`. */
+  sideImage: string;
   /** Short founder-voice story for this Chapter. */
   story: string;
   /** Price in INR. Flat pricing per travaholic-build-brief.md — no discount gimmicks. */

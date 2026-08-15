@@ -10,12 +10,10 @@ import { useCart } from "@/lib/cart";
 const links = [
   { label: "Collection", href: "/series" },
   { label: "Travel Inspiration", href: "/#pick-your-world" },
+  { label: "Explorers", href: "/community" },
   { label: "Journal", href: "/journal" },
   { label: "About", href: "/about" },
 ];
-
-// Kept reachable from the mega-menu even though it's off the primary nav.
-const secondaryLinks = [{ label: "Explorers", href: "/community" }];
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -109,7 +107,7 @@ export function Navbar() {
                 Travaholic
               </p>
               <ul className="space-y-3">
-                {[...links, ...secondaryLinks].map((link) => (
+                {links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}

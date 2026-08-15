@@ -120,7 +120,7 @@ export function ExploreGlobe() {
             <Link href={`/chapter/${activeChapter.slug}`} className="group block">
               <div className="relative aspect-[4/5] w-full max-w-[380px] overflow-visible md:mx-0 mx-auto">
                 <Image
-                  src={chapterImageSrc(activeChapter.folder, activeChapter.primary)}
+                  src={chapterImageSrc(activeChapter.folder, activeChapter.sideImage)}
                   alt={activeChapter.name}
                   fill
                   sizes="380px"

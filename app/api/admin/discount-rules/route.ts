@@ -9,14 +9,18 @@ export async function POST(request: Request) {
 
   try {
     const supabase = getSupabaseServerClient();
-    const { error } = await supabase.from("discount_rules").insert({
-      name: body.name,
-      buy_quantity: body.buyQuantity,
-      discount_percent: body.discountPercent,
-      active: body.active ?? true,
-    });
+    const { data, error } = await supabase
+      .from("discount_rules")
+      .insert({
+        name: body.name,
+        buy_quantity: body.buyQuantity,
+        discount_percent: body.discountPercent,
+        active: body.active ?? true,
+      })
+      .select()
+      .single();
     if (error) throw error;
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, rule: data });
   } catch (err) {
     console.error("Failed to create discount rule", err);
     return NextResponse.json({ error: "Could not create discount rule" }, { status: 500 });
@@ -45,5 +49,20 @@ export async function PATCH(request: Request) {
   } catch (err) {
     console.error("Failed to update discount rule", err);
     return NextResponse.json({ error: "Could not update discount rule" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  try {
+    const supabase = getSupabaseServerClient();
+    const { error } = await supabase.from("discount_rules").delete().eq("id", id);
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Failed to delete discount rule", err);
+    return NextResponse.json({ error: "Could not delete discount rule" }, { status: 500 });
   }
 }

@@ -28,6 +28,9 @@ export async function getAllChapters(): Promise<Chapter[]> {
       folder: "", // unused — dynamic chapters store full URLs in `images`/`primary`
       images: row.images,
       primary: row.primary_image,
+      // Admin-added Chapters don't have a separate side-angle pick yet —
+      // fall back to whatever was set as the hero image.
+      sideImage: row.primary_image,
       story: row.story,
       price: row.price,
       verifiedOnSite: row.verified_on_site,

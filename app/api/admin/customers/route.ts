@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const supabase = getSupabaseServerClient();
     const milesPerCapSetting = await getSetting("MILES_PER_CAP");
-    const milesPerCap = milesPerCapSetting ? Number(milesPerCapSetting) : 100;
+    const milesPerCap = milesPerCapSetting ? Number(milesPerCapSetting) : 250;
 
     const [{ data: orders, error }, { data: imported }] = await Promise.all([
       supabase

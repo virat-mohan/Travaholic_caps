@@ -24,6 +24,12 @@ export function DiscountRulesEditor({ initialRules }: { initialRules: Rule[] }) 
     });
   }
 
+  async function removeRule(id: string) {
+    if (!confirm("Remove this discount rule? This can't be undone.")) return;
+    setRules((prev) => prev.filter((r) => r.id !== id));
+    await fetch(`/api/admin/discount-rules?id=${id}`, { method: "DELETE" });
+  }
+
   async function createRule() {
     if (!draft.name) return;
     setCreating(true);
@@ -39,16 +45,8 @@ export function DiscountRulesEditor({ initialRules }: { initialRules: Rule[] }) 
         }),
       });
       if (res.ok) {
-        setRules((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            name: draft.name,
-            buy_quantity: draft.buyQuantity,
-            discount_percent: draft.discountPercent,
-            active: true,
-          },
-        ]);
+        const data = await res.json();
+        setRules((prev) => [...prev, data.rule]);
         setDraft({ name: "", buyQuantity: 3, discountPercent: 50 });
       }
     } finally {
@@ -87,6 +85,12 @@ export function DiscountRulesEditor({ initialRules }: { initialRules: Rule[] }) 
             className="w-16 border border-divider bg-surface px-2 py-1 font-sans text-body-s text-ink outline-none focus:border-ink"
           />
           <span className="text-caption text-secondary-text">% off</span>
+          <button
+            onClick={() => removeRule(r.id)}
+            className="ml-auto text-caption text-secondary-text transition-colors hover:text-paint-orange"
+          >
+            Remove
+          </button>
         </div>
       ))}
 

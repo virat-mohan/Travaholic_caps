@@ -14,7 +14,7 @@ export async function getRedemptionConfig() {
   ]);
   return {
     threshold: thresholdSetting ? Number(thresholdSetting) : 500,
-    valueRupees: valueSetting ? Number(valueSetting) : 100,
+    valueRupees: valueSetting ? Number(valueSetting) : 200,
   };
 }
 
@@ -28,7 +28,7 @@ export async function getRedeemableAmount(customerId: string) {
 /** Earns Miles for a purchase — one row per order, so it can never be double-applied. */
 export async function earnMilesForOrder(customerId: string, orderId: string, capsBought: number) {
   const milesPerCapSetting = await getSetting("MILES_PER_CAP");
-  const milesPerCap = milesPerCapSetting ? Number(milesPerCapSetting) : 100;
+  const milesPerCap = milesPerCapSetting ? Number(milesPerCapSetting) : 250;
   const delta = capsBought * milesPerCap;
   if (delta <= 0) return;
 

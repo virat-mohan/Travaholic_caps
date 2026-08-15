@@ -22,9 +22,9 @@ function formatDate(iso: string) {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [milesPerCap, setMilesPerCap] = useState(100);
+  const [milesPerCap, setMilesPerCap] = useState(250);
   const [redemptionThreshold, setRedemptionThreshold] = useState(500);
-  const [redemptionValueRupees, setRedemptionValueRupees] = useState(100);
+  const [redemptionValueRupees, setRedemptionValueRupees] = useState(200);
   const [loading, setLoading] = useState(true);
 
   const [minSpend, setMinSpend] = useState("");
@@ -41,9 +41,9 @@ export default function CustomersPage() {
     fetch("/api/admin/loyalty-config")
       .then((res) => res.json())
       .then((data) => {
-        setMilesPerCap(data.milesPerCap ?? 100);
+        setMilesPerCap(data.milesPerCap ?? 250);
         setRedemptionThreshold(data.redemptionThreshold ?? 500);
-        setRedemptionValueRupees(data.redemptionValueRupees ?? 100);
+        setRedemptionValueRupees(data.redemptionValueRupees ?? 200);
       });
   }
 

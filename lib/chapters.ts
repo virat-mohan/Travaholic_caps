@@ -21,6 +21,7 @@ export const chapters: Chapter[] = [
       "_MG_0185 final.jpg",
     ],
     primary: "_MG_0161 final.jpg",
+    sideImage: "_MG_0160 final.jpg",
     story:
       "The one cap that goes with literally everything you own. No print, no gimmick — just certified drip for whatever the day throws at you. Main character energy, monochrome edition.",
     price: 1399,
@@ -33,6 +34,7 @@ export const chapters: Chapter[] = [
     folder: "Travaholic Ocean",
     images: ["IMG_0203.JPG", "IMG_0205.JPG", "IMG_0206.JPG", "IMG_0207.JPG", "IMG_0209.JPG"],
     primary: "IMG_0206.JPG",
+    sideImage: "IMG_0207.JPG",
     story:
       "For the ones who are low-key obsessed with that ocean-meets-sky blue. Put this on and you're instantly built different — beach brain, boat hair, zero notes.",
     price: 1399,
@@ -51,6 +53,7 @@ export const chapters: Chapter[] = [
       "_MG_0184 final.jpg",
     ],
     primary: "_MG_0168 final.jpg",
+    sideImage: "_MG_0167 final.jpg",
     story:
       "Head in the clouds, energy immaculate. Sky's for staring out of plane windows and pretending you're the main character of your own travel montage. Somewhere above the noise, literally.",
     price: 1399,
@@ -69,6 +72,7 @@ export const chapters: Chapter[] = [
       "_MG_0194 final.jpg",
     ],
     primary: "_MG_0130 final.jpg",
+    sideImage: "_MG_0129 final.jpg",
     story:
       "Sun's down, vibes up. Beach'n is golden-hour main-character energy and zero plans for tomorrow. Certified beach brain, no cap.",
     price: 1399,
@@ -87,6 +91,7 @@ export const chapters: Chapter[] = [
       "IMG_0275-final-1024x1024.jpg.webp",
     ],
     primary: "IMG_0272-final-1024x1024.jpg.webp",
+    sideImage: "IMG_0269-final-1024x1024.jpg.webp",
     story:
       "No itinerary, no overthinking, just sun on your face and a main-character walk to nowhere in particular. Sunshine is the whole vibe.",
     price: 1399,
@@ -105,6 +110,7 @@ export const chapters: Chapter[] = [
       "_MG_0186 final.jpg",
     ],
     primary: "_MG_0156 final.jpg",
+    sideImage: "_MG_0155 final.jpg",
     story:
       "Too warm, too green, too good to be real — that's the energy. Put this on and unlock instant vacation brain, wherever you actually are.",
     price: 1399,
@@ -117,6 +123,7 @@ export const chapters: Chapter[] = [
     folder: "Tropical Pink",
     images: ["IMG_0195.JPG", "IMG_0196.JPG", "IMG_0197.JPG", "IMG_0198.JPG", "IMG_0200.JPG"],
     primary: "IMG_0197.JPG",
+    sideImage: "IMG_0196.JPG",
     story:
       "Same tropical energy, dialled up. This one's giving sunset-that-lived-in-your-head-rent-free. Wear it like you mean it.",
     price: 1399,
@@ -135,6 +142,7 @@ export const chapters: Chapter[] = [
       "_MG_0189 final.jpg",
     ],
     primary: "_MG_0147 final.jpg",
+    sideImage: "_MG_0146 final.jpg",
     story:
       "Golden hour, but make it desert. Dunes Maroon is for the ones who go quiet when the sand turns the colour of rust — moody, main character, a little mysterious.",
     price: 1399,
@@ -153,6 +161,7 @@ export const chapters: Chapter[] = [
       "_MG_0187 final.jpg",
     ],
     primary: "_MG_0151 final.jpg",
+    sideImage: "_MG_0150 final.jpg",
     story:
       "Same dunes, earlier in the day, when the sand is still throwing gold light back at you and the heat hasn't won yet. I wanted a cap that felt like the last good hour before noon in the desert.",
     price: 1399,
@@ -171,6 +180,7 @@ export const chapters: Chapter[] = [
       "_MG_0183 final.jpg",
     ],
     primary: "_MG_0175 final.jpg",
+    sideImage: "_MG_0173 final.jpg",
     story:
       "There's a moment on every mountain trail where you stop complaining about your legs because the view finally shuts you up. Peaking is that moment, sketched from a summit I definitely should have trained more for.",
     price: 1399,
@@ -183,6 +193,7 @@ export const chapters: Chapter[] = [
     folder: "Travaholic Snow",
     images: ["IMG_8855.JPG", "IMG_8859.JPG", "IMG_8861.JPG", "IMG_8862.JPG", "IMG_8863.JPG"],
     primary: "IMG_8855.JPG",
+    sideImage: "IMG_8855.JPG",
     story:
       "White on white, because at altitude everything else disappears and it's just you, the cold, and the quiet. This one's for the mornings your breath shows before your coffee does.",
     price: 1399,
@@ -195,6 +206,7 @@ export const chapters: Chapter[] = [
     folder: "Wildling",
     images: ["IMG_1812.jpg", "IMG_1814.jpg", "IMG_1815.jpg", "IMG_1818.jpg", "IMG_1826.jpg"],
     primary: "IMG_1814.jpg",
+    sideImage: "IMG_1814.jpg",
     story:
       "A wolf on a rock, mountains behind, the last bit of light before the forest goes properly dark. Wildling's for the part of a trip when your phone has no signal and you stop checking it anyway.",
     price: 1399,
@@ -207,6 +219,7 @@ export const chapters: Chapter[] = [
     folder: "Junglee",
     images: ["IMG_1820.jpg", "IMG_1821.jpg", "IMG_1822.jpg", "IMG_1823.jpg", "IMG_1825.jpg"],
     primary: "IMG_1821.jpg",
+    sideImage: "IMG_1821.jpg",
     story:
       "Junglee means wild in a way that doesn't quite translate — a little feral, a little free. This one came from a trek where we got properly, gloriously lost for an afternoon and didn't mind at all.",
     price: 1399,
@@ -225,6 +238,7 @@ export const chapters: Chapter[] = [
       "_MG_0190 final.jpg",
     ],
     primary: "_MG_0141 final.jpg",
+    sideImage: "_MG_0139 final.jpg",
     story:
       "Not every trip needs a mountain. Some of the best ones are just a new skyline and a coffee you haven't tried yet. City Slicker is for the traveller who's just as at home lost in a new city as lost on a trail.",
     price: 1399,
@@ -237,6 +251,7 @@ export const chapters: Chapter[] = [
     folder: "City Slicker Black",
     images: ["IMG_7229.jpg", "IMG_7230.jpg", "IMG_7231.jpg", "IMG_7232.jpg", "IMG_7233.jpg"],
     primary: "IMG_7230.jpg",
+    sideImage: "IMG_7230.jpg",
     story:
       "Same city, later at night. Black, because that's what the skyline turns into once the sun's fully down and the lights take over the sketch instead.",
     price: 1399,
@@ -255,6 +270,7 @@ export const chapters: Chapter[] = [
       "_MG_0191 final.jpg",
     ],
     primary: "_MG_0134 final.jpg",
+    sideImage: "_MG_0133 final.jpg",
     story:
       "Every trail has those little markers that tell you you're still going the right way. Orange is that — a small, stubborn flash of colour that says keep going, you're close.",
     price: 1399,

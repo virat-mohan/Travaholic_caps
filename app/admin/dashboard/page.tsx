@@ -3,7 +3,6 @@ import { chapters } from "@/lib/chapters";
 import { InventoryRow } from "@/components/admin/InventoryRow";
 import { OrderStatusCell } from "@/components/admin/OrderStatusCell";
 import { ShipmentCell } from "@/components/admin/ShipmentCell";
-import { DiscountRulesEditor } from "@/components/admin/DiscountRulesEditor";
 
 // This page reads live, frequently-changing data (orders, stock) and needs
 // Supabase env vars — never prerender it at build time.
@@ -37,12 +36,11 @@ export default async function AdminDashboardPage() {
     courier_name: string | null;
   }[] = [];
   let inventory: { chapter_slug: string; stock_on_hand: number }[] = [];
-  let rules: { id: string; name: string; buy_quantity: number; discount_percent: number; active: boolean }[] = [];
   let configError = false;
 
   try {
     const supabase = getSupabaseServerClient();
-    const [ordersRes, inventoryRes, rulesRes] = await Promise.all([
+    const [ordersRes, inventoryRes] = await Promise.all([
       supabase
         .from("orders")
         .select(
@@ -51,11 +49,9 @@ export default async function AdminDashboardPage() {
         .order("created_at", { ascending: false })
         .limit(50),
       supabase.from("inventory").select("chapter_slug, stock_on_hand").order("chapter_slug"),
-      supabase.from("discount_rules").select("id, name, buy_quantity, discount_percent, active"),
     ]);
     orders = ordersRes.data ?? [];
     inventory = inventoryRes.data ?? [];
-    rules = rulesRes.data ?? [];
   } catch {
     configError = true;
   }
@@ -182,11 +178,6 @@ export default async function AdminDashboardPage() {
             ))}
           </tbody>
         </table>
-      </section>
-
-      <section className="mt-16">
-        <h2 className="font-display text-heading-s uppercase text-ink">Discount Rules</h2>
-        <DiscountRulesEditor initialRules={rules ?? []} />
       </section>
 
     </main>
