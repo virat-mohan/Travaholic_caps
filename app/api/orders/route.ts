@@ -6,6 +6,7 @@ import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/l
 import { sendInvoiceEmail } from "@/lib/email";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
 import { recordGuestCheckoutLead } from "@/lib/leads";
+import { getShippingRate } from "@/lib/shiprocket";
 
 type OrderPayload = {
   customer: {
@@ -54,7 +55,14 @@ export async function POST(request: Request) {
       loyaltyDiscountAmount = Math.min(body.redeemMilesRupees, maxRedeemableRupees);
     }
 
-    const total = body.subtotal - discountAmount - loyaltyDiscountAmount;
+    // Looked up fresh from Shiprocket by pincode, same as the Razorpay flow
+    // — never a client-supplied amount, so it stays a genuine pass-through.
+    const unitCount = body.items.reduce((sum, item) => sum + item.quantity, 0);
+    const shippingCharge = body.customer.pincode
+      ? (await getShippingRate(body.customer.pincode, unitCount)) ?? 0
+      : 0;
+
+    const total = body.subtotal - discountAmount - loyaltyDiscountAmount + shippingCharge;
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -69,6 +77,7 @@ export async function POST(request: Request) {
         subtotal: body.subtotal,
         discount_amount: discountAmount,
         loyalty_discount_amount: loyaltyDiscountAmount,
+        shipping_charge: shippingCharge,
         total,
         is_gift: body.isGift ?? false,
         gift_note: body.giftNote ?? null,

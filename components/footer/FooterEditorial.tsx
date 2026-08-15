@@ -39,7 +39,10 @@ export function FooterEditorial() {
             moments worth remembering.
           </p>
           <p className="mt-4 max-w-xs text-micro uppercase tracking-[0.05em] text-secondary-text">
-            C-152, Okhla Industrial Area Phase-1, Delhi, South Delhi, 110025
+            C-152, Industrial Phase-1, Okhla, South Delhi, Delhi, 110020
+          </p>
+          <p className="mt-1 max-w-xs text-micro uppercase tracking-[0.05em] text-secondary-text">
+            GSTIN 07BZNPS5735B2Z3
           </p>
         </div>
         {columns.map((col) => (
@@ -64,12 +67,18 @@ export function FooterEditorial() {
       </div>
       <div className="mx-auto mt-12 flex w-full max-w-[1440px] items-center justify-between px-6 font-sans text-micro uppercase tracking-[0.05em] text-secondary-text md:px-12">
         <p>© {new Date().getFullYear()} Travaholic</p>
-        <div className="flex gap-5">
+        <div className="flex flex-wrap gap-5">
           <Link href="/privacy" className="hover:text-ink">
             Privacy
           </Link>
           <Link href="/terms" className="hover:text-ink">
             Terms
+          </Link>
+          <Link href="/refund-policy" className="hover:text-ink">
+            Refunds
+          </Link>
+          <Link href="/shipping-policy" className="hover:text-ink">
+            Shipping
           </Link>
         </div>
       </div>

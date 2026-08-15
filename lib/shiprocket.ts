@@ -125,6 +125,35 @@ export async function createShiprocketOrder(order: ShiprocketOrderInput) {
   };
 }
 
+/**
+ * Live shipping cost for a delivery pincode, straight from Shiprocket's own
+ * rate-check API — this is what makes shipping a genuine pass-through
+ * rather than a guessed flat fee. Returns the cheapest serviceable courier's
+ * rate, rounded up to the rupee. Best-effort: returns null (rather than
+ * throwing) if Shiprocket isn't configured or the pincode isn't
+ * serviceable, so checkout can fall back to asking the customer to
+ * double-check their pincode instead of hard-failing.
+ */
+export async function getShippingRate(deliveryPincode: string, unitCount: number) {
+  const pickupPincode = await getSetting("SHIPROCKET_PICKUP_PINCODE");
+  if (!pickupPincode) return null;
+
+  const weight = Math.max(0.1, unitCount * UNIT_WEIGHT_KG);
+
+  try {
+    const data = await shiprocketFetch(
+      `/courier/serviceability/?pickup_postcode=${pickupPincode}&delivery_postcode=${deliveryPincode}&weight=${weight}&cod=0`
+    );
+    const couriers = data?.data?.available_courier_companies as { rate: number }[] | undefined;
+    if (!couriers || couriers.length === 0) return null;
+    const cheapest = Math.min(...couriers.map((c) => c.rate));
+    return Math.ceil(cheapest);
+  } catch (err) {
+    console.error("Shiprocket rate check failed", err);
+    return null;
+  }
+}
+
 export async function trackShiprocketShipment(shipmentId: string) {
   const data = await shiprocketFetch(`/courier/track/shipment/${shipmentId}`);
   const tracking = data[shipmentId]?.tracking_data;

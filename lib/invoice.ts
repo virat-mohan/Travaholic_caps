@@ -69,7 +69,11 @@ export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[
         <p>Delivery address: ${order.delivery_address}</p>
       </div>
 
-      <p style="margin-top:32px;font-size:12px;color:#999;">Travaholic · C-152, Okhla Industrial Area Phase-1, Delhi, South Delhi, 110025</p>
+      <div style="margin-top:24px;border-top:1px solid #ddd;padding-top:12px;font-size:12px;color:#999;">
+        <p>Prices are inclusive of applicable GST.</p>
+        <p style="margin-top:8px;">Travaholic · GSTIN 07BZNPS5735B2Z3</p>
+        <p>C-152, Industrial Phase-1, Okhla, South Delhi, Delhi, 110020</p>
+      </div>
     </div>
   `;
 }

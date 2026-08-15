@@ -61,6 +61,8 @@ export default function CheckoutPage() {
   const [payError, setPayError] = useState<string | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [redeemMiles, setRedeemMiles] = useState(false);
+  const [shippingCharge, setShippingCharge] = useState<number | null>(null);
+  const [shippingUnavailable, setShippingUnavailable] = useState(false);
 
   // Identity-first flow: verify who's checking out before showing the full
   // order form, so a returning customer's address and Miles are pulled in
@@ -74,7 +76,42 @@ export default function CheckoutPage() {
   const [identityError, setIdentityError] = useState<string | null>(null);
 
   const loyaltyDiscount = redeemMiles ? account?.loyalty?.maxRedeemableRupees ?? 0 : 0;
-  const total = Math.max(0, subtotal - discount - loyaltyDiscount);
+  const total = Math.max(0, subtotal - discount - loyaltyDiscount) + (shippingCharge ?? 0);
+  const unitCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Live pass-through shipping quote from Shiprocket, by pincode — a
+  // display-only preview; the actual charge is recomputed server-side from
+  // the same pincode when the order is placed, so this can never be spoofed
+  // into a lower number by the client.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!/^\d{6}$/.test(form.pincode)) {
+        setShippingCharge(null);
+        setShippingUnavailable(false);
+        return;
+      }
+      fetch("/api/checkout/shipping-rate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pincode: form.pincode, unitCount }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.available) {
+            setShippingCharge(data.rate);
+            setShippingUnavailable(false);
+          } else {
+            setShippingCharge(null);
+            setShippingUnavailable(true);
+          }
+        })
+        .catch(() => {
+          setShippingCharge(null);
+          setShippingUnavailable(false);
+        });
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [form.pincode, unitCount]);
 
   useEffect(() => {
     fetch("/api/checkout/config")
@@ -206,7 +243,7 @@ export default function CheckoutPage() {
       const createRes = await fetch("/api/checkout/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cartItems, redeemMilesRupees: loyaltyDiscount }),
+        body: JSON.stringify({ items: cartItems, redeemMilesRupees: loyaltyDiscount, pincode: form.pincode }),
       });
       const createData = await createRes.json();
       if (!createRes.ok) throw new Error(createData.error ?? "Could not start payment");
@@ -306,6 +343,7 @@ export default function CheckoutPage() {
       `Subtotal: ₹${subtotal.toLocaleString("en-IN")}`,
       ...(discount > 0 ? [`Discount: −₹${discount.toLocaleString("en-IN")}`] : []),
       ...(loyaltyDiscount > 0 ? [`Travaholic Miles redeemed: −₹${loyaltyDiscount.toLocaleString("en-IN")}`] : []),
+      ...(shippingCharge ? [`Shipping: ₹${shippingCharge.toLocaleString("en-IN")}`] : []),
       `Total: ₹${total.toLocaleString("en-IN")}`,
       "",
       `Name: ${form.name}`,
@@ -356,6 +394,18 @@ export default function CheckoutPage() {
           <span className="text-tan-gold">Travaholic Miles Redeemed</span>
           <span className="text-tan-gold">−₹{loyaltyDiscount.toLocaleString("en-IN")}</span>
         </div>
+      )}
+      {shippingCharge != null && (
+        <div className="flex items-center justify-between text-body-s">
+          <span className="text-secondary-text">Shipping</span>
+          <span className="text-secondary-text">₹{shippingCharge.toLocaleString("en-IN")}</span>
+        </div>
+      )}
+      {shippingUnavailable && (
+        <p className="text-caption text-paint-orange">
+          We couldn&apos;t find delivery rates for that pincode — double-check it, or we&apos;ll confirm
+          shipping with you directly.
+        </p>
       )}
       <div className="flex items-center justify-between pt-3 font-display text-heading-s text-ink">
         <span>Total</span>

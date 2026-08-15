@@ -2,7 +2,9 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 
 export type StockLabel = "out-of-stock" | "selling-fast" | null;
 
-const SELLING_FAST_THRESHOLD = 15;
+// Small-batch stock — 10 units left is the point urgency messaging starts
+// being credibly true rather than a generic marketing nudge.
+const SELLING_FAST_THRESHOLD = 10;
 
 export function stockLabelFor(stock: number | undefined): StockLabel {
   if (stock === undefined) return null;

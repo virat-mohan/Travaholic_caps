@@ -50,7 +50,11 @@ export async function POST(request: Request) {
     // Recomputed independently of whatever the client sent — this must match
     // what create-order charged, since both derive from the same trusted
     // source (catalogue prices, the active discount rule, the ledger).
-    const pricing = await computeTrustedOrderTotal(payload.items, payload.redeemMilesRupees);
+    const pricing = await computeTrustedOrderTotal(
+      payload.items,
+      payload.redeemMilesRupees,
+      payload.customer.pincode
+    );
 
     const supabase = getSupabaseServerClient();
     const { data: savedOrder, error: orderError } = await supabase
@@ -66,6 +70,7 @@ export async function POST(request: Request) {
         subtotal: pricing.subtotal,
         discount_amount: pricing.discountAmount,
         loyalty_discount_amount: pricing.loyaltyDiscountAmount,
+        shipping_charge: pricing.shippingCharge,
         total: pricing.total,
         is_gift: payload.isGift ?? false,
         gift_note: payload.giftNote ?? null,

@@ -3,16 +3,20 @@ import { calculateDiscount, type DiscountRule } from "@/lib/discounts";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getCurrentCustomer } from "@/lib/auth";
 import { getRedeemableAmount } from "@/lib/loyalty";
+import { getShippingRate } from "@/lib/shiprocket";
 
 /**
  * Recomputes an order's pricing entirely server-side — item prices, the
- * active discount rule, and any Miles redemption — rather than trusting
- * whatever numbers the client sent. This is what the Razorpay flow charges
- * against; a tampered client request can't change what actually gets billed.
+ * active discount rule, any Miles redemption, and shipping — rather than
+ * trusting whatever numbers the client sent. This is what the Razorpay flow
+ * charges against; a tampered client request can't change what actually
+ * gets billed. Shipping is looked up fresh from Shiprocket by pincode
+ * (never a client-supplied amount) so it stays a genuine cost pass-through.
  */
 export async function computeTrustedOrderTotal(
   items: { slug: string; quantity: number }[],
-  requestedRedeemRupees?: number
+  requestedRedeemRupees?: number,
+  deliveryPincode?: string
 ) {
   const chapters = await getAllChapters();
   const pricedItems = items.map((item) => {
@@ -47,7 +51,21 @@ export async function computeTrustedOrderTotal(
     loyaltyDiscountAmount = Math.min(requestedRedeemRupees, maxRedeemableRupees);
   }
 
-  const total = Math.max(0, subtotal - discountAmount - loyaltyDiscountAmount);
+  let shippingCharge = 0;
+  if (deliveryPincode) {
+    const unitCount = pricedItems.reduce((sum, item) => sum + item.quantity, 0);
+    shippingCharge = (await getShippingRate(deliveryPincode, unitCount)) ?? 0;
+  }
 
-  return { items: pricedItems, subtotal, discountAmount, loyaltyDiscountAmount, total, customer };
+  const total = Math.max(0, subtotal - discountAmount - loyaltyDiscountAmount) + shippingCharge;
+
+  return {
+    items: pricedItems,
+    subtotal,
+    discountAmount,
+    loyaltyDiscountAmount,
+    shippingCharge,
+    total,
+    customer,
+  };
 }

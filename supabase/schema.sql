@@ -481,3 +481,10 @@ create table if not exists bot_conversations (
   created_at timestamptz not null default now()
 );
 create unique index if not exists bot_conversations_platform_user_idx on bot_conversations (platform, meta_user_id);
+
+-- ============================================================
+-- Shipping is a live cost pass-through from Shiprocket's rate-check API
+-- (by delivery pincode + package weight), computed server-side and stored
+-- alongside the order it was charged on.
+-- ============================================================
+alter table orders add column if not exists shipping_charge integer not null default 0;
