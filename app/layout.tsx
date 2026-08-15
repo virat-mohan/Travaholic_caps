@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo_Black, IBM_Plex_Mono } from "next/font/google";
+import { Archivo_Black, Manrope } from "next/font/google";
 import { Navbar } from "@/components/navigation/Navbar";
 import { SplashIntro } from "@/components/hero/SplashIntro";
 import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
@@ -7,10 +7,10 @@ import { CartProvider } from "@/lib/cart";
 import { getSetting } from "@/lib/settings";
 import "./globals.css";
 
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const archivoBlack = Archivo_Black({
@@ -31,7 +31,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${plexMono.variable} ${archivoBlack.variable} h-full antialiased`}
+      className={`${manrope.variable} ${archivoBlack.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
         <script

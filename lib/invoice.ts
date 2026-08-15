@@ -15,7 +15,7 @@ type InvoiceItem = { chapter_name: string; unit_price: number; quantity: number 
 
 export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[]) {
   const brand = await getBrandProfile();
-  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-color-v2.png`;
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
 
   const date = new Date(order.created_at).toLocaleDateString("en-IN", {
     day: "numeric",

@@ -15,9 +15,18 @@ export async function POST(request: Request) {
       .eq("session_key", body.sessionKey)
       .maybeSingle();
 
-    // Never resurrect a converted/abandoned session back to active just
-    // because the browser tab is still open and re-fires a debounced save.
-    const status = existing && existing.status !== "active" ? existing.status : "active";
+    // A completed order must never be resurrected into "abandoned" again.
+    // But an "abandoned" session getting a fresh save means the shopper is
+    // actively back and shopping (possibly with a different cart) — that
+    // should go back to "active" so the sweep can pick it up (with the new
+    // items) if they abandon again, rather than staying stuck on whatever
+    // was true the last time they walked away.
+    const status = existing?.status === "converted" ? "converted" : "active";
+    // Clear any previous nudge flag when reactivating, so a genuinely new
+    // round of abandonment (different cart, later visit) is eligible for
+    // its own retargeting message instead of being silently skipped because
+    // the session was already nudged once in a prior round.
+    const retargetedAt = status === "converted" ? undefined : null;
 
     const { error } = await supabase.from("cart_sessions").upsert(
       {
@@ -28,6 +37,7 @@ export async function POST(request: Request) {
         items: body.items ?? [],
         subtotal: body.subtotal ?? null,
         status,
+        ...(retargetedAt !== undefined ? { retargeted_at: retargetedAt } : {}),
         last_activity_at: new Date().toISOString(),
       },
       { onConflict: "session_key" }

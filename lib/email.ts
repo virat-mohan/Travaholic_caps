@@ -70,7 +70,7 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
 /** Login OTP by email — the active channel while WhatsApp/SMS delivery is still being set up. */
 export async function sendOtpEmail(email: string, code: string) {
   const brand = await getBrandProfile();
-  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-color-v2.png`;
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
 
   const html = `
     <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;text-align:center;">
@@ -95,20 +95,20 @@ type CartSessionForEmail = {
 export async function sendAbandonedCartEmail(session: CartSessionForEmail) {
   if (!session.customer_email) return false;
   const brand = await getBrandProfile();
-  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-color-v2.png`;
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
   const cartUrl = `${brand.siteUrl.replace(/\/$/, "")}/cart`;
   const itemLines = session.items
     .map((i) => `<li style="margin-bottom:4px;">${i.quantity} × ${i.name}</li>`)
     .join("");
 
   const html = `
-    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
       <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
         <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
       </div>
       <p style="font-size:16px;">Hi ${session.customer_name ?? "there"},</p>
       <p style="font-size:14px;color:#444;line-height:1.6;">You left something in your cart:</p>
-      <ul style="font-size:14px;color:#1a1a1a;padding-left:20px;">${itemLines}</ul>
+      <ul style="font-size:14px;color:#1a1a1a;list-style:none;margin:0;padding:0;">${itemLines}</ul>
       <a href="${cartUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Finish Checking Out</a>
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
