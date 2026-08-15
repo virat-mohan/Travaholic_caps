@@ -3,8 +3,6 @@ import type { Chapter } from "@/types/chapter";
 /**
  * Static Chapter catalogue sourced from public/images/chapters.
  * Pricing/specs per travaholic-build-brief.md: flat ₹1,399, no discount gimmicks.
- * Peaking, Sunshine and Travaholic Orange were not found live on travaholic.in at
- * brief time (verifiedOnSite: false) — flagged for confirmation, not guessed.
  * Temporary — Phase 6 replaces this with Sanity-driven content.
  */
 export const chapters: Chapter[] = [
@@ -93,9 +91,9 @@ export const chapters: Chapter[] = [
     primary: "IMG_0272-final-1024x1024.jpg.webp",
     sideImage: "IMG_0272-final-1024x1024.jpg.webp",
     story:
-      "No itinerary, no overthinking, just sun on your face and a main-character walk to nowhere in particular. Sunshine is the whole vibe.",
+      "There's a version of a day with absolutely nothing on it — no itinerary, no overthinking, just sun on your face and a main-character walk to nowhere in particular. Sunshine is that day, worn as a cap.",
     price: 1399,
-    verifiedOnSite: false,
+    verifiedOnSite: true,
   },
   {
     slug: "tropical-blue",
@@ -184,7 +182,7 @@ export const chapters: Chapter[] = [
     story:
       "There's a moment on every mountain trail where you stop complaining about your legs because the view finally shuts you up. Peaking is that moment, sketched from a summit I definitely should have trained more for.",
     price: 1399,
-    verifiedOnSite: false,
+    verifiedOnSite: true,
   },
   {
     slug: "travaholic-snow",
@@ -274,7 +272,7 @@ export const chapters: Chapter[] = [
     story:
       "Every trail has those little markers that tell you you're still going the right way. Orange is that — a small, stubborn flash of colour that says keep going, you're close.",
     price: 1399,
-    verifiedOnSite: false,
+    verifiedOnSite: true,
   },
 ];
 
