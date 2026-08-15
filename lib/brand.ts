@@ -19,10 +19,7 @@ export const DEFAULT_BRAND_PROFILE: BrandProfile = {
     "Warm, specific, editorial travel storytelling — never a hard sell. Every product ties back to a real place or moment. Confident but never shouty.",
   productNoun: "trucker cap",
   currencySymbol: "₹",
-  // travaholic.in currently points to a different platform — this app's
-  // real home is the Vercel URL below until DNS is switched over. Update
-  // this in /admin/brand-profile the day travaholic.in actually points here.
-  siteUrl: "https://travaholic-caps.vercel.app",
+  siteUrl: "https://travaholic.in",
   instagramHandle: "@travaholic.in",
 };
 
