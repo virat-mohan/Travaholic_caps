@@ -14,6 +14,7 @@ import { ViewContentTracker } from "@/components/tracking/ViewContentTracker";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { RestockNotifyForm } from "@/components/chapter/RestockNotifyForm";
 import { seriesOrder } from "@/lib/series";
 
 export function generateStaticParams() {
@@ -143,7 +144,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
                   stockLabel === "out-of-stock" ? "text-paint-orange" : "text-tan-gold"
                 }`}
               >
-                {stockLabel === "out-of-stock" ? "Out of Stock" : "Selling Fast"}
+                {stockLabel === "out-of-stock" ? "Sold Out" : "Selling Fast"}
               </p>
             )}
 
@@ -159,6 +160,8 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
                 disabled={stockLabel === "out-of-stock"}
               />
             </div>
+
+            {stockLabel === "out-of-stock" && <RestockNotifyForm chapterSlug={chapter.slug} />}
 
             <div className="mt-10 border-t border-divider pt-6">
               <p className="font-display text-body-s uppercase tracking-[0.05em] text-ink">

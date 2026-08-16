@@ -91,6 +91,7 @@ export default function LeadsPage() {
           <option value="buying">Buying</option>
           <option value="collaborating">Collaborating</option>
           <option value="general_enquiry">General Enquiry</option>
+          <option value="restock_notify">Restock Notify</option>
         </select>
       </div>
 

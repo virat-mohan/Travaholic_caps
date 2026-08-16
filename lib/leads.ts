@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 
 export type LeadSource = "meta_dm" | "meta_comment" | "website" | "other";
-export type LeadType = "buying" | "collaborating" | "general_enquiry";
+export type LeadType = "buying" | "collaborating" | "general_enquiry" | "restock_notify";
 
 export async function createLead(input: {
   name?: string | null;
@@ -13,6 +13,7 @@ export async function createLead(input: {
   metaUserId?: string | null;
   note?: string | null;
   status?: "new" | "contacted" | "converted" | "closed";
+  chapterSlug?: string | null;
 }) {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
@@ -27,6 +28,7 @@ export async function createLead(input: {
       meta_user_id: input.metaUserId ?? null,
       note: input.note ?? null,
       status: input.status ?? "new",
+      chapter_slug: input.chapterSlug ?? null,
     })
     .select()
     .single();

@@ -517,3 +517,15 @@ alter table orders add column if not exists balance_due integer not null default
 -- ============================================================
 alter table orders add column if not exists attributed_ad_brief_id uuid;
 create index if not exists orders_attributed_ad_brief_id_idx on orders (attributed_ad_brief_id);
+
+-- ============================================================
+-- "Notify me when back in stock" requests, on a sold-out Chapter's page —
+-- reuses the leads table (source: website, lead_type: restock_notify) so
+-- this is never a throwaway signup list, it's the same CRM everything else
+-- feeds into. chapter_slug is what the inventory update route matches
+-- against when stock goes from 0 to positive; status flips new -> contacted
+-- once the notification email actually sends, so a lead is never emailed
+-- twice for the same restock.
+-- ============================================================
+alter table leads add column if not exists chapter_slug text;
+create index if not exists leads_chapter_slug_idx on leads (chapter_slug);

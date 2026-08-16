@@ -42,7 +42,7 @@ export function ChapterCard({
                 stockLabel === "out-of-stock" ? "bg-ink text-cream" : "bg-tan-gold text-ink"
               }`}
             >
-              {stockLabel === "out-of-stock" ? "Out of Stock" : "Selling Fast"}
+              {stockLabel === "out-of-stock" ? "Sold Out" : "Selling Fast"}
             </span>
           )}
         </div>

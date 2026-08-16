@@ -39,7 +39,7 @@ export function AddToCartButton({
         disabled
         className="cursor-not-allowed border border-divider bg-surface-alt px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-secondary-text"
       >
-        Out of Stock
+        Sold Out
       </button>
     );
   }

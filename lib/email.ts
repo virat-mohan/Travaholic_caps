@@ -115,3 +115,23 @@ export async function sendAbandonedCartEmail(session: CartSessionForEmail) {
   `;
   return sendEmail(session.customer_email, `You left something at ${brand.brandName}`, html);
 }
+
+/** Sent once to each pending "notify me" lead when a sold-out Chapter's stock goes back above zero. */
+export async function sendRestockEmail(email: string, name: string | null, chapterName: string, chapterSlug: string) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+  const chapterUrl = `${brand.siteUrl.replace(/\/$/, "")}/chapter/${chapterSlug}`;
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">${chapterName} is back in stock — grab it before it sells out again.</p>
+      <a href="${chapterUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Shop ${chapterName}</a>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(email, `${chapterName} is back in stock`, html);
+}
