@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 type Field = { key: string; label: string; hint: string };
 
@@ -69,6 +70,7 @@ export default function AdminSettingsPage() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savedKey, setSavedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -127,13 +129,25 @@ export default function AdminSettingsPage() {
                     </div>
                     <p className="mt-1 text-caption text-secondary-text">{f.hint}</p>
                     <div className="mt-3 flex gap-3">
-                      <input
-                        type="password"
-                        placeholder={present[f.key] ? "Enter a new value to replace it" : "Paste value here"}
-                        value={drafts[f.key] ?? ""}
-                        onChange={(e) => setDrafts((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                        className="flex-1 border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
-                      />
+                      <div className="relative flex-1">
+                        <input
+                          type={visibleKeys[f.key] ? "text" : "password"}
+                          placeholder={present[f.key] ? "Enter a new value to replace it" : "Paste value here"}
+                          value={drafts[f.key] ?? ""}
+                          onChange={(e) => setDrafts((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                          className="w-full border border-ink/30 bg-surface px-4 py-2 pr-10 font-sans text-body-s text-ink outline-none focus:border-ink"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVisibleKeys((prev) => ({ ...prev, [f.key]: !prev[f.key] }))
+                          }
+                          aria-label={visibleKeys[f.key] ? "Hide value" : "Show value"}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-secondary-text hover:text-ink"
+                        >
+                          {visibleKeys[f.key] ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                       <button
                         onClick={() => save(f.key)}
                         className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
