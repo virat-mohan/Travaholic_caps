@@ -34,7 +34,10 @@ const NAV_SECTIONS = [
   },
   {
     label: "Community",
-    links: [{ href: "/admin/explorer-submissions", label: "Explorer Submissions" }],
+    links: [
+      { href: "/admin/explorer-submissions", label: "Explorer Submissions" },
+      { href: "/admin/reviews", label: "Reviews" },
+    ],
   },
   {
     label: "Marketing",

@@ -15,6 +15,7 @@ import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { RestockNotifyForm } from "@/components/chapter/RestockNotifyForm";
+import { getApprovedReviews, getReviewSummary } from "@/lib/reviews";
 import { seriesOrder } from "@/lib/series";
 
 export function generateStaticParams() {
@@ -56,6 +57,10 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
   const brand = await getBrandProfile();
   const siteUrl = brand.siteUrl.replace(/\/$/, "");
   const productImage = `${siteUrl}${chapterImageSrc(chapter.folder, chapter.sideImage)}`;
+  const [reviews, reviewSummary] = await Promise.all([
+    getApprovedReviews(chapter.slug),
+    getReviewSummary(chapter.slug),
+  ]);
 
   // Product + Breadcrumb structured data — the concrete facts (price,
   // availability, brand) answer engines pull to respond to "how much is
@@ -77,6 +82,15 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
           ? "https://schema.org/OutOfStock"
           : "https://schema.org/InStock",
     },
+    ...(reviewSummary
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: reviewSummary.average,
+            reviewCount: reviewSummary.count,
+          },
+        }
+      : {}),
   };
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -126,9 +140,16 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
 
           <div className="md:pt-4">
             <h1 className="font-display text-heading-xl uppercase text-ink">{chapter.name}</h1>
-            <p className="mt-3 font-sans text-body-l text-ink">
-              ₹{chapter.price.toLocaleString("en-IN")}
-            </p>
+            <div className="mt-3 flex items-baseline gap-3">
+              <p className="font-sans text-body-l text-ink">
+                ₹{chapter.price.toLocaleString("en-IN")}
+              </p>
+              {reviewSummary && (
+                <a href="#reviews" className="font-sans text-caption text-secondary-text">
+                  <span className="text-tan-gold">★</span> {reviewSummary.average} ({reviewSummary.count})
+                </a>
+              )}
+            </div>
             <p className="mt-6 max-w-md font-sans text-body text-secondary-text">{chapter.story}</p>
 
             {!chapter.verifiedOnSite && (
@@ -178,6 +199,28 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
             </div>
           </div>
         </div>
+
+        {reviews.length > 0 && (
+          <section id="reviews" className="mt-24 border-t border-divider pt-16 md:mt-32">
+            <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
+              Reviews {reviewSummary && `— ★ ${reviewSummary.average} (${reviewSummary.count})`}
+            </p>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {reviews.map((r) => (
+                <div key={r.id} className="border-t border-divider pt-4">
+                  <p className="text-tan-gold">
+                    {"★".repeat(r.rating)}
+                    <span className="text-divider">{"★".repeat(5 - r.rating)}</span>
+                  </p>
+                  {r.review_text && (
+                    <p className="mt-2 font-sans text-body-s text-ink">{r.review_text}</p>
+                  )}
+                  <p className="mt-2 text-caption text-secondary-text">{r.customer_name}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {explorerPosts.length > 0 && (
           <section className="mt-24 border-t border-divider pt-16 md:mt-32">

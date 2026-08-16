@@ -553,3 +553,29 @@ create table if not exists referrals (
   created_at timestamptz not null default now()
 );
 create index if not exists referrals_referrer_idx on referrals (referrer_customer_id);
+
+-- ============================================================
+-- Post-delivery review collection. Triggered off the courier-status
+-- webhook's transition into a "delivered" status — one request email per
+-- order, linking to /review/[orderId], the same unguessable-UUID-as-
+-- capability-link pattern the invoice page already uses (no login
+-- needed). One review per order+chapter — a real duplicate submission
+-- attempt just updates the existing row rather than creating a second.
+-- Moderated (approved defaults false) before anything shows publicly, to
+-- keep spam/inappropriate content off the site.
+-- ============================================================
+create table if not exists reviews (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references orders(id),
+  chapter_slug text not null,
+  customer_name text not null,
+  rating integer not null check (rating between 1 and 5),
+  review_text text,
+  approved boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (order_id, chapter_slug)
+);
+create index if not exists reviews_chapter_slug_idx on reviews (chapter_slug);
+create index if not exists reviews_approved_idx on reviews (approved);
+
+alter table orders add column if not exists review_requested_at timestamptz;

@@ -164,3 +164,32 @@ export async function sendReferralInviteEmail(
   `;
   return sendEmail(toEmail, `${referrerName ?? "A friend"} gave you ₹${discountRupees} off ${brand.brandName}`, html);
 }
+
+/** Sent once, when an order's shipment status transitions to delivered — see the courier-status webhook. */
+export async function sendReviewRequestEmail(
+  toEmail: string,
+  customerName: string | null,
+  orderId: string,
+  chapterNames: string[]
+) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+  const reviewUrl = `${brand.siteUrl.replace(/\/$/, "")}/review/${orderId}`;
+  const itemsLine = chapterNames.join(", ");
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${customerName ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        Your ${itemsLine} should have arrived by now — how is it? A quick review helps other
+        travellers pick the right Chapter, and takes under a minute.
+      </p>
+      <a href="${reviewUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Leave a Review</a>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `How's your ${brand.brandName}?`, html);
+}

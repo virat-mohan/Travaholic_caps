@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendNdrWhatsApp } from "@/lib/whatsapp-notify";
+import { sendReviewRequestEmail } from "@/lib/email";
 
 // Broad keyword match rather than an exact status list — Shiprocket's status
 // strings vary by courier partner, and catching a superset (with occasional
 // false positives) is a much smaller cost than silently missing a real NDR
 // and losing the one window to save the delivery before RTO.
 const NDR_KEYWORDS = /ndr|undeliver|delivery fail|delivery attempt|not available|consignee/i;
+const DELIVERED_KEYWORDS = /delivered/i;
 
 /**
  * Shiprocket calls this on every shipment status change (Settings -> API ->
@@ -15,7 +17,8 @@ const NDR_KEYWORDS = /ndr|undeliver|delivery fail|delivery attempt|not available
  * live instead of needing a manual "Refresh Tracking" click — and on the
  * transition into a failed-delivery (NDR) status, fires an automatic
  * WhatsApp nudge to the customer, since that's the actual window to save a
- * delivery before Shiprocket gives up and sends it back (RTO).
+ * delivery before Shiprocket gives up and sends it back (RTO). On the
+ * transition into delivered, fires the review-request email.
  *
  * Payload field names below follow Shiprocket's documented webhook shape,
  * but — like the Meta/MSG91 integrations earlier — this hasn't been
@@ -52,7 +55,9 @@ export async function POST(request: Request) {
   try {
     const supabase = getSupabaseServerClient();
 
-    let lookup = supabase.from("orders").select("id, customer_name, customer_phone, shipment_status");
+    let lookup = supabase
+      .from("orders")
+      .select("id, customer_name, customer_phone, customer_email, shipment_status, review_requested_at");
     if (ourOrderId) lookup = lookup.eq("id", ourOrderId);
     else if (shipmentId) lookup = lookup.eq("shiprocket_shipment_id", shipmentId);
     else lookup = lookup.eq("shiprocket_awb_code", awbCode);
@@ -66,6 +71,9 @@ export async function POST(request: Request) {
     const newStatus = String(status).toLowerCase();
     const wasNdr = NDR_KEYWORDS.test(existing.shipment_status ?? "");
     const isNdr = NDR_KEYWORDS.test(newStatus);
+    // "undelivered" contains "delivered" as a substring — NDR must win that check.
+    const wasDelivered = !wasNdr && DELIVERED_KEYWORDS.test(existing.shipment_status ?? "");
+    const isDelivered = !isNdr && DELIVERED_KEYWORDS.test(newStatus);
 
     const patch: Record<string, string> = { shipment_status: newStatus };
     if (awbCode) patch.shiprocket_awb_code = awbCode;
@@ -82,6 +90,31 @@ export async function POST(request: Request) {
         customer_phone: existing.customer_phone,
         total: 0,
       });
+    }
+
+    // Same transition-only guard, plus review_requested_at as a second
+    // safety net in case a delivered->something->delivered flip ever
+    // happens on a courier's side — never send the review ask twice.
+    if (isDelivered && !wasDelivered && !existing.review_requested_at && existing.customer_email) {
+      const { data: items } = await supabase
+        .from("order_items")
+        .select("chapter_name")
+        .eq("order_id", existing.id);
+      const chapterNames = [...new Set((items ?? []).map((i) => i.chapter_name))];
+      if (chapterNames.length > 0) {
+        const sent = await sendReviewRequestEmail(
+          existing.customer_email,
+          existing.customer_name,
+          existing.id,
+          chapterNames
+        );
+        if (sent) {
+          await supabase
+            .from("orders")
+            .update({ review_requested_at: new Date().toISOString() })
+            .eq("id", existing.id);
+        }
+      }
     }
   } catch (err) {
     console.error("Shiprocket webhook handling failed", err);
