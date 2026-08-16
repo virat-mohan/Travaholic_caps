@@ -52,6 +52,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "SHIPROCKET_PASSWORD", label: "Shiprocket Password", hint: "Used to fetch an API token — Shiprocket doesn't issue separate API keys." },
       { key: "SHIPROCKET_PICKUP_LOCATION", label: "Shiprocket Pickup Location", hint: "The exact pickup location nickname configured in your Shiprocket dashboard under Settings → Pickup Addresses." },
       { key: "SHIPROCKET_PICKUP_PINCODE", label: "Shiprocket Pickup Pincode", hint: "The pincode of that same pickup address — used to calculate live shipping rates at checkout." },
+      { key: "SHIPROCKET_WEBHOOK_TOKEN", label: "Shiprocket Webhook Token", hint: "Make up any random string, then paste the same value into Shiprocket → Settings → API → Webhooks as the API secret/header value. Lets shipment status update live on the dashboard instead of needing manual refresh." },
     ],
   },
   {
