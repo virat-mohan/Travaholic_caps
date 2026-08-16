@@ -4,6 +4,13 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getCurrentCustomer } from "@/lib/auth";
 import { getRedeemableAmount } from "@/lib/loyalty";
 import { getShippingRate } from "@/lib/shiprocket";
+import { getSetting } from "@/lib/settings";
+
+/** The fixed amount charged upfront for a COD order — the rest is collected by the courier on delivery. */
+export async function getCodAdvanceRupees() {
+  const setting = await getSetting("COD_ADVANCE_AMOUNT_RUPEES");
+  return setting ? Number(setting) : 99;
+}
 
 /**
  * Recomputes an order's pricing entirely server-side — item prices, the

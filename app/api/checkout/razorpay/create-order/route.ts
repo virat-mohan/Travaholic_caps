@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createRazorpayOrder } from "@/lib/razorpay";
-import { computeTrustedOrderTotal } from "@/lib/order-pricing";
+import { computeTrustedOrderTotal, getCodAdvanceRupees } from "@/lib/order-pricing";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -14,8 +14,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Order total must be greater than zero" }, { status: 400 });
     }
 
+    const isCodAdvance = body.paymentType === "cod_advance";
+    const codAdvanceRupees = isCodAdvance ? await getCodAdvanceRupees() : 0;
+    // COD orders only charge the small advance right now — the rest is
+    // collected by the courier on delivery, never mind the full total.
+    const chargeAmount = isCodAdvance ? Math.min(codAdvanceRupees, pricing.total) : pricing.total;
+
     const { razorpayOrderId, keyId } = await createRazorpayOrder(
-      pricing.total,
+      chargeAmount,
       `travaholic_${Date.now()}`
     );
 
@@ -27,6 +33,8 @@ export async function POST(request: Request) {
       loyaltyDiscountAmount: pricing.loyaltyDiscountAmount,
       shippingCharge: pricing.shippingCharge,
       total: pricing.total,
+      chargeAmount,
+      codAdvanceAmount: isCodAdvance ? chargeAmount : 0,
     });
   } catch (err) {
     console.error("Failed to create Razorpay order", err);

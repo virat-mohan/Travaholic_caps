@@ -8,7 +8,11 @@ type InvoiceOrder = {
   delivery_address: string;
   subtotal: number;
   discount_amount: number;
+  shipping_charge?: number;
   total: number;
+  payment_type?: string;
+  cod_advance_amount?: number;
+  balance_due?: number;
 };
 
 type InvoiceItem = { chapter_name: string; unit_price: number; quantity: number };
@@ -61,7 +65,18 @@ export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[
             ? `<div style="display:flex;justify-content:space-between;color:#b8860b;"><span>Discount</span><span>−₹${order.discount_amount.toLocaleString("en-IN")}</span></div>`
             : ""
         }
+        ${
+          order.shipping_charge
+            ? `<div style="display:flex;justify-content:space-between;"><span>Shipping</span><span>₹${order.shipping_charge.toLocaleString("en-IN")}</span></div>`
+            : ""
+        }
         <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:16px;margin-top:8px;"><span>Total</span><span>₹${order.total.toLocaleString("en-IN")}</span></div>
+        ${
+          order.payment_type === "cod_advance"
+            ? `<div style="display:flex;justify-content:space-between;margin-top:8px;color:#1a1a1a;"><span>Paid now</span><span>₹${(order.cod_advance_amount ?? 0).toLocaleString("en-IN")}</span></div>
+               <div style="display:flex;justify-content:space-between;font-weight:bold;color:#b8860b;"><span>Due on delivery</span><span>₹${(order.balance_due ?? 0).toLocaleString("en-IN")}</span></div>`
+            : ""
+        }
       </div>
 
       <div style="margin-top:24px;font-size:13px;color:#666;">

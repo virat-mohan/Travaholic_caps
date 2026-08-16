@@ -53,14 +53,16 @@ export default function CheckoutPage() {
   const [isGift, setIsGift] = useState(false);
   const [giftNote, setGiftNote] = useState("");
   const [newsletterOptIn, setNewsletterOptIn] = useState(true);
-  const [razorpay, setRazorpay] = useState<{ enabled: boolean; keyId: string | null }>({
+  const [razorpay, setRazorpay] = useState<{ enabled: boolean; keyId: string | null; codAdvanceRupees: number }>({
     enabled: false,
     keyId: null,
+    codAdvanceRupees: 99,
   });
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [redeemMiles, setRedeemMiles] = useState(false);
+  const [paymentType, setPaymentType] = useState<"prepaid" | "cod_advance">("prepaid");
   const [shippingCharge, setShippingCharge] = useState<number | null>(null);
   const [shippingUnavailable, setShippingUnavailable] = useState(false);
   // Distinct from shippingUnavailable: this specifically means Shiprocket
@@ -125,8 +127,14 @@ export default function CheckoutPage() {
   useEffect(() => {
     fetch("/api/checkout/config")
       .then((res) => res.json())
-      .then((data) => setRazorpay({ enabled: !!data.razorpayEnabled, keyId: data.razorpayKeyId }))
-      .catch(() => setRazorpay({ enabled: false, keyId: null }));
+      .then((data) =>
+        setRazorpay({
+          enabled: !!data.razorpayEnabled,
+          keyId: data.razorpayKeyId,
+          codAdvanceRupees: data.codAdvanceRupees ?? 99,
+        })
+      )
+      .catch(() => setRazorpay({ enabled: false, keyId: null, codAdvanceRupees: 99 }));
   }, []);
 
   function applyAccount(data: Account) {
@@ -252,7 +260,12 @@ export default function CheckoutPage() {
       const createRes = await fetch("/api/checkout/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cartItems, redeemMilesRupees: loyaltyDiscount, pincode: form.pincode }),
+        body: JSON.stringify({
+          items: cartItems,
+          redeemMilesRupees: loyaltyDiscount,
+          pincode: form.pincode,
+          paymentType,
+        }),
       });
       const createData = await createRes.json();
       if (!createRes.ok) throw new Error(createData.error ?? "Could not start payment");
@@ -260,10 +273,10 @@ export default function CheckoutPage() {
       const rzp = new window.Razorpay({
         key: createData.keyId,
         order_id: createData.razorpayOrderId,
-        amount: Math.round(createData.total * 100),
+        amount: Math.round(createData.chargeAmount * 100),
         currency: "INR",
         name: "Travaholic",
-        description: "Order payment",
+        description: paymentType === "cod_advance" ? "COD advance payment" : "Order payment",
         prefill: { name: form.name, email: form.email, contact: form.phone },
         handler: async (response: {
           razorpay_order_id: string;
@@ -284,6 +297,7 @@ export default function CheckoutPage() {
                   sessionKey: getSessionKey(),
                   redeemMilesRupees: loyaltyDiscount,
                   newsletterOptIn,
+                  paymentType,
                 },
               }),
             });
@@ -697,6 +711,42 @@ export default function CheckoutPage() {
                     Send me new Chapters, travel stories and Journal updates
                   </span>
                 </label>
+
+                {razorpay.enabled && (
+                  <div className="mt-6 border-t border-divider pt-6">
+                    <p className="text-caption uppercase tracking-[0.1em] text-secondary-text">
+                      Payment
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name="paymentType"
+                          checked={paymentType === "prepaid"}
+                          onChange={() => setPaymentType("prepaid")}
+                          className="mt-1 h-4 w-4 accent-ink"
+                        />
+                        <span className="font-sans text-body-s text-ink">
+                          Pay in full now — ₹{total.toLocaleString("en-IN")}
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name="paymentType"
+                          checked={paymentType === "cod_advance"}
+                          onChange={() => setPaymentType("cod_advance")}
+                          className="mt-1 h-4 w-4 accent-ink"
+                        />
+                        <span className="font-sans text-body-s text-ink">
+                          Cash on Delivery — pay ₹{razorpay.codAdvanceRupees} now to confirm, rest (₹
+                          {Math.max(0, total - razorpay.codAdvanceRupees).toLocaleString("en-IN")}) on
+                          delivery
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {payError && <p className="text-body-s text-paint-orange">{payError}</p>}
@@ -711,7 +761,9 @@ export default function CheckoutPage() {
                   : razorpay.enabled
                     ? paying
                       ? "Processing..."
-                      : `Pay ₹${total.toLocaleString("en-IN")}`
+                      : paymentType === "cod_advance"
+                        ? `Pay ₹${Math.min(razorpay.codAdvanceRupees, total).toLocaleString("en-IN")} to Confirm`
+                        : `Pay ₹${total.toLocaleString("en-IN")}`
                     : "Place Order via WhatsApp"}
               </button>
             </form>

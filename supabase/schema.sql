@@ -488,3 +488,17 @@ create unique index if not exists bot_conversations_platform_user_idx on bot_con
 -- alongside the order it was charged on.
 -- ============================================================
 alter table orders add column if not exists shipping_charge integer not null default 0;
+
+-- ============================================================
+-- COD with a mandatory small advance — customer pays a fixed advance
+-- (e.g. ₹99) online to confirm the order, courier collects the rest on
+-- delivery. This is the RTO-mitigation lever for COD specifically: a
+-- shopper who's already put money down is a real commitment, not a free
+-- option to refuse at the door, while still offering pay-on-delivery.
+-- payment_status stays 'paid' when the advance is what's been collected
+-- (in the sense that the order-confirming payment succeeded) — balance_due
+-- is what distinguishes "fully settled" from "advance only".
+-- ============================================================
+alter table orders add column if not exists payment_type text not null default 'prepaid'; -- prepaid | cod_advance
+alter table orders add column if not exists cod_advance_amount integer not null default 0;
+alter table orders add column if not exists balance_due integer not null default 0;

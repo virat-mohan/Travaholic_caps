@@ -34,8 +34,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       city: order.delivery_city,
       state: order.delivery_state,
       pincode: order.delivery_pincode,
-      paymentMethod: order.payment_status === "paid" ? "Prepaid" : "COD",
-      subtotal: order.subtotal,
+      paymentMethod: order.payment_type === "cod_advance" ? "COD" : "Prepaid",
+      // For a COD-advance order, Shiprocket should only show the remaining
+      // balance as collectible on delivery — the advance was already
+      // charged online. Field mapping here is a best-effort read of
+      // Shiprocket's API (sub_total drives the COD collectible amount);
+      // worth confirming against what actually shows in Shiprocket's
+      // dashboard on the first live COD-advance shipment.
+      subtotal: order.payment_type === "cod_advance" ? order.balance_due : order.subtotal,
       total: order.total,
       items: (items ?? []).map((item) => ({
         name: item.chapter_name,

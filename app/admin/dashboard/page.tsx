@@ -26,6 +26,8 @@ export default async function AdminDashboardPage() {
     total: number;
     subtotal: number;
     discount_amount: number;
+    payment_type: string | null;
+    balance_due: number | null;
     status: string;
     shipment_status: string | null;
     refund_status: string | null;
@@ -44,7 +46,7 @@ export default async function AdminDashboardPage() {
       supabase
         .from("orders")
         .select(
-          "id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, status, shipment_status, refund_status, is_gift, gift_note, shiprocket_shipment_id, shiprocket_awb_code, courier_name"
+          "id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, payment_type, balance_due, status, shipment_status, refund_status, is_gift, gift_note, shiprocket_shipment_id, shiprocket_awb_code, courier_name"
         )
         .order("created_at", { ascending: false })
         .limit(50),
@@ -91,6 +93,7 @@ export default async function AdminDashboardPage() {
                 <th className="py-2 pr-4">Subtotal</th>
                 <th className="py-2 pr-4">Discount</th>
                 <th className="py-2 pr-4">Total</th>
+                <th className="py-2 pr-4">Payment</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4">Shipment</th>
                 <th className="py-2 pr-4">Shipping</th>
@@ -114,6 +117,15 @@ export default async function AdminDashboardPage() {
                   </td>
                   <td className="py-3 font-sans text-body-s text-ink">
                     ₹{o.total?.toLocaleString("en-IN")}
+                  </td>
+                  <td className="py-3 text-caption">
+                    {o.payment_type === "cod_advance" ? (
+                      <span className="font-bold text-paint-orange">
+                        COD · ₹{o.balance_due?.toLocaleString("en-IN")} due
+                      </span>
+                    ) : (
+                      <span className="text-secondary-text">Prepaid</span>
+                    )}
                   </td>
                   <td className="py-3">
                     <OrderStatusCell orderId={o.id} field="status" value={o.status} />

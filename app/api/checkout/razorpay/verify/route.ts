@@ -4,7 +4,7 @@ import { verifyRazorpaySignature } from "@/lib/razorpay";
 import { sendInvoiceEmail } from "@/lib/email";
 import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-notify";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
-import { computeTrustedOrderTotal } from "@/lib/order-pricing";
+import { computeTrustedOrderTotal, getCodAdvanceRupees } from "@/lib/order-pricing";
 import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
 import { recordGuestCheckoutLead } from "@/lib/leads";
@@ -25,6 +25,7 @@ type OrderPayload = {
   sessionKey?: string;
   redeemMilesRupees?: number;
   newsletterOptIn?: boolean;
+  paymentType?: "prepaid" | "cod_advance";
 };
 
 export async function POST(request: Request) {
@@ -56,6 +57,10 @@ export async function POST(request: Request) {
       payload.customer.pincode
     );
 
+    const isCodAdvance = payload.paymentType === "cod_advance";
+    const codAdvanceAmount = isCodAdvance ? Math.min(await getCodAdvanceRupees(), pricing.total) : 0;
+    const balanceDue = isCodAdvance ? pricing.total - codAdvanceAmount : 0;
+
     const supabase = getSupabaseServerClient();
     const { data: savedOrder, error: orderError } = await supabase
       .from("orders")
@@ -72,10 +77,16 @@ export async function POST(request: Request) {
         loyalty_discount_amount: pricing.loyaltyDiscountAmount,
         shipping_charge: pricing.shippingCharge,
         total: pricing.total,
+        payment_type: isCodAdvance ? "cod_advance" : "prepaid",
+        cod_advance_amount: codAdvanceAmount,
+        balance_due: balanceDue,
         is_gift: payload.isGift ?? false,
         gift_note: payload.giftNote ?? null,
         customer_id: pricing.customer?.id ?? null,
         status: "confirmed",
+        // "paid" here means the order-confirming payment succeeded — for a
+        // COD-advance order that's just the advance, balance_due is what
+        // distinguishes it from a fully-settled prepaid order.
         payment_status: "paid",
         razorpay_order_id,
         razorpay_payment_id,
