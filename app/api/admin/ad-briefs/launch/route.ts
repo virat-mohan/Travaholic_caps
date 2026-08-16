@@ -16,9 +16,13 @@ export async function POST(request: Request) {
     }
 
     const brand = await getBrandProfile();
-    const landingUrl = brief.chapter_slug
-      ? `${brand.siteUrl}/chapter/${brief.chapter_slug}`
-      : brand.siteUrl;
+    const baseUrl = brief.chapter_slug ? `${brand.siteUrl}/chapter/${brief.chapter_slug}` : brand.siteUrl;
+    // `ab` (ad brief id) is what makes attribution real rather than a
+    // blended account-wide estimate — every click from this specific ad
+    // carries it, the client persists it through the session, and it lands
+    // on the order it eventually produces. See lib/client-tracking.ts and
+    // the attribution capture on order creation.
+    const landingUrl = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}ab=${brief.id}`;
 
     const { campaignId, adSetId, adId } = await createPausedMetaCampaign({
       headline: brief.headline,

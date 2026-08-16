@@ -502,3 +502,18 @@ alter table orders add column if not exists shipping_charge integer not null def
 alter table orders add column if not exists payment_type text not null default 'prepaid'; -- prepaid | cod_advance
 alter table orders add column if not exists cod_advance_amount integer not null default 0;
 alter table orders add column if not exists balance_due integer not null default 0;
+
+-- ============================================================
+-- Real ad attribution — which specific launched campaign (ad_brief) this
+-- order actually traces back to, captured client-side from the `ab` query
+-- param a campaign's landing URL carries (see the launch route and
+-- lib/client-tracking.ts). This is what turns ROAS from a blended
+-- account-wide estimate (weekly_reports.roas) into a true per-campaign
+-- number the ad agent can actually trust to scale or pause spend.
+-- No FK constraint deliberately — this is client-supplied analytics
+-- metadata, not something an order should ever fail to save over; a stale
+-- or malformed value just means the order's attribution is unknown, never
+-- a reason to lose the order itself.
+-- ============================================================
+alter table orders add column if not exists attributed_ad_brief_id uuid;
+create index if not exists orders_attributed_ad_brief_id_idx on orders (attributed_ad_brief_id);

@@ -7,6 +7,44 @@ declare global {
 }
 
 const SESSION_KEY_STORAGE = "travaholic-session-key";
+const ATTRIBUTION_STORAGE = "travaholic-attribution";
+const ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30-day last-click attribution window
+
+/**
+ * Captures the `ab` (ad brief id) query param a launched campaign's landing
+ * URL carries — see the launch route in app/api/admin/ad-briefs/launch —
+ * and persists it so it survives browsing between the ad click and
+ * eventually checking out. Last-click wins: a newer `ab` overwrites an
+ * older one, same convention as every standard attribution model.
+ * Deliberately reads window.location directly rather than useSearchParams,
+ * since that hook forces a Suspense boundary on the page using it — this
+ * needs to run globally on every page without adding that constraint
+ * everywhere.
+ */
+export function captureAttribution() {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  const adBriefId = params.get("ab");
+  if (!adBriefId) return;
+  localStorage.setItem(
+    ATTRIBUTION_STORAGE,
+    JSON.stringify({ adBriefId, capturedAt: Date.now() })
+  );
+}
+
+/** The still-valid attributed ad brief id, if any, for stamping onto an order at checkout. */
+export function getAttribution(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(ATTRIBUTION_STORAGE);
+    if (!raw) return null;
+    const { adBriefId, capturedAt } = JSON.parse(raw);
+    if (Date.now() - capturedAt > ATTRIBUTION_TTL_MS) return null;
+    return adBriefId ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /** A stable per-browser id used to correlate cart_sessions, tracking_events and orders. */
 export function getSessionKey() {

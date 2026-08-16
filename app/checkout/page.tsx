@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
-import { trackEvent, getSessionKey } from "@/lib/client-tracking";
+import { trackEvent, getSessionKey, getAttribution } from "@/lib/client-tracking";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -298,6 +298,7 @@ export default function CheckoutPage() {
                   redeemMilesRupees: loyaltyDiscount,
                   newsletterOptIn,
                   paymentType,
+                  attributedAdBriefId: getAttribution(),
                 },
               }),
             });
@@ -350,6 +351,7 @@ export default function CheckoutPage() {
           sessionKey: getSessionKey(),
           redeemMilesRupees: loyaltyDiscount,
           newsletterOptIn,
+          attributedAdBriefId: getAttribution(),
         }),
       });
       trackEvent("Purchase", { value: total });

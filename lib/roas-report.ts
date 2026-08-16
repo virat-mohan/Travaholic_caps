@@ -1,6 +1,26 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getAccountInsights } from "@/lib/meta-insights";
 
+/**
+ * Revenue truly attributable to one launched campaign — orders whose
+ * checkout carried that campaign's `ab` (ad brief id) param, see
+ * lib/client-tracking.ts. Distinct from the blended account-wide
+ * weekly_reports.roas (all revenue / all spend, ads or not) — this is
+ * what makes a per-campaign scale/pause decision trustworthy rather than
+ * a guess from click volume.
+ */
+export async function getAttributedRevenue(adBriefId: string, days: number) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase
+    .from("orders")
+    .select("total")
+    .eq("attributed_ad_brief_id", adBriefId)
+    .gte("created_at", since);
+  const orders = data ?? [];
+  return { revenue: orders.reduce((sum, o) => sum + (o.total ?? 0), 0), orderCount: orders.length };
+}
+
 export type WeeklyReport = {
   weekStart: string;
   weekEnd: string;

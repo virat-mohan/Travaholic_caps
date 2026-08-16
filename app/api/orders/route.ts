@@ -26,7 +26,10 @@ type OrderPayload = {
   sessionKey?: string;
   redeemMilesRupees?: number;
   newsletterOptIn?: boolean;
+  attributedAdBriefId?: string | null;
 };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
   let body: OrderPayload;
@@ -92,6 +95,10 @@ export async function POST(request: Request) {
         is_gift: body.isGift ?? false,
         gift_note: body.giftNote ?? null,
         customer_id: customer?.id ?? null,
+        attributed_ad_brief_id:
+          body.attributedAdBriefId && UUID_RE.test(body.attributedAdBriefId)
+            ? body.attributedAdBriefId
+            : null,
       })
       .select()
       .single();

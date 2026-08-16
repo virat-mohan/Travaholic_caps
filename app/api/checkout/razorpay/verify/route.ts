@@ -26,7 +26,10 @@ type OrderPayload = {
   redeemMilesRupees?: number;
   newsletterOptIn?: boolean;
   paymentType?: "prepaid" | "cod_advance";
+  attributedAdBriefId?: string | null;
 };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -60,6 +63,10 @@ export async function POST(request: Request) {
     const isCodAdvance = payload.paymentType === "cod_advance";
     const codAdvanceAmount = isCodAdvance ? Math.min(await getCodAdvanceRupees(), pricing.total) : 0;
     const balanceDue = isCodAdvance ? pricing.total - codAdvanceAmount : 0;
+    const attributedAdBriefId =
+      payload.attributedAdBriefId && UUID_RE.test(payload.attributedAdBriefId)
+        ? payload.attributedAdBriefId
+        : null;
 
     const supabase = getSupabaseServerClient();
     const { data: savedOrder, error: orderError } = await supabase
@@ -80,6 +87,7 @@ export async function POST(request: Request) {
         payment_type: isCodAdvance ? "cod_advance" : "prepaid",
         cod_advance_amount: codAdvanceAmount,
         balance_due: balanceDue,
+        attributed_ad_brief_id: attributedAdBriefId,
         is_gift: payload.isGift ?? false,
         gift_note: payload.giftNote ?? null,
         customer_id: pricing.customer?.id ?? null,

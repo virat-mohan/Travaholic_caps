@@ -3,12 +3,13 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Script from "next/script";
-import { trackEvent } from "@/lib/client-tracking";
+import { trackEvent, captureAttribution } from "@/lib/client-tracking";
 
 export function MetaPixelTracker({ pixelId }: { pixelId: string | null }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    captureAttribution();
     trackEvent("PageView");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
