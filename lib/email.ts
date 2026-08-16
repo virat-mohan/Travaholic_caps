@@ -193,3 +193,28 @@ export async function sendReviewRequestEmail(
   `;
   return sendEmail(toEmail, `How's your ${brand.brandName}?`, html);
 }
+
+/** Retention nudge for a customer who hasn't ordered in a while — see the win-back cron. */
+export async function sendWinbackEmail(toEmail: string, name: string | null, milesBalance: number) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+  const shopUrl = `${brand.siteUrl.replace(/\/$/, "")}/series`;
+
+  const milesLine =
+    milesBalance > 0
+      ? `You've still got ${milesBalance.toLocaleString("en-IN")} Travaholic Miles sitting there, ready to redeem.`
+      : "There are new Chapters up since you last checked in.";
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">It's been a while — ${milesLine}</p>
+      <a href="${shopUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Shop the Collection</a>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `We miss you at ${brand.brandName}`, html);
+}

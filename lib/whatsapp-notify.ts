@@ -130,3 +130,10 @@ export async function sendReferralInviteWhatsApp(
   const variables = [friendName, referrerName, referralUrl];
   return sendTemplate(friendPhone, "referral_invite", msg91TemplateId, variables, {});
 }
+
+/** Retention nudge by WhatsApp — best-effort alongside the email, which always sends regardless. */
+export async function sendWinbackWhatsApp(phone: string, name: string, milesBalance: number) {
+  const msg91TemplateId = await getSetting("MSG91_WINBACK_TEMPLATE_ID");
+  const variables = [name, String(milesBalance)];
+  return sendTemplate(phone, "winback", msg91TemplateId, variables, {});
+}

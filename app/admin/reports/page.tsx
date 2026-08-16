@@ -27,6 +27,8 @@ export default function ReportsPage() {
   const [generating, setGenerating] = useState(false);
   const [sweeping, setSweeping] = useState(false);
   const [sweepResult, setSweepResult] = useState<string | null>(null);
+  const [winbackRunning, setWinbackRunning] = useState(false);
+  const [winbackResult, setWinbackResult] = useState<string | null>(null);
 
   function load() {
     fetch("/api/admin/reports")
@@ -66,6 +68,22 @@ export default function ReportsPage() {
     }
   }
 
+  async function runWinback() {
+    setWinbackRunning(true);
+    setWinbackResult(null);
+    try {
+      const res = await fetch("/api/cron/winback");
+      const data = await res.json();
+      setWinbackResult(
+        res.ok
+          ? `${data.sent} lapsed customer(s) nudged (of ${data.lapsedCustomersChecked} checked).`
+          : "Sweep failed."
+      );
+    } finally {
+      setWinbackRunning(false);
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1100px] px-6 pt-28 pb-24 md:px-12">
       <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
@@ -93,6 +111,17 @@ export default function ReportsPage() {
           {sweeping ? "Running..." : "Run Abandoned-Cart Sweep Now"}
         </button>
         {sweepResult && <p className="text-caption text-secondary-text">{sweepResult}</p>}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <button
+          onClick={runWinback}
+          disabled={winbackRunning}
+          className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
+        >
+          {winbackRunning ? "Running..." : "Run Win-Back Sweep Now"}
+        </button>
+        {winbackResult && <p className="text-caption text-secondary-text">{winbackResult}</p>}
       </div>
 
       <div className="mt-10 overflow-x-auto">

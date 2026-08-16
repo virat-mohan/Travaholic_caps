@@ -579,3 +579,12 @@ create index if not exists reviews_chapter_slug_idx on reviews (chapter_slug);
 create index if not exists reviews_approved_idx on reviews (approved);
 
 alter table orders add column if not exists review_requested_at timestamptz;
+
+-- ============================================================
+-- Retention / win-back — nudges a customer whose most recent order was
+-- >= WINBACK_AFTER_DAYS ago and hasn't been nudged in that same window,
+-- so it naturally repeats every cycle for someone who still hasn't come
+-- back, without ever spamming daily (the cron runs daily, but this
+-- timestamp is what gates an actual send).
+-- ============================================================
+alter table customers add column if not exists last_winback_sent_at timestamptz;

@@ -46,6 +46,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "MSG91_ABANDONED_CART_TEMPLATE_ID", label: "MSG91 Abandoned Cart Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, item summary." },
       { key: "MSG91_NDR_TEMPLATE_ID", label: "MSG91 NDR Nudge Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, order number. Sent automatically when a delivery attempt fails, before it becomes an RTO." },
       { key: "MSG91_REFERRAL_INVITE_TEMPLATE_ID", label: "MSG91 Referral Invite Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: friend name, referrer name, referral link. Sent when a customer invites a friend from their account page. Optional — invites always go by email regardless." },
+      { key: "MSG91_WINBACK_TEMPLATE_ID", label: "MSG91 Win-Back Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, Miles balance. Optional — win-back always goes by email regardless." },
     ],
   },
   {
@@ -64,6 +65,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "COD_ADVANCE_AMOUNT_RUPEES", label: "COD Advance Amount (₹)", hint: "Charged upfront to confirm a Cash on Delivery order; the rest is collected by the courier. Defaults to ₹99 if unset." },
       { key: "REFERRAL_DISCOUNT_RUPEES", label: "Referral Discount (₹)", hint: "Flat discount a new customer gets on their first order when they check out with someone's referral code. Defaults to ₹200 if unset." },
       { key: "REFERRAL_REWARD_MILES", label: "Referral Reward (Miles)", hint: "Miles credited to the referrer once the referred order is placed. Defaults to 500 (= ₹200 at the current redemption rate) if unset." },
+      { key: "WINBACK_AFTER_DAYS", label: "Win-Back Nudge After (Days)", hint: "How many days since a customer's last order before they get a \"we miss you\" nudge — repeats on the same interval if they still haven't ordered again. Defaults to 60 if unset." },
     ],
   },
   {
