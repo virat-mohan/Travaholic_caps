@@ -45,6 +45,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "MSG91_ORDER_CONFIRMATION_TEMPLATE_ID", label: "MSG91 Order Confirmation Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: customer name, order number, total." },
       { key: "MSG91_ABANDONED_CART_TEMPLATE_ID", label: "MSG91 Abandoned Cart Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, item summary." },
       { key: "MSG91_NDR_TEMPLATE_ID", label: "MSG91 NDR Nudge Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, order number. Sent automatically when a delivery attempt fails, before it becomes an RTO." },
+      { key: "MSG91_REFERRAL_INVITE_TEMPLATE_ID", label: "MSG91 Referral Invite Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: friend name, referrer name, referral link. Sent when a customer invites a friend from their account page. Optional — invites always go by email regardless." },
     ],
   },
   {
@@ -55,6 +56,14 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "SHIPROCKET_PICKUP_LOCATION", label: "Shiprocket Pickup Location", hint: "The exact pickup location nickname configured in your Shiprocket dashboard under Settings → Pickup Addresses." },
       { key: "SHIPROCKET_PICKUP_PINCODE", label: "Shiprocket Pickup Pincode", hint: "The pincode of that same pickup address — used to calculate live shipping rates at checkout." },
       { key: "SHIPROCKET_WEBHOOK_TOKEN", label: "Shiprocket Webhook Token", hint: "Make up any random string, then paste the same value into Shiprocket → Settings → API → Webhooks as the API secret/header value. Lets shipment status update live on the dashboard instead of needing manual refresh." },
+    ],
+  },
+  {
+    label: "Loyalty & Referrals",
+    fields: [
+      { key: "COD_ADVANCE_AMOUNT_RUPEES", label: "COD Advance Amount (₹)", hint: "Charged upfront to confirm a Cash on Delivery order; the rest is collected by the courier. Defaults to ₹99 if unset." },
+      { key: "REFERRAL_DISCOUNT_RUPEES", label: "Referral Discount (₹)", hint: "Flat discount a new customer gets on their first order when they check out with someone's referral code. Defaults to ₹200 if unset." },
+      { key: "REFERRAL_REWARD_MILES", label: "Referral Reward (Miles)", hint: "Miles credited to the referrer once the referred order is placed. Defaults to 500 (= ₹200 at the current redemption rate) if unset." },
     ],
   },
   {

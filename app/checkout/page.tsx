@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
-import { trackEvent, getSessionKey, getAttribution } from "@/lib/client-tracking";
+import { trackEvent, getSessionKey, getAttribution, getReferralCode } from "@/lib/client-tracking";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -265,6 +265,8 @@ export default function CheckoutPage() {
           redeemMilesRupees: loyaltyDiscount,
           pincode: form.pincode,
           paymentType,
+          phone: form.phone,
+          referralCode: getReferralCode(),
         }),
       });
       const createData = await createRes.json();
@@ -299,6 +301,7 @@ export default function CheckoutPage() {
                   newsletterOptIn,
                   paymentType,
                   attributedAdBriefId: getAttribution(),
+                  referralCode: getReferralCode(),
                 },
               }),
             });
@@ -306,7 +309,7 @@ export default function CheckoutPage() {
             if (!verifyRes.ok) throw new Error(verifyData.error ?? "Payment verification failed");
             trackEvent("Purchase", { value: createData.total });
             clear();
-            router.push("/checkout/confirmed");
+            router.push(`/checkout/confirmed?order=${verifyData.orderId}`);
           } catch (err) {
             setPayError(err instanceof Error ? err.message : "Payment verification failed");
           } finally {
@@ -332,8 +335,9 @@ export default function CheckoutPage() {
       return;
     }
 
+    let createdOrderId: string | null = null;
     try {
-      await fetch("/api/orders", {
+      const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -352,8 +356,11 @@ export default function CheckoutPage() {
           redeemMilesRupees: loyaltyDiscount,
           newsletterOptIn,
           attributedAdBriefId: getAttribution(),
+          referralCode: getReferralCode(),
         }),
       });
+      const data = await res.json().catch(() => null);
+      createdOrderId = data?.orderId ?? null;
       trackEvent("Purchase", { value: total });
     } catch (err) {
       // Best-effort logging — WhatsApp remains the real order channel either way.
@@ -381,7 +388,7 @@ export default function CheckoutPage() {
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`;
     window.open(url, "_blank");
     clear();
-    router.push("/checkout/confirmed");
+    router.push(createdOrderId ? `/checkout/confirmed?order=${createdOrderId}` : "/checkout/confirmed");
   }
 
   if (items.length === 0) {

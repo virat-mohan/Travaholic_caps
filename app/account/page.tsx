@@ -30,6 +30,12 @@ export default function AccountPage() {
   const [loyalty, setLoyalty] = useState<Loyalty | null>(null);
   const [loading, setLoading] = useState(true);
   const [savedProfile, setSavedProfile] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCount, setReferralCount] = useState(0);
+  const [referFriend, setReferFriend] = useState({ name: "", phone: "", email: "" });
+  const [referring, setReferring] = useState(false);
+  const [referResult, setReferResult] = useState<string | null>(null);
+  const [referError, setReferError] = useState<string | null>(null);
 
   const [newAddress, setNewAddress] = useState({
     label: "",
@@ -54,11 +60,39 @@ export default function AccountPage() {
         setAddresses(data.addresses ?? []);
         setOrders(data.orders ?? []);
         setLoyalty(data.loyalty);
+        setReferralCode(data.referralCode ?? null);
+        setReferralCount(data.referralCount ?? 0);
       })
       .finally(() => setLoading(false));
   }
 
   useEffect(load, []);
+
+  async function sendReferral(e: React.FormEvent) {
+    e.preventDefault();
+    setReferring(true);
+    setReferResult(null);
+    setReferError(null);
+    try {
+      const res = await fetch("/api/account/refer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          friendName: referFriend.name,
+          friendPhone: referFriend.phone,
+          friendEmail: referFriend.email,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not send the invite");
+      setReferResult(`Sent! ${referFriend.name} will hear from us shortly.`);
+      setReferFriend({ name: "", phone: "", email: "" });
+    } catch (err) {
+      setReferError(err instanceof Error ? err.message : "Could not send the invite");
+    } finally {
+      setReferring(false);
+    }
+  }
 
   async function updateProfile(patch: Partial<Customer>) {
     if (!customer) return;
@@ -145,6 +179,64 @@ export default function AccountPage() {
               : "Keep buying to unlock your first redemption."}
           </p>
         </div>
+      )}
+
+      {referralCode && (
+        <section className="mt-8 border border-divider p-6">
+          <p className="text-caption uppercase tracking-[0.1em] text-secondary-text">
+            Recommend to a Fellow Explorer
+          </p>
+          <p className="mt-2 max-w-md text-body-s text-secondary-text">
+            Share your code — they get a discount on their first order, you earn Miles once it ships.
+            {referralCount > 0 && ` You've referred ${referralCount} order${referralCount === 1 ? "" : "s"} so far.`}
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <code className="border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s tracking-[0.1em] text-ink">
+              {referralCode}
+            </code>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(`${window.location.origin}/?ref=${referralCode}`)}
+              className="text-caption text-secondary-text underline"
+            >
+              Copy Link
+            </button>
+          </div>
+
+          <form onSubmit={sendReferral} className="mt-5 flex flex-wrap items-start gap-2 border-t border-divider pt-5">
+            <input
+              type="text"
+              required
+              placeholder="Friend's name"
+              value={referFriend.name}
+              onChange={(e) => setReferFriend((f) => ({ ...f, name: e.target.value }))}
+              className="w-36 border border-ink/30 bg-surface px-3 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+            />
+            <input
+              type="tel"
+              placeholder="Their phone"
+              value={referFriend.phone}
+              onChange={(e) => setReferFriend((f) => ({ ...f, phone: e.target.value }))}
+              className="w-36 border border-ink/30 bg-surface px-3 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+            />
+            <input
+              type="email"
+              placeholder="Their email"
+              value={referFriend.email}
+              onChange={(e) => setReferFriend((f) => ({ ...f, email: e.target.value }))}
+              className="w-48 border border-ink/30 bg-surface px-3 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+            />
+            <button
+              type="submit"
+              disabled={referring}
+              className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
+            >
+              {referring ? "Sending..." : "Send"}
+            </button>
+            {referResult && <p className="w-full text-caption text-ink">{referResult}</p>}
+            {referError && <p className="w-full text-caption text-paint-orange">{referError}</p>}
+          </form>
+        </section>
       )}
 
       <section className="mt-12 border-t border-divider pt-8">

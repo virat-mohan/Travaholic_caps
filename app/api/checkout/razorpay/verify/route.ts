@@ -8,6 +8,8 @@ import { computeTrustedOrderTotal, getCodAdvanceRupees } from "@/lib/order-prici
 import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
 import { recordGuestCheckoutLead } from "@/lib/leads";
+import { rewardReferrer } from "@/lib/referrals";
+import { findOrCreateCustomerForGuest } from "@/lib/auth";
 
 type OrderPayload = {
   customer: {
@@ -27,6 +29,7 @@ type OrderPayload = {
   newsletterOptIn?: boolean;
   paymentType?: "prepaid" | "cod_advance";
   attributedAdBriefId?: string | null;
+  referralCode?: string | null;
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -51,14 +54,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Payment signature verification failed" }, { status: 400 });
     }
 
+    // Idempotency guard — a retried/double-submitted verify call (network
+    // retry, double-click before the button disabled) must never create a
+    // second order for the same payment. Without this, a retry would
+    // double-decrement inventory, double-earn Miles, and double-pay a
+    // referrer, none of which a duplicate signature check alone prevents.
+    const supabase = getSupabaseServerClient();
+    const { data: existingOrder } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("razorpay_payment_id", razorpay_payment_id)
+      .maybeSingle();
+    if (existingOrder) {
+      return NextResponse.json({ orderId: existingOrder.id });
+    }
+
     // Recomputed independently of whatever the client sent — this must match
     // what create-order charged, since both derive from the same trusted
     // source (catalogue prices, the active discount rule, the ledger).
     const pricing = await computeTrustedOrderTotal(
       payload.items,
       payload.redeemMilesRupees,
-      payload.customer.pincode
+      payload.customer.pincode,
+      payload.referralCode,
+      payload.customer.phone
     );
+
+    // Guest checkout (no OTP session) still gets a real customer record —
+    // matched/deduped by phone/email, never a logged-in session — so Miles
+    // and a referral code work for them too, not just people who verified.
+    const wasGuest = !pricing.customer;
+    const guestCustomer = wasGuest
+      ? await findOrCreateCustomerForGuest(payload.customer.phone, payload.customer.email, payload.customer.name)
+      : null;
+    const effectiveCustomerId = pricing.customer?.id ?? guestCustomer?.id ?? null;
 
     const isCodAdvance = payload.paymentType === "cod_advance";
     const codAdvanceAmount = isCodAdvance ? Math.min(await getCodAdvanceRupees(), pricing.total) : 0;
@@ -68,7 +97,6 @@ export async function POST(request: Request) {
         ? payload.attributedAdBriefId
         : null;
 
-    const supabase = getSupabaseServerClient();
     const { data: savedOrder, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -88,9 +116,11 @@ export async function POST(request: Request) {
         cod_advance_amount: codAdvanceAmount,
         balance_due: balanceDue,
         attributed_ad_brief_id: attributedAdBriefId,
+        referral_code_used: pricing.referral ? payload.referralCode?.toUpperCase() : null,
+        referral_discount_amount: pricing.referralDiscountAmount,
         is_gift: payload.isGift ?? false,
         gift_note: payload.giftNote ?? null,
-        customer_id: pricing.customer?.id ?? null,
+        customer_id: effectiveCustomerId,
         status: "confirmed",
         // "paid" here means the order-confirming payment succeeded — for a
         // COD-advance order that's just the advance, balance_due is what
@@ -129,19 +159,29 @@ export async function POST(request: Request) {
       }
     }
 
-    if (pricing.customer) {
+    if (effectiveCustomerId) {
       const capsBought = pricing.items.reduce((sum, item) => sum + item.quantity, 0);
-      if (pricing.loyaltyDiscountAmount > 0) {
-        await redeemMilesForOrder(pricing.customer.id, savedOrder.id, pricing.loyaltyDiscountAmount);
+      if (pricing.customer && pricing.loyaltyDiscountAmount > 0) {
+        await redeemMilesForOrder(effectiveCustomerId, savedOrder.id, pricing.loyaltyDiscountAmount);
       }
-      await earnMilesForOrder(pricing.customer.id, savedOrder.id, capsBought);
+      await earnMilesForOrder(effectiveCustomerId, savedOrder.id, capsBought);
     }
 
     if (payload.newsletterOptIn != null) {
-      await applyNewsletterOptIn(pricing.customer?.id ?? null, savedOrder.customer_email, payload.newsletterOptIn);
+      await applyNewsletterOptIn(effectiveCustomerId, savedOrder.customer_email, payload.newsletterOptIn);
     }
 
-    if (!pricing.customer) {
+    if (pricing.referral) {
+      await rewardReferrer(
+        pricing.referral.referrerCustomerId,
+        savedOrder.id,
+        effectiveCustomerId,
+        payload.customer.phone,
+        pricing.referral.rewardMiles
+      );
+    }
+
+    if (wasGuest) {
       await recordGuestCheckoutLead({
         name: payload.customer.name,
         phone: payload.customer.phone,

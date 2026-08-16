@@ -1,4 +1,6 @@
 import { getBrandProfile } from "@/lib/brand";
+import { getSetting } from "@/lib/settings";
+import { getOrCreateReferralCode } from "@/lib/referrals";
 
 type InvoiceOrder = {
   id: string;
@@ -13,6 +15,7 @@ type InvoiceOrder = {
   payment_type?: string;
   cod_advance_amount?: number;
   balance_due?: number;
+  customer_id?: string | null;
 };
 
 type InvoiceItem = { chapter_name: string; unit_price: number; quantity: number };
@@ -26,6 +29,25 @@ export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[
     month: "short",
     year: "numeric",
   });
+
+  // Every order now has a customer record behind it (guest checkout gets
+  // one too, see findOrCreateCustomerForGuest) — invoice is the one
+  // touchpoint every customer reads, so it's the natural place to plant
+  // the referral code even for someone who never visits /account.
+  let referralSection = "";
+  if (order.customer_id) {
+    const [referralCode, discountSetting] = await Promise.all([
+      getOrCreateReferralCode(order.customer_id),
+      getSetting("REFERRAL_DISCOUNT_RUPEES"),
+    ]);
+    const discountRupees = discountSetting ? Number(discountSetting) : 200;
+    referralSection = `
+      <div style="margin-top:24px;border-top:1px solid #ddd;padding-top:16px;text-align:center;">
+        <p style="font-size:13px;color:#444;">Know someone who'd love ${brand.brandName}?</p>
+        <p style="font-size:13px;color:#444;margin-top:4px;">Share your code <strong>${referralCode}</strong> — they get ₹${discountRupees} off, you earn Miles.</p>
+      </div>
+    `;
+  }
 
   const rows = items
     .map(
@@ -83,7 +105,7 @@ export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[
         <p>Billed to: ${order.customer_name}</p>
         <p>Delivery address: ${order.delivery_address}</p>
       </div>
-
+      ${referralSection}
       <div style="margin-top:24px;border-top:1px solid #ddd;padding-top:12px;font-size:12px;color:#999;">
         <p>Prices are inclusive of applicable GST.</p>
         <p style="margin-top:8px;">Travaholic · GSTIN 07BZNPS5735B2Z3</p>

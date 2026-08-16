@@ -9,7 +9,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const pricing = await computeTrustedOrderTotal(body.items, body.redeemMilesRupees, body.pincode);
+    const pricing = await computeTrustedOrderTotal(
+      body.items,
+      body.redeemMilesRupees,
+      body.pincode,
+      body.referralCode,
+      body.phone
+    );
     if (pricing.total <= 0) {
       return NextResponse.json({ error: "Order total must be greater than zero" }, { status: 400 });
     }
@@ -31,6 +37,7 @@ export async function POST(request: Request) {
       subtotal: pricing.subtotal,
       discountAmount: pricing.discountAmount,
       loyaltyDiscountAmount: pricing.loyaltyDiscountAmount,
+      referralDiscountAmount: pricing.referralDiscountAmount,
       shippingCharge: pricing.shippingCharge,
       total: pricing.total,
       chargeAmount,

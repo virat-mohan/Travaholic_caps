@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
-import { getCurrentCustomer } from "@/lib/auth";
+import { getCurrentCustomer, findOrCreateCustomerForGuest } from "@/lib/auth";
 import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { sendInvoiceEmail } from "@/lib/email";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
 import { recordGuestCheckoutLead } from "@/lib/leads";
 import { getShippingRate } from "@/lib/shiprocket";
+import { resolveReferralDiscount, rewardReferrer } from "@/lib/referrals";
 
 type OrderPayload = {
   customer: {
@@ -27,6 +28,7 @@ type OrderPayload = {
   redeemMilesRupees?: number;
   newsletterOptIn?: boolean;
   attributedAdBriefId?: string | null;
+  referralCode?: string | null;
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -75,7 +77,20 @@ export async function POST(request: Request) {
       shippingCharge = shippingResult.status === "available" ? shippingResult.rate : 0;
     }
 
-    const total = body.subtotal - discountAmount - loyaltyDiscountAmount + shippingCharge;
+    const referral = await resolveReferralDiscount(body.referralCode, customer?.id ?? null, body.customer.phone);
+    const referralDiscountAmount = referral ? Math.min(referral.discountRupees, body.subtotal) : 0;
+
+    // Guest checkout (no OTP session) still gets a real customer record —
+    // matched/deduped by phone/email, never a logged-in session — so Miles
+    // and a referral code work for them too, not just people who verified.
+    const wasGuest = !customer;
+    const guestCustomer = wasGuest
+      ? await findOrCreateCustomerForGuest(body.customer.phone, body.customer.email, body.customer.name)
+      : null;
+    const effectiveCustomerId = customer?.id ?? guestCustomer?.id ?? null;
+
+    const total =
+      body.subtotal - discountAmount - loyaltyDiscountAmount - referralDiscountAmount + shippingCharge;
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -94,11 +109,13 @@ export async function POST(request: Request) {
         total,
         is_gift: body.isGift ?? false,
         gift_note: body.giftNote ?? null,
-        customer_id: customer?.id ?? null,
+        customer_id: effectiveCustomerId,
         attributed_ad_brief_id:
           body.attributedAdBriefId && UUID_RE.test(body.attributedAdBriefId)
             ? body.attributedAdBriefId
             : null,
+        referral_code_used: referral ? body.referralCode?.toUpperCase() : null,
+        referral_discount_amount: referralDiscountAmount,
       })
       .select()
       .single();
@@ -117,12 +134,12 @@ export async function POST(request: Request) {
 
     if (itemsError) throw itemsError;
 
-    if (customer) {
+    if (effectiveCustomerId) {
       const capsBought = body.items.reduce((sum, item) => sum + item.quantity, 0);
-      if (loyaltyDiscountAmount > 0) {
-        await redeemMilesForOrder(customer.id, order.id, loyaltyDiscountAmount);
+      if (customer && loyaltyDiscountAmount > 0) {
+        await redeemMilesForOrder(effectiveCustomerId, order.id, loyaltyDiscountAmount);
       }
-      await earnMilesForOrder(customer.id, order.id, capsBought);
+      await earnMilesForOrder(effectiveCustomerId, order.id, capsBought);
     }
 
     // Decrement inventory. Best-effort — a failed decrement shouldn't fail the order.
@@ -148,10 +165,20 @@ export async function POST(request: Request) {
     });
 
     if (body.newsletterOptIn != null) {
-      await applyNewsletterOptIn(customer?.id ?? null, order.customer_email, body.newsletterOptIn);
+      await applyNewsletterOptIn(effectiveCustomerId, order.customer_email, body.newsletterOptIn);
     }
 
-    if (!customer) {
+    if (referral) {
+      await rewardReferrer(
+        referral.referrerCustomerId,
+        order.id,
+        effectiveCustomerId,
+        body.customer.phone,
+        referral.rewardMiles
+      );
+    }
+
+    if (wasGuest) {
       await recordGuestCheckoutLead({
         name: body.customer.name,
         phone: body.customer.phone,

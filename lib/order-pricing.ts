@@ -5,6 +5,7 @@ import { getCurrentCustomer } from "@/lib/auth";
 import { getRedeemableAmount } from "@/lib/loyalty";
 import { getShippingRate } from "@/lib/shiprocket";
 import { getSetting } from "@/lib/settings";
+import { resolveReferralDiscount } from "@/lib/referrals";
 
 /** The fixed amount charged upfront for a COD order — the rest is collected by the courier on delivery. */
 export async function getCodAdvanceRupees() {
@@ -23,7 +24,9 @@ export async function getCodAdvanceRupees() {
 export async function computeTrustedOrderTotal(
   items: { slug: string; quantity: number }[],
   requestedRedeemRupees?: number,
-  deliveryPincode?: string
+  deliveryPincode?: string,
+  referralCode?: string | null,
+  checkoutPhone?: string
 ) {
   const chapters = await getAllChapters();
   const pricedItems = items.map((item) => {
@@ -73,13 +76,19 @@ export async function computeTrustedOrderTotal(
     shippingCharge = shippingResult.status === "available" ? shippingResult.rate : 0;
   }
 
-  const total = Math.max(0, subtotal - discountAmount - loyaltyDiscountAmount) + shippingCharge;
+  const referral = await resolveReferralDiscount(referralCode, customer?.id ?? null, checkoutPhone ?? "");
+  const referralDiscountAmount = referral ? Math.min(referral.discountRupees, subtotal) : 0;
+
+  const total =
+    Math.max(0, subtotal - discountAmount - loyaltyDiscountAmount - referralDiscountAmount) + shippingCharge;
 
   return {
     items: pricedItems,
     subtotal,
     discountAmount,
     loyaltyDiscountAmount,
+    referralDiscountAmount,
+    referral,
     shippingCharge,
     total,
     customer,

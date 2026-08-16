@@ -529,3 +529,27 @@ create index if not exists orders_attributed_ad_brief_id_idx on orders (attribut
 -- ============================================================
 alter table leads add column if not exists chapter_slug text;
 create index if not exists leads_chapter_slug_idx on leads (chapter_slug);
+
+-- ============================================================
+-- Referral program — the highest-leverage, lowest-cost acquisition channel
+-- in D2C. Every customer gets a code (lazily generated on first account
+-- access); a new shopper who checks out with someone's code gets a flat
+-- discount, and the referrer earns Miles once that order actually closes.
+-- Reward fires at order creation (same moment as normal purchase Miles),
+-- not on delivery — consistent with how earnMilesForOrder already works.
+-- ============================================================
+alter table customers add column if not exists referral_code text unique;
+alter table orders add column if not exists referral_code_used text;
+alter table orders add column if not exists referral_discount_amount integer not null default 0;
+
+create table if not exists referrals (
+  id uuid primary key default gen_random_uuid(),
+  referrer_customer_id uuid not null references customers(id),
+  referred_order_id uuid references orders(id),
+  referred_customer_id uuid references customers(id),
+  referred_phone text,
+  reward_miles integer not null default 0,
+  status text not null default 'rewarded', -- rewarded | (reserved for future manual reversal on refund)
+  created_at timestamptz not null default now()
+);
+create index if not exists referrals_referrer_idx on referrals (referrer_customer_id);

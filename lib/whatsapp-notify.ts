@@ -113,3 +113,20 @@ export async function sendNdrWhatsApp(order: OrderForWhatsApp) {
     orderId: order.id,
   });
 }
+
+/**
+ * Sends a referral invite by WhatsApp — best-effort alongside the email,
+ * which always sends regardless since it needs no template approval. Needs
+ * a Flow with three variables: friend name, referrer name, referral link —
+ * set its ID as MSG91_REFERRAL_INVITE_TEMPLATE_ID in /admin/settings.
+ */
+export async function sendReferralInviteWhatsApp(
+  friendPhone: string,
+  friendName: string,
+  referrerName: string,
+  referralUrl: string
+) {
+  const msg91TemplateId = await getSetting("MSG91_REFERRAL_INVITE_TEMPLATE_ID");
+  const variables = [friendName, referrerName, referralUrl];
+  return sendTemplate(friendPhone, "referral_invite", msg91TemplateId, variables, {});
+}

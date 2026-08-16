@@ -32,6 +32,32 @@ export function captureAttribution() {
   );
 }
 
+const REFERRAL_STORAGE = "travaholic-referral";
+const REFERRAL_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Same pattern as captureAttribution, for a `?ref=<code>` referral link. */
+export function captureReferral() {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("ref");
+  if (!code) return;
+  localStorage.setItem(REFERRAL_STORAGE, JSON.stringify({ code, capturedAt: Date.now() }));
+}
+
+/** The still-valid referral code, if any, to apply at checkout. */
+export function getReferralCode(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(REFERRAL_STORAGE);
+    if (!raw) return null;
+    const { code, capturedAt } = JSON.parse(raw);
+    if (Date.now() - capturedAt > REFERRAL_TTL_MS) return null;
+    return code ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** The still-valid attributed ad brief id, if any, for stamping onto an order at checkout. */
 export function getAttribution(): string | null {
   if (typeof window === "undefined") return null;

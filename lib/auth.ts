@@ -131,6 +131,54 @@ export async function verifyOtp(rawPhone: string | null, rawEmail: string | null
   return { token, customer, isNewCustomer: !existing };
 }
 
+/**
+ * Same find-or-create logic as verifyOtp's account resolution, but for
+ * guest checkout — a shopper who skips OTP still gets a real customer
+ * record (matched/deduped by phone, then email) so Miles and referral
+ * codes work for them too, without silently logging them into a session
+ * they never verified. They just won't see it in /account until they
+ * actually verify OTP with the same phone/email later.
+ */
+export async function findOrCreateCustomerForGuest(
+  phone: string | null,
+  email: string | null,
+  name: string | null
+): Promise<Customer | null> {
+  if (!phone && !email) return null;
+  const supabase = getSupabaseServerClient();
+
+  let existing: Customer | null = null;
+  if (phone) {
+    const { data } = await supabase.from("customers").select("*").eq("phone", phone).maybeSingle();
+    existing = data as Customer | null;
+  }
+  if (!existing && email) {
+    const { data } = await supabase.from("customers").select("*").eq("email", email).maybeSingle();
+    existing = data as Customer | null;
+  }
+  if (existing) return existing;
+
+  const { data: created, error } = await supabase
+    .from("customers")
+    .insert({ phone, email, name })
+    .select()
+    .single();
+  if (error) {
+    // Unique-violation on phone/email means a concurrent checkout (or the
+    // OTP flow) won the race and inserted first — re-select rather than
+    // treat it as a real failure.
+    if (error.code === "23505") {
+      const { data: raced } = phone
+        ? await supabase.from("customers").select("*").eq("phone", phone).maybeSingle()
+        : await supabase.from("customers").select("*").eq("email", email!).maybeSingle();
+      if (raced) return raced as Customer;
+    }
+    console.error("Failed to create guest customer record", error);
+    return null;
+  }
+  return created as Customer;
+}
+
 export async function getCustomerFromToken(token: string | undefined | null): Promise<Customer | null> {
   if (!token) return null;
   try {

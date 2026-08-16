@@ -135,3 +135,32 @@ export async function sendRestockEmail(email: string, name: string | null, chapt
   `;
   return sendEmail(email, `${chapterName} is back in stock`, html);
 }
+
+/** Sent immediately when a customer invites a friend from their account page. */
+export async function sendReferralInviteEmail(
+  toEmail: string,
+  toName: string | null,
+  referrerName: string | null,
+  referralCode: string,
+  discountRupees: number
+) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+  const referralUrl = `${brand.siteUrl.replace(/\/$/, "")}/?ref=${referralCode}`;
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${toName ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        ${referrerName ?? "A friend"} thinks you&apos;d like ${brand.brandName} — travel-inspired trucker
+        caps, ₹1,399 flat. Use their link and get ₹${discountRupees} off your first order.
+      </p>
+      <a href="${referralUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Shop &amp; Save ₹${discountRupees}</a>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `${referrerName ?? "A friend"} gave you ₹${discountRupees} off ${brand.brandName}`, html);
+}
