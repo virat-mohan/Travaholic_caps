@@ -43,6 +43,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "MSG91_OTP_TEMPLATE_ID", label: "MSG91 OTP Flow Slug", hint: "Not a numeric ID — the Flow's URL slug (e.g. \"login-otp\"), found via the </> \"View Code\" button on the Flow builder canvas. One variable (VAR1) for the code." },
       { key: "MSG91_ORDER_CONFIRMATION_TEMPLATE_ID", label: "MSG91 Order Confirmation Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: customer name, order number, total." },
       { key: "MSG91_ABANDONED_CART_TEMPLATE_ID", label: "MSG91 Abandoned Cart Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, item summary." },
+      { key: "MSG91_NDR_TEMPLATE_ID", label: "MSG91 NDR Nudge Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, order number. Sent automatically when a delivery attempt fails, before it becomes an RTO." },
     ],
   },
   {

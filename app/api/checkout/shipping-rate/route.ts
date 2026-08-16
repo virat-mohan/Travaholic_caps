@@ -10,9 +10,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid pincode" }, { status: 400 });
   }
 
-  const rate = await getShippingRate(pincode, unitCount || 1);
-  if (rate === null) {
-    return NextResponse.json({ available: false });
+  const result = await getShippingRate(pincode, unitCount || 1);
+  if (result.status === "available") {
+    return NextResponse.json({ available: true, rate: result.rate });
   }
-  return NextResponse.json({ available: true, rate });
+  // "checked_unavailable" is a real can't-deliver-here result and should
+  // read as blocking to the shopper; "not_configured"/"check_failed" are
+  // our problem, so surface as "unknown" rather than implying they did
+  // something wrong.
+  return NextResponse.json({
+    available: false,
+    blocking: result.status === "checked_unavailable",
+  });
 }

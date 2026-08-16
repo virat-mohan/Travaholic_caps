@@ -125,18 +125,32 @@ export async function createShiprocketOrder(order: ShiprocketOrderInput) {
   };
 }
 
+export type ShippingRateResult =
+  | { status: "not_configured" }
+  | { status: "checked_unavailable" }
+  | { status: "check_failed" }
+  | { status: "available"; rate: number };
+
 /**
  * Live shipping cost for a delivery pincode, straight from Shiprocket's own
  * rate-check API — this is what makes shipping a genuine pass-through
  * rather than a guessed flat fee. Returns the cheapest serviceable courier's
- * rate, rounded up to the rupee. Best-effort: returns null (rather than
- * throwing) if Shiprocket isn't configured or the pincode isn't
- * serviceable, so checkout can fall back to asking the customer to
- * double-check their pincode instead of hard-failing.
+ * rate, rounded up to the rupee.
+ *
+ * Distinguishes *why* a rate isn't available, because the two cases need
+ * opposite handling: "checked_unavailable" (Shiprocket explicitly can't
+ * deliver to this pincode) is a real RTO risk and should block the order;
+ * "not_configured" or "check_failed" (our setup, or a transient API/network
+ * issue) is our problem, not the customer's, and should never block a sale —
+ * an occasional free-shipping order is a far smaller cost than turning away
+ * a real customer because of our own outage.
  */
-export async function getShippingRate(deliveryPincode: string, unitCount: number) {
+export async function getShippingRate(
+  deliveryPincode: string,
+  unitCount: number
+): Promise<ShippingRateResult> {
   const pickupPincode = await getSetting("SHIPROCKET_PICKUP_PINCODE");
-  if (!pickupPincode) return null;
+  if (!pickupPincode) return { status: "not_configured" };
 
   const weight = Math.max(0.1, unitCount * UNIT_WEIGHT_KG);
 
@@ -145,12 +159,12 @@ export async function getShippingRate(deliveryPincode: string, unitCount: number
       `/courier/serviceability/?pickup_postcode=${pickupPincode}&delivery_postcode=${deliveryPincode}&weight=${weight}&cod=0`
     );
     const couriers = data?.data?.available_courier_companies as { rate: number }[] | undefined;
-    if (!couriers || couriers.length === 0) return null;
+    if (!couriers || couriers.length === 0) return { status: "checked_unavailable" };
     const cheapest = Math.min(...couriers.map((c) => c.rate));
-    return Math.ceil(cheapest);
+    return { status: "available", rate: Math.ceil(cheapest) };
   } catch (err) {
     console.error("Shiprocket rate check failed", err);
-    return null;
+    return { status: "check_failed" };
   }
 }
 

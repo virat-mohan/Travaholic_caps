@@ -96,3 +96,20 @@ export async function sendAbandonedCartWhatsApp(session: CartSessionForWhatsApp)
     cartSessionId: session.id,
   });
 }
+
+/**
+ * Sends a nudge after a failed delivery attempt (NDR) — this is the actual
+ * RTO-prevention intervention, since it lands in the window before Shiprocket
+ * gives up and sends the shipment back. Needs a Flow with two variables:
+ * customer name, order number — set its ID as MSG91_NDR_TEMPLATE_ID in
+ * /admin/settings. Called from the Shiprocket webhook on the state
+ * transition into an NDR status, not on every webhook hit while already in
+ * that status, so a retried webhook can't spam the customer repeatedly.
+ */
+export async function sendNdrWhatsApp(order: OrderForWhatsApp) {
+  const msg91TemplateId = await getSetting("MSG91_NDR_TEMPLATE_ID");
+  const variables = [order.customer_name, order.id.slice(0, 8).toUpperCase()];
+  return sendTemplate(order.customer_phone, "ndr_nudge", msg91TemplateId, variables, {
+    orderId: order.id,
+  });
+}

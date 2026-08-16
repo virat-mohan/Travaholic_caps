@@ -14,6 +14,10 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    label: "Logistics",
+    links: [{ href: "/admin/logistics", label: "Shipments & RTO" }],
+  },
+  {
     label: "Content",
     links: [
       { href: "/admin/journal-drafts", label: "Journal Draft Generator" },

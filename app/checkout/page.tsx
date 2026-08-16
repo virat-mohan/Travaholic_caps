@@ -63,6 +63,11 @@ export default function CheckoutPage() {
   const [redeemMiles, setRedeemMiles] = useState(false);
   const [shippingCharge, setShippingCharge] = useState<number | null>(null);
   const [shippingUnavailable, setShippingUnavailable] = useState(false);
+  // Distinct from shippingUnavailable: this specifically means Shiprocket
+  // checked and confirmed it can't deliver to this pincode — a real RTO
+  // risk, so it blocks payment. A plain "unavailable" (our config, or a
+  // transient API hiccup) never blocks — see getShippingRate's doc comment.
+  const [shippingBlocking, setShippingBlocking] = useState(false);
 
   // Identity-first flow: verify who's checking out before showing the full
   // order form, so a returning customer's address and Miles are pulled in
@@ -88,6 +93,7 @@ export default function CheckoutPage() {
       if (!/^\d{6}$/.test(form.pincode)) {
         setShippingCharge(null);
         setShippingUnavailable(false);
+        setShippingBlocking(false);
         return;
       }
       fetch("/api/checkout/shipping-rate", {
@@ -100,14 +106,17 @@ export default function CheckoutPage() {
           if (data.available) {
             setShippingCharge(data.rate);
             setShippingUnavailable(false);
+            setShippingBlocking(false);
           } else {
             setShippingCharge(null);
             setShippingUnavailable(true);
+            setShippingBlocking(!!data.blocking);
           }
         })
         .catch(() => {
           setShippingCharge(null);
           setShippingUnavailable(false);
+          setShippingBlocking(false);
         });
     }, 500);
     return () => clearTimeout(timeout);
@@ -401,7 +410,13 @@ export default function CheckoutPage() {
           <span className="text-secondary-text">₹{shippingCharge.toLocaleString("en-IN")}</span>
         </div>
       )}
-      {shippingUnavailable && (
+      {shippingBlocking && (
+        <p className="text-caption text-paint-orange">
+          We can&apos;t currently deliver to that pincode — please double-check it or use a different
+          address before continuing.
+        </p>
+      )}
+      {shippingUnavailable && !shippingBlocking && (
         <p className="text-caption text-paint-orange">
           We couldn&apos;t find delivery rates for that pincode — double-check it, or we&apos;ll confirm
           shipping with you directly.
@@ -688,14 +703,16 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={paying}
+                disabled={paying || shippingBlocking}
                 className="w-full border border-ink bg-ink px-8 py-4 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
               >
-                {razorpay.enabled
-                  ? paying
-                    ? "Processing..."
-                    : `Pay ₹${total.toLocaleString("en-IN")}`
-                  : "Place Order via WhatsApp"}
+                {shippingBlocking
+                  ? "Undeliverable Pincode"
+                  : razorpay.enabled
+                    ? paying
+                      ? "Processing..."
+                      : `Pay ₹${total.toLocaleString("en-IN")}`
+                    : "Place Order via WhatsApp"}
               </button>
             </form>
           </>

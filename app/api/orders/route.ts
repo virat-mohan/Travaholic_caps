@@ -58,9 +58,19 @@ export async function POST(request: Request) {
     // Looked up fresh from Shiprocket by pincode, same as the Razorpay flow
     // — never a client-supplied amount, so it stays a genuine pass-through.
     const unitCount = body.items.reduce((sum, item) => sum + item.quantity, 0);
-    const shippingCharge = body.customer.pincode
-      ? (await getShippingRate(body.customer.pincode, unitCount)) ?? 0
-      : 0;
+    let shippingCharge = 0;
+    if (body.customer.pincode) {
+      const shippingResult = await getShippingRate(body.customer.pincode, unitCount);
+      if (shippingResult.status === "checked_unavailable") {
+        return NextResponse.json(
+          {
+            error: `We can't currently deliver to pincode ${body.customer.pincode} — please double-check it or use a different address.`,
+          },
+          { status: 400 }
+        );
+      }
+      shippingCharge = shippingResult.status === "available" ? shippingResult.rate : 0;
+    }
 
     const total = body.subtotal - discountAmount - loyaltyDiscountAmount + shippingCharge;
 

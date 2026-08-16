@@ -54,7 +54,16 @@ export async function computeTrustedOrderTotal(
   let shippingCharge = 0;
   if (deliveryPincode) {
     const unitCount = pricedItems.reduce((sum, item) => sum + item.quantity, 0);
-    shippingCharge = (await getShippingRate(deliveryPincode, unitCount)) ?? 0;
+    const shippingResult = await getShippingRate(deliveryPincode, unitCount);
+    // Only a confirmed "Shiprocket can't deliver here" blocks the order —
+    // our own misconfiguration or a transient API error must never turn
+    // away a real customer, see getShippingRate's doc comment.
+    if (shippingResult.status === "checked_unavailable") {
+      throw new Error(
+        `We can't currently deliver to pincode ${deliveryPincode} — please double-check it or use a different address.`
+      );
+    }
+    shippingCharge = shippingResult.status === "available" ? shippingResult.rate : 0;
   }
 
   const total = Math.max(0, subtotal - discountAmount - loyaltyDiscountAmount) + shippingCharge;

@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { sendNdrWhatsApp } from "@/lib/whatsapp-notify";
+
+// Broad keyword match rather than an exact status list — Shiprocket's status
+// strings vary by courier partner, and catching a superset (with occasional
+// false positives) is a much smaller cost than silently missing a real NDR
+// and losing the one window to save the delivery before RTO.
+const NDR_KEYWORDS = /ndr|undeliver|delivery fail|delivery attempt|not available|consignee/i;
 
 /**
  * Shiprocket calls this on every shipment status change (Settings -> API ->
  * Webhooks in their dashboard), so the dashboard's shipment status updates
- * live instead of needing a manual "Refresh Tracking" click.
+ * live instead of needing a manual "Refresh Tracking" click — and on the
+ * transition into a failed-delivery (NDR) status, fires an automatic
+ * WhatsApp nudge to the customer, since that's the actual window to save a
+ * delivery before Shiprocket gives up and sends it back (RTO).
  *
  * Payload field names below follow Shiprocket's documented webhook shape,
  * but — like the Meta/MSG91 integrations earlier — this hasn't been
@@ -41,19 +51,37 @@ export async function POST(request: Request) {
 
   try {
     const supabase = getSupabaseServerClient();
-    const patch: Record<string, string> = { shipment_status: String(status).toLowerCase() };
+
+    let lookup = supabase.from("orders").select("id, customer_name, customer_phone, shipment_status");
+    if (ourOrderId) lookup = lookup.eq("id", ourOrderId);
+    else if (shipmentId) lookup = lookup.eq("shiprocket_shipment_id", shipmentId);
+    else lookup = lookup.eq("shiprocket_awb_code", awbCode);
+    const { data: existing } = await lookup.maybeSingle();
+
+    if (!existing) {
+      console.error("Shiprocket webhook: no matching order for", { ourOrderId, awbCode, shipmentId });
+      return NextResponse.json({ ok: true });
+    }
+
+    const newStatus = String(status).toLowerCase();
+    const wasNdr = NDR_KEYWORDS.test(existing.shipment_status ?? "");
+    const isNdr = NDR_KEYWORDS.test(newStatus);
+
+    const patch: Record<string, string> = { shipment_status: newStatus };
     if (awbCode) patch.shiprocket_awb_code = awbCode;
     if (courierName) patch.courier_name = courierName;
+    await supabase.from("orders").update(patch).eq("id", existing.id);
 
-    let query = supabase.from("orders").update(patch);
-    if (ourOrderId) query = query.eq("id", ourOrderId);
-    else if (shipmentId) query = query.eq("shiprocket_shipment_id", shipmentId);
-    else query = query.eq("shiprocket_awb_code", awbCode);
-
-    const { data, error } = await query.select("id");
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      console.error("Shiprocket webhook: no matching order for", { ourOrderId, awbCode, shipmentId });
+    // Only on the transition into NDR, not on every webhook hit while
+    // already in that status — a retried/duplicate webhook for the same
+    // failed attempt must never spam the customer repeatedly.
+    if (isNdr && !wasNdr && existing.customer_phone) {
+      await sendNdrWhatsApp({
+        id: existing.id,
+        customer_name: existing.customer_name,
+        customer_phone: existing.customer_phone,
+        total: 0,
+      });
     }
   } catch (err) {
     console.error("Shiprocket webhook handling failed", err);
