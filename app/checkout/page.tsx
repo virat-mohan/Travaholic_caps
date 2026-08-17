@@ -60,6 +60,8 @@ export default function CheckoutPage() {
     codAdvanceRupees: 99,
   });
   const [referralCodeInput, setReferralCodeInput] = useState(() => getReferralCode() ?? "");
+  const [referralPreview, setReferralPreview] = useState<{ checked: string; valid: boolean; discountRupees: number } | null>(null);
+  const [referralChecking, setReferralChecking] = useState(false);
   function updateReferralCode(value: string) {
     const trimmed = value.trim().toUpperCase();
     setReferralCodeInput(value);
@@ -90,8 +92,39 @@ export default function CheckoutPage() {
   const [identityError, setIdentityError] = useState<string | null>(null);
 
   const loyaltyDiscount = redeemMiles ? account?.loyalty?.maxRedeemableRupees ?? 0 : 0;
-  const total = Math.max(0, subtotal - discount - loyaltyDiscount) + (shippingCharge ?? 0);
+  const normalizedReferralCode = referralCodeInput.trim().toUpperCase();
+  const referralDiscount =
+    referralPreview?.checked === normalizedReferralCode && referralPreview.valid
+      ? Math.min(referralPreview.discountRupees, subtotal)
+      : 0;
+  const total =
+    Math.max(0, subtotal - discount - loyaltyDiscount - referralDiscount) + (shippingCharge ?? 0);
   const unitCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Live referral-code validation — mirrors resolveReferralDiscount's rules
+  // (self-referral, one-time-per-customer) so the total shown before payment
+  // matches what create-order/verify will actually charge, instead of the
+  // shopper only finding out the code didn't apply after paying.
+  useEffect(() => {
+    const code = normalizedReferralCode;
+    const timeout = setTimeout(() => {
+      if (!code) {
+        setReferralPreview(null);
+        return;
+      }
+      setReferralChecking(true);
+      fetch("/api/checkout/referral-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referralCode: code, phone: form.phone }),
+      })
+        .then((res) => res.json())
+        .then((data) => setReferralPreview({ checked: code, valid: !!data.valid, discountRupees: data.discountRupees ?? 0 }))
+        .catch(() => setReferralPreview({ checked: code, valid: false, discountRupees: 0 }))
+        .finally(() => setReferralChecking(false));
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [normalizedReferralCode, form.phone]);
 
   // Live pass-through shipping quote from Shiprocket, by pincode — a
   // display-only preview; the actual charge is recomputed server-side from
@@ -434,6 +467,12 @@ export default function CheckoutPage() {
           <span className="text-tan-gold">−₹{loyaltyDiscount.toLocaleString("en-IN")}</span>
         </div>
       )}
+      {referralDiscount > 0 && (
+        <div className="flex items-center justify-between text-body-s">
+          <span className="text-tan-gold">Referral Code ({normalizedReferralCode})</span>
+          <span className="text-tan-gold">−₹{referralDiscount.toLocaleString("en-IN")}</span>
+        </div>
+      )}
       {shippingCharge != null && (
         <div className="flex items-center justify-between text-body-s">
           <span className="text-secondary-text">Shipping</span>
@@ -614,6 +653,19 @@ export default function CheckoutPage() {
                 placeholder="Got a code from a friend? Enter it here"
                 className="mt-3 w-full max-w-[280px] border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
               />
+              {normalizedReferralCode && (
+                <p className="mt-2 text-caption">
+                  {referralChecking ? (
+                    <span className="text-secondary-text">Checking code...</span>
+                  ) : referralPreview?.checked === normalizedReferralCode && referralPreview.valid ? (
+                    <span className="text-tan-gold">
+                      Code applied — ₹{referralDiscount.toLocaleString("en-IN")} off
+                    </span>
+                  ) : referralPreview?.checked === normalizedReferralCode ? (
+                    <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
+                  ) : null}
+                </p>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="mt-10 space-y-6">
