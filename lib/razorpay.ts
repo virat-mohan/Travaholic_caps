@@ -36,6 +36,37 @@ export async function createRazorpayOrder(amountInRupees: number, receipt: strin
   return { razorpayOrderId: order.id as string, keyId: creds.keyId };
 }
 
+/**
+ * Refunds a payment via Razorpay's Refund API — this actually moves money
+ * back to the customer's original payment method, not just a status label.
+ * Omit amountInRupees for a full refund; pass a smaller amount for partial
+ * (e.g. refunding a COD-advance order's advance only). Razorpay itself
+ * enforces you can't refund more than what was actually captured, and
+ * rejects a second full refund on an already-refunded payment — errors
+ * from those cases surface as-is rather than being guessed at here.
+ */
+export async function refundRazorpayPayment(paymentId: string, amountInRupees?: number) {
+  const creds = await getRazorpayCredentials();
+  if (!creds) throw new Error("Razorpay is not configured yet — add keys in /admin/settings");
+
+  const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}/refund`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${creds.keyId}:${creds.keySecret}`).toString("base64")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(
+      amountInRupees != null ? { amount: Math.round(amountInRupees * 100) } : {}
+    ),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(`Razorpay refund failed: ${res.status} ${JSON.stringify(data)}`);
+  }
+  return { refundId: data.id as string, status: data.status as string, amountRupees: (data.amount as number) / 100 };
+}
+
 export async function verifyRazorpaySignature(
   razorpayOrderId: string,
   razorpayPaymentId: string,

@@ -3,6 +3,7 @@ import { chapters } from "@/lib/chapters";
 import { InventoryRow } from "@/components/admin/InventoryRow";
 import { OrderStatusCell } from "@/components/admin/OrderStatusCell";
 import { ShipmentCell } from "@/components/admin/ShipmentCell";
+import { RefundActions } from "@/components/admin/RefundActions";
 
 // This page reads live, frequently-changing data (orders, stock) and needs
 // Supabase env vars — never prerender it at build time.
@@ -36,6 +37,9 @@ export default async function AdminDashboardPage() {
     shiprocket_shipment_id: string | null;
     shiprocket_awb_code: string | null;
     courier_name: string | null;
+    razorpay_payment_id: string | null;
+    refunded_amount: number | null;
+    return_shipment_id: string | null;
   }[] = [];
   let inventory: { chapter_slug: string; stock_on_hand: number }[] = [];
   let configError = false;
@@ -46,7 +50,7 @@ export default async function AdminDashboardPage() {
       supabase
         .from("orders")
         .select(
-          "id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, payment_type, balance_due, status, shipment_status, refund_status, is_gift, gift_note, shiprocket_shipment_id, shiprocket_awb_code, courier_name"
+          "id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, payment_type, balance_due, status, shipment_status, refund_status, is_gift, gift_note, shiprocket_shipment_id, shiprocket_awb_code, courier_name, razorpay_payment_id, refunded_amount, return_shipment_id"
         )
         .order("created_at", { ascending: false })
         .limit(50),
@@ -98,6 +102,7 @@ export default async function AdminDashboardPage() {
                 <th className="py-2 pr-4">Shipment</th>
                 <th className="py-2 pr-4">Shipping</th>
                 <th className="py-2 pr-4">Refund</th>
+                <th className="py-2 pr-4">Actions</th>
                 <th className="py-2 pr-4">Gift</th>
               </tr>
             </thead>
@@ -150,6 +155,15 @@ export default async function AdminDashboardPage() {
                       orderId={o.id}
                       field="refundStatus"
                       value={o.refund_status ?? "none"}
+                    />
+                  </td>
+                  <td className="py-3">
+                    <RefundActions
+                      orderId={o.id}
+                      total={o.total}
+                      refundedAmount={o.refunded_amount ?? 0}
+                      hasRazorpayPayment={!!o.razorpay_payment_id}
+                      returnShipmentId={o.return_shipment_id}
                     />
                   </td>
                   <td className="py-3 text-caption text-secondary-text">

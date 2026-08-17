@@ -588,3 +588,11 @@ alter table orders add column if not exists review_requested_at timestamptz;
 -- timestamp is what gates an actual send).
 -- ============================================================
 alter table customers add column if not exists last_winback_sent_at timestamptz;
+
+-- ============================================================
+-- Real Razorpay refunds (not just the refund_status label) and Shiprocket
+-- return pickups, both triggerable from the admin dashboard.
+-- ============================================================
+alter table orders add column if not exists refunded_amount integer not null default 0;
+alter table orders add column if not exists razorpay_refund_id text;
+alter table orders add column if not exists return_shipment_id text;

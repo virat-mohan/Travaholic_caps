@@ -125,6 +125,79 @@ export async function createShiprocketOrder(order: ShiprocketOrderInput) {
   };
 }
 
+export type ReturnPickupInput = {
+  orderId: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  addressLine: string;
+  city: string;
+  state: string;
+  pincode: string;
+  items: { name: string; sku: string; quantity: number; price: number }[];
+};
+
+/**
+ * Schedules a reverse pickup — a courier collects the item FROM the
+ * customer and brings it back to the pickup location on file, for a
+ * return/refund. Unlike createShiprocketOrder (confirmed working against
+ * a real shipment earlier), this endpoint and payload shape are a
+ * best-effort read of Shiprocket's documented "Create Return Order" API,
+ * mirrored as closely as possible against the forward-order shape that's
+ * already confirmed to work — genuinely untested against a live call.
+ * Check the response/Shiprocket's dashboard closely on first real use and
+ * adjust field names here if it errors or the pickup doesn't show up
+ * correctly on their side.
+ */
+export async function createShiprocketReturnPickup(input: ReturnPickupInput) {
+  const pickupLocation = await getSetting("SHIPROCKET_PICKUP_LOCATION");
+  if (!pickupLocation) {
+    throw new Error("SHIPROCKET_PICKUP_LOCATION is not set — add it in /admin/settings");
+  }
+
+  const [firstName, ...rest] = input.customerName.trim().split(/\s+/);
+  const lastName = rest.join(" ") || firstName;
+  const totalWeight = Math.max(0.1, input.items.reduce((sum, i) => sum + i.quantity, 0) * UNIT_WEIGHT_KG);
+
+  const data = await shiprocketFetch("/orders/create/return", {
+    method: "POST",
+    body: JSON.stringify({
+      order_id: `RET-${input.orderId}`,
+      order_date: new Date().toISOString().slice(0, 16).replace("T", " "),
+      pickup_customer_name: firstName,
+      pickup_last_name: lastName,
+      pickup_address: input.addressLine,
+      pickup_city: input.city,
+      pickup_state: input.state,
+      pickup_country: "India",
+      pickup_pincode: input.pincode,
+      pickup_email: input.customerEmail,
+      pickup_phone: input.customerPhone.replace(/\D/g, "").slice(-10),
+      pickup_isd_code: "91",
+      shipping_customer_name: pickupLocation,
+      pickup_location: pickupLocation,
+      order_items: input.items.map((item) => ({
+        name: item.name,
+        sku: item.sku,
+        units: item.quantity,
+        selling_price: item.price,
+        qc_enable: false,
+      })),
+      payment_method: "PREPAID",
+      sub_total: input.items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+      length: BOX_DIMENSIONS_CM.length,
+      breadth: BOX_DIMENSIONS_CM.breadth,
+      height: BOX_DIMENSIONS_CM.height,
+      weight: totalWeight,
+    }),
+  });
+
+  return {
+    shiprocketOrderId: String(data.order_id),
+    shipmentId: String(data.shipment_id),
+  };
+}
+
 export type ShippingRateResult =
   | { status: "not_configured" }
   | { status: "checked_unavailable" }
