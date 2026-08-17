@@ -111,7 +111,7 @@ export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[
 
           <tr>
             <td style="padding:36px 40px 8px 40px;text-align:center;">
-              <img src="${logoUrl}" alt="${brand.brandName}" width="88" style="display:inline-block;" />
+              <img src="${logoUrl}" alt="${brand.brandName}" width="150" style="display:inline-block;" />
             </td>
           </tr>
           <tr>

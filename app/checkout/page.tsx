@@ -10,6 +10,7 @@ import { calculateDiscount } from "@/lib/discounts";
 import { trackEvent, getSessionKey, getAttribution, getReferralCode, setReferralCode } from "@/lib/client-tracking";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
+import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
 
 const WHATSAPP_NUMBER = "919958871283";
 
@@ -315,7 +316,7 @@ export default function CheckoutPage() {
             if (!verifyRes.ok) throw new Error(verifyData.error ?? "Payment verification failed");
             trackEvent("Purchase", { value: createData.total });
             clear();
-            router.push(`/checkout/confirmed?order=${verifyData.orderId}`);
+            router.push(`/checkout/confirmed?order=${verifyData.orderId}&paid=1`);
           } catch (err) {
             setPayError(err instanceof Error ? err.message : "Payment verification failed");
           } finally {
@@ -465,6 +466,7 @@ export default function CheckoutPage() {
         <h1 className="mt-2 font-display text-heading-xl uppercase text-ink md:text-display-m">
           Almost Done.
         </h1>
+        <CheckoutSteps current="checkout" />
 
         {(identityStep === "identify" || identityStep === "otp") && (
           <>

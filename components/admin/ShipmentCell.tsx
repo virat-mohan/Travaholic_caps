@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function ShipmentCell({
   orderId,
@@ -13,6 +14,7 @@ export function ShipmentCell({
   awbCode: string | null;
   courierName: string | null;
 }) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState({ shipmentId, awbCode, courierName });
@@ -25,6 +27,11 @@ export function ShipmentCell({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not ship");
       setState((s) => ({ ...s, shipmentId: data.shipmentId }));
+      // The row's shipment-status dropdown is a separate component with its
+      // own local state (server-driven, set once at page load) — a plain
+      // client-state update here wouldn't touch it. Refreshing the server
+      // component is what actually syncs it to "processing".
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not ship");
     } finally {
