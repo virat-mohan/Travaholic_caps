@@ -80,8 +80,13 @@ create table if not exists discount_rules (
   created_at timestamptz not null default now()
 );
 
-insert into discount_rules (name, buy_quantity, discount_percent, active) values
-  ('Buy 2, get 3rd at half price', 3, 50, true);
+-- Seed data, not meant to be re-inserted on every re-run of this file — no
+-- unique constraint on discount_rules to key an ON CONFLICT off, so this
+-- guards the same way instead. Confirmed the naive version above created
+-- ~10 duplicate active rows in production from repeated schema.sql runs.
+insert into discount_rules (name, buy_quantity, discount_percent, active)
+select 'Buy 2, get 3rd at half price', 3, 50, true
+where not exists (select 1 from discount_rules);
 
 -- Chapters added from the admin (the original 16 stay hardcoded in lib/chapters.ts —
 -- this table is only for new ones added later, and their images live in Supabase
