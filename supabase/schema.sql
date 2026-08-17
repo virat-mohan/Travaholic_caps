@@ -8,16 +8,22 @@ create table if not exists orders (
   customer_email text not null,
   delivery_address text not null,
   subtotal integer not null, -- in INR, whole rupees, before discount
-  discount_amount integer not null default 0,
-  total integer not null default 0, -- subtotal - discount_amount
-  status text not null default 'pending_whatsapp_confirmation',
-  -- Fulfilment. shiprocket_order_id gets filled in once that integration exists.
-  shipment_status text not null default 'not_shipped',
-  shiprocket_order_id text,
-  refund_status text not null default 'none', -- none | requested | approved | refunded | denied
-  is_gift boolean not null default false,
-  gift_note text
+  status text not null default 'pending_whatsapp_confirmation'
 );
+
+-- These were originally listed inside the CREATE TABLE above, but that's a
+-- no-op on an already-existing table (same lesson as otp_codes.email and
+-- customers.phone further down) — orders already existed in production
+-- before this file was the source of truth, so every one of these silently
+-- never landed until made an explicit ALTER. Confirmed missing in production
+-- 2026-08-17 via direct query, despite schema.sql having been re-run.
+alter table orders add column if not exists discount_amount integer not null default 0;
+alter table orders add column if not exists total integer not null default 0; -- subtotal - discount_amount
+alter table orders add column if not exists shipment_status text not null default 'not_shipped';
+alter table orders add column if not exists shiprocket_order_id text;
+alter table orders add column if not exists refund_status text not null default 'none'; -- none | requested | approved | refunded | denied
+alter table orders add column if not exists is_gift boolean not null default false;
+alter table orders add column if not exists gift_note text;
 
 create table if not exists order_items (
   id uuid primary key default gen_random_uuid(),

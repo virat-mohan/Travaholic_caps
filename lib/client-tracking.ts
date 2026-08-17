@@ -58,6 +58,16 @@ export function getReferralCode(): string | null {
   }
 }
 
+/** Lets someone who typed a code by hand at checkout (not via a `?ref=` link) apply it the same way. */
+export function setReferralCode(code: string | null) {
+  if (typeof window === "undefined") return;
+  if (!code) {
+    localStorage.removeItem(REFERRAL_STORAGE);
+    return;
+  }
+  localStorage.setItem(REFERRAL_STORAGE, JSON.stringify({ code, capturedAt: Date.now() }));
+}
+
 /** The still-valid attributed ad brief id, if any, for stamping onto an order at checkout. */
 export function getAttribution(): string | null {
   if (typeof window === "undefined") return null;

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
-import { trackEvent, getSessionKey, getAttribution, getReferralCode } from "@/lib/client-tracking";
+import { trackEvent, getSessionKey, getAttribution, getReferralCode, setReferralCode } from "@/lib/client-tracking";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -58,6 +58,12 @@ export default function CheckoutPage() {
     keyId: null,
     codAdvanceRupees: 99,
   });
+  const [referralCodeInput, setReferralCodeInput] = useState(() => getReferralCode() ?? "");
+  function updateReferralCode(value: string) {
+    const trimmed = value.trim().toUpperCase();
+    setReferralCodeInput(value);
+    setReferralCode(trimmed || null);
+  }
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
@@ -266,7 +272,7 @@ export default function CheckoutPage() {
           pincode: form.pincode,
           paymentType,
           phone: form.phone,
-          referralCode: getReferralCode(),
+          referralCode: referralCodeInput.trim().toUpperCase() || null,
         }),
       });
       const createData = await createRes.json();
@@ -301,7 +307,7 @@ export default function CheckoutPage() {
                   newsletterOptIn,
                   paymentType,
                   attributedAdBriefId: getAttribution(),
-                  referralCode: getReferralCode(),
+                  referralCode: referralCodeInput.trim().toUpperCase() || null,
                 },
               }),
             });
@@ -356,7 +362,7 @@ export default function CheckoutPage() {
           redeemMilesRupees: loyaltyDiscount,
           newsletterOptIn,
           attributedAdBriefId: getAttribution(),
-          referralCode: getReferralCode(),
+          referralCode: referralCodeInput.trim().toUpperCase() || null,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -595,6 +601,18 @@ export default function CheckoutPage() {
                 </span>
               </label>
             )}
+
+            <div className="mt-4">
+              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                Referral Code (Optional)
+              </label>
+              <input
+                value={referralCodeInput}
+                onChange={(e) => updateReferralCode(e.target.value)}
+                placeholder="Got a code from a friend? Enter it here"
+                className="mt-3 w-full max-w-[280px] border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
+              />
+            </div>
 
             <form onSubmit={handleSubmit} className="mt-10 space-y-6">
               <div>
