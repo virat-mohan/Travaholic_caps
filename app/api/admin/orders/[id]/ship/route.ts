@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { createShiprocketOrder } from "@/lib/shiprocket";
+import { createShiprocketOrder, assignShiprocketAwb, requestShiprocketPickup } from "@/lib/shiprocket";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -61,7 +61,38 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .eq("id", id);
     if (error) throw error;
 
-    return NextResponse.json({ ok: true, shiprocketOrderId, shipmentId });
+    // Best-effort from here — the order is already safely created in
+    // Shiprocket regardless of what happens next, so a courier-assignment
+    // or pickup-request failure must never look like the whole "Ship"
+    // action failed. Both steps can always be retried manually from
+    // Shiprocket's own dashboard if they don't go through here.
+    let awbCode: string | null = null;
+    let courierName: string | null = null;
+    let courierWarning: string | null = null;
+    try {
+      const assigned = await assignShiprocketAwb(shipmentId);
+      awbCode = assigned.awbCode;
+      courierName = assigned.courierName;
+      if (awbCode) {
+        await supabase
+          .from("orders")
+          .update({ shiprocket_awb_code: awbCode, courier_name: courierName })
+          .eq("id", id);
+        try {
+          await requestShiprocketPickup(shipmentId);
+        } catch (pickupErr) {
+          console.error("Shiprocket pickup request failed", id, pickupErr);
+          courierWarning = "Courier assigned, but the pickup request failed — schedule it from Shiprocket's dashboard.";
+        }
+      } else {
+        courierWarning = "Order created, but no courier could be auto-assigned — assign one from Shiprocket's dashboard.";
+      }
+    } catch (awbErr) {
+      console.error("Shiprocket AWB assignment failed", id, awbErr);
+      courierWarning = "Order created in Shiprocket, but courier assignment failed — assign one from Shiprocket's dashboard.";
+    }
+
+    return NextResponse.json({ ok: true, shiprocketOrderId, shipmentId, awbCode, courierName, courierWarning });
   } catch (err) {
     console.error("Failed to create Shiprocket shipment", err);
     return NextResponse.json(

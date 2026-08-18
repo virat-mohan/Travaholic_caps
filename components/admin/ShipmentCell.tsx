@@ -19,16 +19,25 @@ export function ShipmentCell({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [state, setState] = useState({ shiprocketOrderId, shipmentId, awbCode, courierName });
 
   async function ship() {
     setBusy(true);
     setError(null);
+    setWarning(null);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/ship`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not ship");
-      setState((s) => ({ ...s, shipmentId: data.shipmentId, shiprocketOrderId: data.shiprocketOrderId ?? s.shiprocketOrderId }));
+      setState((s) => ({
+        ...s,
+        shipmentId: data.shipmentId,
+        shiprocketOrderId: data.shiprocketOrderId ?? s.shiprocketOrderId,
+        awbCode: data.awbCode ?? s.awbCode,
+        courierName: data.courierName ?? s.courierName,
+      }));
+      if (data.courierWarning) setWarning(data.courierWarning);
       // The row's shipment-status dropdown is a separate component with its
       // own local state (server-driven, set once at page load) — a plain
       // client-state update here wouldn't touch it. Refreshing the server
@@ -87,6 +96,7 @@ export function ShipmentCell({
       >
         {busy ? "Checking..." : "Refresh Tracking"}
       </button>
+      {warning && <p className="mt-1 max-w-[180px] text-micro text-paint-orange">{warning}</p>}
       {error && <p className="mt-1 max-w-[160px] text-micro text-paint-orange">{error}</p>}
     </div>
   );

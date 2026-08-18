@@ -254,6 +254,40 @@ export async function cancelShiprocketOrder(shiprocketOrderId: string) {
   });
 }
 
+/**
+ * Auto-assigns the best-recommended courier and generates the AWB for a
+ * shipment — the step that turns a Shiprocket order sitting in their "New"
+ * tab into something with a tracking number, actually ready to be picked
+ * up. No courier_id sent, so Shiprocket picks based on its own
+ * recommendation (serviceability, rate, performance) rather than us
+ * hardcoding a preference.
+ */
+export async function assignShiprocketAwb(shipmentId: string) {
+  const data = await shiprocketFetch("/courier/assign/awb", {
+    method: "POST",
+    body: JSON.stringify({ shipment_id: Number(shipmentId) }),
+  });
+  const response = data?.response?.data;
+  return {
+    awbCode: response?.awb_code ? String(response.awb_code) : null,
+    courierName: response?.courier_name ?? null,
+  };
+}
+
+/**
+ * Requests the actual courier pickup, once an AWB exists — without this,
+ * an AWB'd shipment can still sit unpicked in "Ready To Ship" indefinitely.
+ * Best-effort: a failure here shouldn't undo the AWB assignment, since the
+ * order is still shippable and pickup can be requested again manually from
+ * Shiprocket's dashboard.
+ */
+export async function requestShiprocketPickup(shipmentId: string) {
+  await shiprocketFetch("/courier/generate/pickup", {
+    method: "POST",
+    body: JSON.stringify({ shipment_id: [Number(shipmentId)] }),
+  });
+}
+
 export async function trackShiprocketShipment(shipmentId: string) {
   const data = await shiprocketFetch(`/courier/track/shipment/${shipmentId}`);
   const tracking = data[shipmentId]?.tracking_data;
