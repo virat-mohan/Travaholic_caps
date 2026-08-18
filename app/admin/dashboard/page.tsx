@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { chapters } from "@/lib/chapters";
 import { InventoryRow } from "@/components/admin/InventoryRow";
@@ -34,6 +35,7 @@ export default async function AdminDashboardPage() {
     refund_status: string | null;
     is_gift: boolean;
     gift_note: string | null;
+    shiprocket_order_id: string | null;
     shiprocket_shipment_id: string | null;
     shiprocket_awb_code: string | null;
     courier_name: string | null;
@@ -50,7 +52,7 @@ export default async function AdminDashboardPage() {
       supabase
         .from("orders")
         .select(
-          "id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, payment_type, balance_due, status, shipment_status, refund_status, is_gift, gift_note, shiprocket_shipment_id, shiprocket_awb_code, courier_name, razorpay_payment_id, refunded_amount, return_shipment_id"
+          "id, created_at, customer_name, customer_phone, total, subtotal, discount_amount, payment_type, balance_due, status, shipment_status, refund_status, is_gift, gift_note, shiprocket_order_id, shiprocket_shipment_id, shiprocket_awb_code, courier_name, razorpay_payment_id, refunded_amount, return_shipment_id"
         )
         .order("created_at", { ascending: false })
         .limit(50),
@@ -84,9 +86,17 @@ export default async function AdminDashboardPage() {
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Admin Dashboard</h1>
 
       <section className="mt-12">
-        <h2 className="font-display text-heading-s uppercase text-ink">
-          Recent Orders ({orders?.length ?? 0})
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-heading-s uppercase text-ink">
+            Recent Orders ({orders?.length ?? 0})
+          </h2>
+          <Link
+            href="/admin/orders/new"
+            className="border border-ink px-4 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream"
+          >
+            + Add Manual Order
+          </Link>
+        </div>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[900px] text-left">
             <thead>
@@ -103,6 +113,7 @@ export default async function AdminDashboardPage() {
                 <th className="py-2 pr-4">Shipping</th>
                 <th className="py-2 pr-4">Refund</th>
                 <th className="py-2 pr-4">Actions</th>
+                <th className="py-2 pr-4">Invoice</th>
                 <th className="py-2 pr-4">Gift</th>
               </tr>
             </thead>
@@ -145,6 +156,7 @@ export default async function AdminDashboardPage() {
                   <td className="py-3">
                     <ShipmentCell
                       orderId={o.id}
+                      shiprocketOrderId={o.shiprocket_order_id}
                       shipmentId={o.shiprocket_shipment_id}
                       awbCode={o.shiprocket_awb_code}
                       courierName={o.courier_name}
@@ -168,6 +180,15 @@ export default async function AdminDashboardPage() {
                       shipmentStatus={o.shipment_status ?? "not_shipped"}
                     />
                   </td>
+                  <td className="py-3">
+                    <Link
+                      href={`/invoice/${o.id}`}
+                      target="_blank"
+                      className="text-micro text-secondary-text underline"
+                    >
+                      View
+                    </Link>
+                  </td>
                   <td className="py-3 text-caption text-secondary-text">
                     {o.is_gift ? o.gift_note || "Yes" : "—"}
                   </td>
@@ -175,7 +196,7 @@ export default async function AdminDashboardPage() {
               ))}
               {(!orders || orders.length === 0) && (
                 <tr>
-                  <td colSpan={11} className="py-8 text-center text-body-s text-secondary-text">
+                  <td colSpan={12} className="py-8 text-center text-body-s text-secondary-text">
                     No orders yet.
                   </td>
                 </tr>

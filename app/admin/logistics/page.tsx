@@ -11,6 +11,7 @@ type LogisticsOrder = {
   delivery_pincode: string | null;
   status: string;
   shipment_status: string | null;
+  shiprocket_order_id: string | null;
   shiprocket_shipment_id: string | null;
   shiprocket_awb_code: string | null;
   courier_name: string | null;
@@ -154,6 +155,7 @@ export default function LogisticsPage() {
                   <td className="py-2 pr-4">
                     <ShipmentCell
                       orderId={order.id}
+                      shiprocketOrderId={order.shiprocket_order_id}
                       shipmentId={order.shiprocket_shipment_id}
                       awbCode={order.shiprocket_awb_code}
                       courierName={order.courier_name}

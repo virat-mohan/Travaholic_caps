@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 
 export function ShipmentCell({
   orderId,
+  shiprocketOrderId,
   shipmentId,
   awbCode,
   courierName,
 }: {
   orderId: string;
+  shiprocketOrderId: string | null;
   shipmentId: string | null;
   awbCode: string | null;
   courierName: string | null;
@@ -17,7 +19,7 @@ export function ShipmentCell({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [state, setState] = useState({ shipmentId, awbCode, courierName });
+  const [state, setState] = useState({ shiprocketOrderId, shipmentId, awbCode, courierName });
 
   async function ship() {
     setBusy(true);
@@ -26,7 +28,7 @@ export function ShipmentCell({
       const res = await fetch(`/api/admin/orders/${orderId}/ship`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not ship");
-      setState((s) => ({ ...s, shipmentId: data.shipmentId }));
+      setState((s) => ({ ...s, shipmentId: data.shipmentId, shiprocketOrderId: data.shiprocketOrderId ?? s.shiprocketOrderId }));
       // The row's shipment-status dropdown is a separate component with its
       // own local state (server-driven, set once at page load) — a plain
       // client-state update here wouldn't touch it. Refreshing the server
@@ -75,6 +77,9 @@ export function ShipmentCell({
         {state.courierName ?? "Awaiting courier"}
         {state.awbCode && <> · {state.awbCode}</>}
       </p>
+      {state.shiprocketOrderId && (
+        <p className="text-micro text-secondary-text">SR #{state.shiprocketOrderId}</p>
+      )}
       <button
         onClick={track}
         disabled={busy}

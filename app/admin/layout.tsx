@@ -8,6 +8,7 @@ const NAV_SECTIONS = [
     label: "Store",
     links: [
       { href: "/admin/dashboard", label: "Dashboard" },
+      { href: "/admin/orders/new", label: "Add Manual Order" },
       { href: "/admin/edit-chapter", label: "Edit Chapters" },
       { href: "/admin/add-chapter", label: "Add Chapter" },
       { href: "/admin/discounts", label: "Discount Rules" },
@@ -15,7 +16,10 @@ const NAV_SECTIONS = [
   },
   {
     label: "Logistics",
-    links: [{ href: "/admin/logistics", label: "Shipments & RTO" }],
+    links: [
+      { href: "/admin/logistics", label: "Shipments & RTO" },
+      { href: "/admin/returns", label: "Return Requests" },
+    ],
   },
   {
     label: "Content",
@@ -63,7 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen w-full">
       <aside className="sticky top-0 hidden h-screen w-[22rem] shrink-0 flex-col overflow-y-auto border-r border-divider bg-surface px-5 pt-8 pb-10 md:flex">
         <p className="mb-4 text-micro uppercase tracking-[0.15em] text-secondary-text">Admin</p>
-        <nav className="columns-2 gap-6">
+        <nav>
           {NAV_SECTIONS.map((section) => (
             <div key={section.label} className="mb-6 break-inside-avoid">
               <p className="mb-2 text-micro uppercase tracking-[0.1em] text-secondary-text/70">
