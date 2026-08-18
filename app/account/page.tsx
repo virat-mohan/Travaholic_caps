@@ -15,7 +15,7 @@ type Address = {
   pincode: string | null;
   is_default: boolean;
 };
-type Order = { id: string; created_at: string; total: number; status: string };
+type Order = { id: string; created_at: string; total: number; status: string; returnEligible?: boolean };
 type Loyalty = { balance: number; threshold: number; valueRupees: number; maxRedeemableRupees: number };
 
 function formatDate(iso: string) {
@@ -379,7 +379,14 @@ export default function AccountPage() {
                 <span className="text-secondary-text">
                   {formatDate(o.created_at)} · #{o.id.slice(0, 8).toUpperCase()}
                 </span>
-                <span className="text-ink">₹{o.total.toLocaleString("en-IN")}</span>
+                <span className="flex items-center gap-3">
+                  <span className="text-ink">₹{o.total.toLocaleString("en-IN")}</span>
+                  {o.returnEligible && (
+                    <a href={`/return/${o.id}`} className="text-caption text-ink underline underline-offset-4">
+                      Request Return
+                    </a>
+                  )}
+                </span>
               </div>
             ))
           )}

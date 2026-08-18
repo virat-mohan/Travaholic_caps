@@ -37,6 +37,7 @@ export const SETTINGS_KEYS = [
   "SHIPROCKET_TOKEN_CACHE",
   "MSG91_RTO_INITIATED_TEMPLATE_ID",
   "MSG91_RTO_REFUNDED_TEMPLATE_ID",
+  "RETURN_WINDOW_DAYS",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

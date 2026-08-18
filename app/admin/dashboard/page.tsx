@@ -164,6 +164,8 @@ export default async function AdminDashboardPage() {
                       refundedAmount={o.refunded_amount ?? 0}
                       hasRazorpayPayment={!!o.razorpay_payment_id}
                       returnShipmentId={o.return_shipment_id}
+                      status={o.status}
+                      shipmentStatus={o.shipment_status ?? "not_shipped"}
                     />
                   </td>
                   <td className="py-3 text-caption text-secondary-text">

@@ -2,26 +2,35 @@
 
 import { useState } from "react";
 
+const CANCELLABLE_SHIPMENT_STATUSES = new Set(["not_shipped", "processing"]);
+
 export function RefundActions({
   orderId,
   total,
   refundedAmount,
   hasRazorpayPayment,
   returnShipmentId,
+  status,
+  shipmentStatus,
 }: {
   orderId: string;
   total: number;
   refundedAmount: number;
   hasRazorpayPayment: boolean;
   returnShipmentId: string | null;
+  status: string;
+  shipmentStatus: string;
 }) {
   const [refunding, setRefunding] = useState(false);
   const [schedulingReturn, setSchedulingReturn] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [refunded, setRefunded] = useState(refundedAmount);
   const [returnScheduled, setReturnScheduled] = useState(!!returnShipmentId);
+  const [cancelled, setCancelled] = useState(status === "cancelled");
   const [error, setError] = useState<string | null>(null);
 
   const maxRefundable = total - refunded;
+  const canCancel = !cancelled && CANCELLABLE_SHIPMENT_STATUSES.has(shipmentStatus);
 
   async function refund() {
     if (maxRefundable <= 0) return;
@@ -69,8 +78,36 @@ export function RefundActions({
     }
   }
 
+  async function cancelOrder() {
+    if (!window.confirm("Cancel this order? This refunds it in full and puts stock back — this can't be undone.")) {
+      return;
+    }
+    setCancelling(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/cancel`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not cancel order");
+      setCancelled(true);
+      if (data.refundedRupees > 0) setRefunded((prev) => prev + data.refundedRupees);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not cancel order");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   return (
     <div className="flex flex-col items-start gap-1">
+      {canCancel && (
+        <button
+          onClick={cancelOrder}
+          disabled={cancelling}
+          className="border border-paint-orange px-2 py-1 text-micro uppercase tracking-[0.05em] text-paint-orange hover:bg-paint-orange hover:text-cream disabled:opacity-50"
+        >
+          {cancelling ? "..." : "Cancel Order"}
+        </button>
+      )}
       {hasRazorpayPayment && maxRefundable > 0 && (
         <button
           onClick={refund}

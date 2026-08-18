@@ -175,6 +175,7 @@ export async function sendReviewRequestEmail(
   const brand = await getBrandProfile();
   const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
   const reviewUrl = `${brand.siteUrl.replace(/\/$/, "")}/review/${orderId}`;
+  const returnUrl = `${brand.siteUrl.replace(/\/$/, "")}/return/${orderId}`;
   const itemsLine = chapterNames.join(", ");
 
   const html = `
@@ -188,6 +189,9 @@ export async function sendReviewRequestEmail(
         travellers pick the right Chapter, and takes under a minute.
       </p>
       <a href="${reviewUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Leave a Review</a>
+      <p style="margin-top:20px;font-size:13px;color:#666;">
+        Something wrong with it? <a href="${returnUrl}" style="color:#101820;">Request a return</a>.
+      </p>
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
@@ -261,4 +265,68 @@ export async function sendRtoRefundedEmail(toEmail: string, name: string | null,
     </div>
   `;
   return sendEmail(toEmail, `Refunded — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+}
+
+/** Sent when an admin approves a return request and schedules the pickup. */
+export async function sendReturnApprovedEmail(toEmail: string, name: string | null, orderId: string) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        Your return for order #${orderId.slice(0, 8).toUpperCase()} is approved — a courier will
+        be in touch to pick it up. Once we receive it, we'll refund you and confirm by email.
+      </p>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `Return approved — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+}
+
+/** Sent when an admin denies a return request. */
+export async function sendReturnDeniedEmail(toEmail: string, name: string | null, orderId: string, reason: string) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        We've reviewed your return request for order #${orderId.slice(0, 8).toUpperCase()} and
+        aren't able to approve it: ${reason}. Reply to this email if you'd like to discuss it further.
+      </p>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `Update on your return — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+}
+
+/** Sent once a customer-initiated return is physically back and refunded — same trigger point as the RTO-refunded email, different copy. */
+export async function sendReturnRefundedEmail(toEmail: string, name: string | null, orderId: string, refundRupees: number) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        We've received your return for order #${orderId.slice(0, 8).toUpperCase()} and refunded
+        <strong>₹${refundRupees.toLocaleString("en-IN")}</strong> to your original payment method —
+        it should reflect within 5-7 business days.
+      </p>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `Return refunded — order #${orderId.slice(0, 8).toUpperCase()}`, html);
 }

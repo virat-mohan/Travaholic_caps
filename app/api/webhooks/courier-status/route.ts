@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendNdrWhatsApp, sendRtoInitiatedWhatsApp, sendRtoRefundedWhatsApp } from "@/lib/whatsapp-notify";
-import { sendReviewRequestEmail, sendRtoInitiatedEmail, sendRtoRefundedEmail } from "@/lib/email";
+import { sendReviewRequestEmail, sendRtoInitiatedEmail, sendRtoRefundedEmail, sendReturnRefundedEmail } from "@/lib/email";
 import { refundRazorpayPayment } from "@/lib/razorpay";
+import { computeReturnRefundRupees, isValidReturnReason } from "@/lib/returns";
 
 // Broad keyword match rather than an exact status list — Shiprocket's status
 // strings vary by courier partner, and catching a superset (with occasional
@@ -65,11 +66,106 @@ export async function POST(request: Request) {
 
   try {
     const supabase = getSupabaseServerClient();
+    const newStatusEarly = String(status).toLowerCase();
+
+    // A return-pickup shipment (customer-initiated return, see
+    // /admin/returns) reports to this same webhook URL, but it's tracked by
+    // return_requests.return_shipment_id, not orders.shiprocket_shipment_id
+    // — check that first so it isn't mistaken for a forward shipment update.
+    if (shipmentId || awbCode) {
+      let returnLookup = supabase
+        .from("return_requests")
+        .select("id, order_id, reason, status, refunded_amount");
+      returnLookup = shipmentId
+        ? returnLookup.eq("return_shipment_id", shipmentId)
+        : returnLookup.eq("return_shipment_id", awbCode);
+      const { data: returnRequest } = await returnLookup.maybeSingle();
+
+      if (returnRequest) {
+        // Only the transition into "delivered" (back at the pickup
+        // location) triggers anything — same reasoning as RTO: refund
+        // before physical confirmation risks refunding an item that's lost
+        // or still in transit.
+        if (DELIVERED_KEYWORDS.test(newStatusEarly) && returnRequest.status !== "refunded") {
+          const { data: order } = await supabase
+            .from("orders")
+            .select("id, customer_name, customer_phone, customer_email, total, shipping_charge, refunded_amount, razorpay_payment_id")
+            .eq("id", returnRequest.order_id)
+            .maybeSingle();
+
+          if (order && isValidReturnReason(returnRequest.reason)) {
+            const refundRupees = computeReturnRefundRupees(
+              returnRequest.reason,
+              order,
+              (order.refunded_amount ?? 0) + (returnRequest.refunded_amount ?? 0)
+            );
+            let refundedRupees = 0;
+
+            if (refundRupees > 0 && order.razorpay_payment_id) {
+              try {
+                const refund = await refundRazorpayPayment(order.razorpay_payment_id, refundRupees);
+                refundedRupees = refund.amountRupees;
+                await supabase
+                  .from("orders")
+                  .update({
+                    refunded_amount: (order.refunded_amount ?? 0) + refundedRupees,
+                    razorpay_refund_id: refund.refundId,
+                    refund_status: "refunded",
+                  })
+                  .eq("id", order.id);
+              } catch (err) {
+                console.error("Return auto-refund failed", returnRequest.id, err);
+                await logOrderEvent(order.id, "return_refund_failed", err instanceof Error ? err.message : String(err));
+              }
+            }
+
+            const { data: items } = await supabase
+              .from("order_items")
+              .select("chapter_slug, quantity")
+              .eq("order_id", order.id);
+            for (const item of items ?? []) {
+              const { data: inv } = await supabase
+                .from("inventory")
+                .select("stock_on_hand")
+                .eq("chapter_slug", item.chapter_slug)
+                .maybeSingle();
+              if (inv) {
+                await supabase
+                  .from("inventory")
+                  .update({ stock_on_hand: inv.stock_on_hand + item.quantity })
+                  .eq("chapter_slug", item.chapter_slug);
+              }
+            }
+
+            await supabase
+              .from("return_requests")
+              .update({
+                status: "refunded",
+                refunded_amount: refundedRupees,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", returnRequest.id);
+            await logOrderEvent(
+              order.id,
+              "return_refunded",
+              `${returnRequest.reason} — ₹${refundedRupees}, restocked ${(items ?? []).map((i) => i.chapter_slug).join(", ")}`
+            );
+
+            if (refundedRupees > 0 && order.customer_email) {
+              await sendReturnRefundedEmail(order.customer_email, order.customer_name, order.id, refundedRupees);
+            }
+          }
+        }
+        // Matched a return shipment either way (delivered or not) — never
+        // fall through to the forward-order logic below for this webhook hit.
+        return NextResponse.json({ ok: true });
+      }
+    }
 
     let lookup = supabase
       .from("orders")
       .select(
-        "id, customer_name, customer_phone, customer_email, shipment_status, review_requested_at, total, shipping_charge, refunded_amount, razorpay_payment_id, rto_notified_at, rto_processed_at"
+        "id, customer_name, customer_phone, customer_email, shipment_status, review_requested_at, total, shipping_charge, refunded_amount, razorpay_payment_id, rto_notified_at, rto_processed_at, delivered_at"
       );
     if (ourOrderId) lookup = lookup.eq("id", ourOrderId);
     else if (shipmentId) lookup = lookup.eq("shiprocket_shipment_id", shipmentId);
@@ -199,6 +295,13 @@ export async function POST(request: Request) {
           await sendRtoRefundedEmail(existing.customer_email, existing.customer_name, existing.id, refundedRupees);
         }
       }
+    }
+
+    // delivered_at is the anchor the return window (Flow 3) counts from —
+    // set once, on the real transition, never overwritten by a later
+    // duplicate/retried "delivered" webhook hit.
+    if (isDelivered && !wasDelivered && !existing.delivered_at) {
+      await supabase.from("orders").update({ delivered_at: new Date().toISOString() }).eq("id", existing.id);
     }
 
     // Same transition-only guard, plus review_requested_at as a second

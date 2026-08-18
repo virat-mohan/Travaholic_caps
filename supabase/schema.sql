@@ -631,3 +631,39 @@ create table if not exists order_events (
   created_at timestamptz not null default now()
 );
 create index if not exists order_events_order_id_idx on order_events (order_id);
+
+-- ============================================================
+-- Pre-shipment cancellation (customer asks to cancel before it's shipped —
+-- once it's picked up, nothing can reliably recall it, so that path routes
+-- into refuse-at-door/RTO or a post-delivery return instead, not this).
+-- No new columns needed — reuses orders.status, refunded_amount,
+-- razorpay_refund_id, refund_status, same as every other refund path.
+-- ============================================================
+
+-- ============================================================
+-- Customer-initiated returns (defect / wrong size) within a return window
+-- measured from actual delivery, confirmed by Shiprocket's webhook — not a
+-- guess from order date, since transit time varies by address. Reason
+-- matters for the refund: a defect is the brand's fault (shipping
+-- refunded too), wrong size follows the same policy as RTO (subtotal only).
+-- "Changed my mind" is deliberately not an eligible reason.
+-- ============================================================
+alter table orders add column if not exists delivered_at timestamptz;
+
+create table if not exists return_requests (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references orders(id) on delete cascade,
+  reason text not null, -- defect | wrong_size
+  note text,
+  photo_url text,
+  status text not null default 'requested', -- requested | approved | denied | received | refunded
+  denial_reason text,
+  return_shipment_id text,
+  refunded_amount integer not null default 0,
+  razorpay_refund_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists return_requests_order_id_idx on return_requests (order_id);
+create index if not exists return_requests_status_idx on return_requests (status);
+create index if not exists return_requests_shipment_id_idx on return_requests (return_shipment_id);

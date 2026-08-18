@@ -241,6 +241,19 @@ export async function getShippingRate(
   }
 }
 
+/**
+ * Cancels a Shiprocket order — only meaningful pre-pickup. Once a courier
+ * has physically picked up the shipment, Shiprocket's own cancel endpoint
+ * either no-ops or fails; that case has to be handled as an RTO (refuse at
+ * the door) or a post-delivery return instead, not a cancellation.
+ */
+export async function cancelShiprocketOrder(shiprocketOrderId: string) {
+  await shiprocketFetch("/orders/cancel", {
+    method: "POST",
+    body: JSON.stringify({ ids: [Number(shiprocketOrderId)] }),
+  });
+}
+
 export async function trackShiprocketShipment(shipmentId: string) {
   const data = await shiprocketFetch(`/courier/track/shipment/${shipmentId}`);
   const tracking = data[shipmentId]?.tracking_data;
