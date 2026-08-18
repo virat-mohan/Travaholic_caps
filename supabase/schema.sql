@@ -607,3 +607,27 @@ alter table customers add column if not exists last_winback_sent_at timestamptz;
 alter table orders add column if not exists refunded_amount integer not null default 0;
 alter table orders add column if not exists razorpay_refund_id text;
 alter table orders add column if not exists return_shipment_id text;
+
+-- ============================================================
+-- RTO automation. On the transition into an RTO-in-transit status, the
+-- customer gets a heads-up (rto_notified_at guards against a duplicate on a
+-- retried webhook). On the transition into RTO actually being delivered back
+-- to the pickup location — not just initiated — the order is auto-refunded
+-- (subtotal + discount only; shipping stays non-refundable, the standard
+-- D2C policy) and inventory is restocked (rto_processed_at guards the
+-- one-time action). order_events is the audit trail this whole thing runs
+-- on instead of a manual approval gate — every automatic action is logged
+-- so it's reviewable/reversible after the fact rather than blocking on a
+-- human before it happens.
+-- ============================================================
+alter table orders add column if not exists rto_notified_at timestamptz;
+alter table orders add column if not exists rto_processed_at timestamptz;
+
+create table if not exists order_events (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references orders(id) on delete cascade,
+  event_type text not null, -- rto_initiated | rto_refunded | rto_refund_failed | rto_restocked | ...
+  detail text,
+  created_at timestamptz not null default now()
+);
+create index if not exists order_events_order_id_idx on order_events (order_id);

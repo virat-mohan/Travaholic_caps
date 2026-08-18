@@ -47,6 +47,8 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "MSG91_NDR_TEMPLATE_ID", label: "MSG91 NDR Nudge Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, order number. Sent automatically when a delivery attempt fails, before it becomes an RTO." },
       { key: "MSG91_REFERRAL_INVITE_TEMPLATE_ID", label: "MSG91 Referral Invite Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: friend name, referrer name, referral link. Sent when a customer invites a friend from their account page. Optional — invites always go by email regardless." },
       { key: "MSG91_WINBACK_TEMPLATE_ID", label: "MSG91 Win-Back Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, Miles balance. Optional — win-back always goes by email regardless." },
+      { key: "MSG91_RTO_INITIATED_TEMPLATE_ID", label: "MSG91 RTO Initiated Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, order number. Sent when a shipment starts heading back to you, before the refund. Optional — an email always goes out regardless." },
+      { key: "MSG91_RTO_REFUNDED_TEMPLATE_ID", label: "MSG91 RTO Refunded Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: customer name, order number, refund amount. Sent once the item is back and the refund has gone through. Optional — an email always goes out regardless." },
     ],
   },
   {

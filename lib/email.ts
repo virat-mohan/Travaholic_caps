@@ -218,3 +218,47 @@ export async function sendWinbackEmail(toEmail: string, name: string | null, mil
   `;
   return sendEmail(toEmail, `We miss you at ${brand.brandName}`, html);
 }
+
+/** Sent when a shipment enters an RTO-in-transit status — informational, fires alongside the WhatsApp nudge since it needs no template approval. */
+export async function sendRtoInitiatedEmail(toEmail: string, name: string | null, orderId: string) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        Unfortunately delivery couldn't be completed for order #${orderId.slice(0, 8).toUpperCase()},
+        and it's on its way back to us. Once it arrives, we'll refund you in full (minus the original
+        shipping charge) — no action needed from you.
+      </p>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `Your order is on its way back to us`, html);
+}
+
+/** Sent once an RTO'd item is physically back and the refund has actually gone through. */
+export async function sendRtoRefundedEmail(toEmail: string, name: string | null, orderId: string, refundRupees: number) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        We've received order #${orderId.slice(0, 8).toUpperCase()} back and refunded
+        <strong>₹${refundRupees.toLocaleString("en-IN")}</strong> to your original payment method —
+        it should reflect within 5-7 business days.
+      </p>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `Refunded — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+}

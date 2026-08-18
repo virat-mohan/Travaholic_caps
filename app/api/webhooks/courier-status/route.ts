@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { sendNdrWhatsApp } from "@/lib/whatsapp-notify";
-import { sendReviewRequestEmail } from "@/lib/email";
+import { sendNdrWhatsApp, sendRtoInitiatedWhatsApp, sendRtoRefundedWhatsApp } from "@/lib/whatsapp-notify";
+import { sendReviewRequestEmail, sendRtoInitiatedEmail, sendRtoRefundedEmail } from "@/lib/email";
+import { refundRazorpayPayment } from "@/lib/razorpay";
 
 // Broad keyword match rather than an exact status list — Shiprocket's status
 // strings vary by courier partner, and catching a superset (with occasional
@@ -10,6 +11,16 @@ import { sendReviewRequestEmail } from "@/lib/email";
 // and losing the one window to save the delivery before RTO.
 const NDR_KEYWORDS = /ndr|undeliver|delivery fail|delivery attempt|not available|consignee/i;
 const DELIVERED_KEYWORDS = /delivered/i;
+const RTO_KEYWORDS = /rto|return to origin|returned to origin/i;
+
+async function logOrderEvent(orderId: string, eventType: string, detail?: string) {
+  try {
+    const supabase = getSupabaseServerClient();
+    await supabase.from("order_events").insert({ order_id: orderId, event_type: eventType, detail: detail ?? null });
+  } catch (err) {
+    console.error("Failed to log order_events row", orderId, eventType, err);
+  }
+}
 
 /**
  * Shiprocket calls this on every shipment status change (Settings -> API ->
@@ -57,7 +68,9 @@ export async function POST(request: Request) {
 
     let lookup = supabase
       .from("orders")
-      .select("id, customer_name, customer_phone, customer_email, shipment_status, review_requested_at");
+      .select(
+        "id, customer_name, customer_phone, customer_email, shipment_status, review_requested_at, total, shipping_charge, refunded_amount, razorpay_payment_id, rto_notified_at, rto_processed_at"
+      );
     if (ourOrderId) lookup = lookup.eq("id", ourOrderId);
     else if (shipmentId) lookup = lookup.eq("shiprocket_shipment_id", shipmentId);
     else lookup = lookup.eq("shiprocket_awb_code", awbCode);
@@ -69,11 +82,24 @@ export async function POST(request: Request) {
     }
 
     const newStatus = String(status).toLowerCase();
-    const wasNdr = NDR_KEYWORDS.test(existing.shipment_status ?? "");
-    const isNdr = NDR_KEYWORDS.test(newStatus);
+    const oldStatus = existing.shipment_status ?? "";
+
+    // RTO must be checked first and excluded from the other two — "RTO
+    // Delivered" contains "delivered" as a substring (would otherwise fire
+    // the review-request email), and Shiprocket's RTO statuses don't overlap
+    // NDR's keywords in practice, but checking order here still matters.
+    const wasRto = RTO_KEYWORDS.test(oldStatus);
+    const isRto = RTO_KEYWORDS.test(newStatus);
+    // "RTO Initiated" / "RTO In Transit" vs the shipment actually being back —
+    // refund/restock must only fire on the latter, not the moment RTO starts.
+    const wasRtoDelivered = wasRto && DELIVERED_KEYWORDS.test(oldStatus);
+    const isRtoDelivered = isRto && DELIVERED_KEYWORDS.test(newStatus);
+
+    const wasNdr = !wasRto && NDR_KEYWORDS.test(oldStatus);
+    const isNdr = !isRto && NDR_KEYWORDS.test(newStatus);
     // "undelivered" contains "delivered" as a substring — NDR must win that check.
-    const wasDelivered = !wasNdr && DELIVERED_KEYWORDS.test(existing.shipment_status ?? "");
-    const isDelivered = !isNdr && DELIVERED_KEYWORDS.test(newStatus);
+    const wasDelivered = !wasRto && !wasNdr && DELIVERED_KEYWORDS.test(oldStatus);
+    const isDelivered = !isRto && !isNdr && DELIVERED_KEYWORDS.test(newStatus);
 
     const patch: Record<string, string> = { shipment_status: newStatus };
     if (awbCode) patch.shiprocket_awb_code = awbCode;
@@ -90,6 +116,89 @@ export async function POST(request: Request) {
         customer_phone: existing.customer_phone,
         total: 0,
       });
+    }
+
+    // RTO in transit — heads-up only, nothing financial yet since the item
+    // hasn't physically come back. rto_notified_at is the transition guard
+    // (mirrors review_requested_at's role for delivered).
+    if (isRto && !isRtoDelivered && !wasRto && !existing.rto_notified_at) {
+      if (existing.customer_phone) {
+        await sendRtoInitiatedWhatsApp({
+          id: existing.id,
+          customer_name: existing.customer_name,
+          customer_phone: existing.customer_phone,
+          total: 0,
+        });
+      }
+      if (existing.customer_email) {
+        await sendRtoInitiatedEmail(existing.customer_email, existing.customer_name, existing.id);
+      }
+      await supabase.from("orders").update({ rto_notified_at: new Date().toISOString() }).eq("id", existing.id);
+      await logOrderEvent(existing.id, "rto_initiated", newStatus);
+    }
+
+    // RTO actually delivered back — the one moment refund + restock fire,
+    // guarded by rto_processed_at so a retried webhook can't double-refund
+    // or double-restock. Shipping stays non-refundable (standard D2C
+    // policy); refund failure (e.g. insufficient Razorpay balance — a real
+    // case seen in this account) is logged but must never block the
+    // restock, since the physical item being back is independent of
+    // whether Razorpay could move money right now.
+    if (isRtoDelivered && !wasRtoDelivered && !existing.rto_processed_at) {
+      const refundRupees = Math.max(0, existing.total - (existing.shipping_charge ?? 0) - (existing.refunded_amount ?? 0));
+      let refundedRupees = 0;
+
+      if (refundRupees > 0 && existing.razorpay_payment_id) {
+        try {
+          const refund = await refundRazorpayPayment(existing.razorpay_payment_id, refundRupees);
+          refundedRupees = refund.amountRupees;
+          await supabase
+            .from("orders")
+            .update({
+              refunded_amount: (existing.refunded_amount ?? 0) + refundedRupees,
+              razorpay_refund_id: refund.refundId,
+              refund_status: "refunded",
+            })
+            .eq("id", existing.id);
+          await logOrderEvent(existing.id, "rto_refunded", `₹${refundedRupees} via ${refund.refundId}`);
+        } catch (err) {
+          console.error("RTO auto-refund failed", existing.id, err);
+          await logOrderEvent(existing.id, "rto_refund_failed", err instanceof Error ? err.message : String(err));
+        }
+      }
+
+      const { data: items } = await supabase
+        .from("order_items")
+        .select("chapter_slug, quantity")
+        .eq("order_id", existing.id);
+      for (const item of items ?? []) {
+        const { data: inv } = await supabase
+          .from("inventory")
+          .select("stock_on_hand")
+          .eq("chapter_slug", item.chapter_slug)
+          .maybeSingle();
+        if (inv) {
+          await supabase
+            .from("inventory")
+            .update({ stock_on_hand: inv.stock_on_hand + item.quantity })
+            .eq("chapter_slug", item.chapter_slug);
+        }
+      }
+      await logOrderEvent(existing.id, "rto_restocked", (items ?? []).map((i) => `${i.chapter_slug} x${i.quantity}`).join(", "));
+
+      await supabase.from("orders").update({ rto_processed_at: new Date().toISOString() }).eq("id", existing.id);
+
+      if (refundedRupees > 0) {
+        if (existing.customer_phone) {
+          await sendRtoRefundedWhatsApp(
+            { id: existing.id, customer_name: existing.customer_name, customer_phone: existing.customer_phone, total: 0 },
+            refundedRupees
+          );
+        }
+        if (existing.customer_email) {
+          await sendRtoRefundedEmail(existing.customer_email, existing.customer_name, existing.id, refundedRupees);
+        }
+      }
     }
 
     // Same transition-only guard, plus review_requested_at as a second

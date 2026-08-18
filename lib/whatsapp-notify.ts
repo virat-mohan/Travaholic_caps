@@ -115,6 +115,34 @@ export async function sendNdrWhatsApp(order: OrderForWhatsApp) {
 }
 
 /**
+ * Sends a heads-up when a shipment enters an RTO-in-transit status — before
+ * the refund, since the item hasn't physically come back yet at this point.
+ * Needs a Flow with two variables: customer name, order number — set its ID
+ * as MSG91_RTO_INITIATED_TEMPLATE_ID in /admin/settings.
+ */
+export async function sendRtoInitiatedWhatsApp(order: OrderForWhatsApp) {
+  const msg91TemplateId = await getSetting("MSG91_RTO_INITIATED_TEMPLATE_ID");
+  const variables = [order.customer_name, order.id.slice(0, 8).toUpperCase()];
+  return sendTemplate(order.customer_phone, "rto_initiated", msg91TemplateId, variables, {
+    orderId: order.id,
+  });
+}
+
+/**
+ * Sends confirmation once the RTO'd item is physically back and the refund
+ * has actually gone through. Needs a Flow with three variables: customer
+ * name, order number, refund amount — set its ID as
+ * MSG91_RTO_REFUNDED_TEMPLATE_ID in /admin/settings.
+ */
+export async function sendRtoRefundedWhatsApp(order: OrderForWhatsApp, refundRupees: number) {
+  const msg91TemplateId = await getSetting("MSG91_RTO_REFUNDED_TEMPLATE_ID");
+  const variables = [order.customer_name, order.id.slice(0, 8).toUpperCase(), `₹${refundRupees.toLocaleString("en-IN")}`];
+  return sendTemplate(order.customer_phone, "rto_refunded", msg91TemplateId, variables, {
+    orderId: order.id,
+  });
+}
+
+/**
  * Sends a referral invite by WhatsApp — best-effort alongside the email,
  * which always sends regardless since it needs no template approval. Needs
  * a Flow with three variables: friend name, referrer name, referral link —
