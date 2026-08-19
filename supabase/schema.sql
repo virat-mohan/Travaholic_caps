@@ -688,3 +688,12 @@ alter table ad_briefs add column if not exists image_urls text[];
 -- ============================================================
 alter table ad_briefs add column if not exists creative_style text; -- ai_photo | real_photo_text_overlay
 alter table ad_briefs add column if not exists overlay_text text;
+
+-- ============================================================
+-- Organic posting — publishing an ad brief's copy/image straight to
+-- Instagram as a real feed post, no ad spend involved. Independent of the
+-- Launch (paused ad campaign) action; a brief can be posted organically,
+-- launched as an ad, both, or neither.
+-- ============================================================
+alter table ad_briefs add column if not exists posted_at timestamptz;
+alter table ad_briefs add column if not exists instagram_post_id text;

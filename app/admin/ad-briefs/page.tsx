@@ -17,6 +17,8 @@ type Brief = {
   image_prompts: string[] | null;
   creative_style: string | null;
   overlay_text: string | null;
+  posted_at: string | null;
+  instagram_post_id: string | null;
   image_url: string | null;
   image_urls: (string | null)[] | null;
   image_source: string | null;
@@ -41,6 +43,7 @@ export default function AdBriefsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [pickerForId, setPickerForId] = useState<string | null>(null);
   const [budgets, setBudgets] = useState<Record<string, number>>({});
+  const [posting, setPosting] = useState<Record<string, boolean>>({});
 
   function loadBriefs() {
     fetch("/api/admin/ad-briefs")
@@ -191,6 +194,29 @@ export default function AdBriefsPage() {
     });
     setBriefs((prev) => prev.map((b) => (b.id === brief.id ? { ...b, image_url: url, image_source: "real" } : b)));
     setPickerForId(null);
+  }
+
+  async function postNow(brief: Brief) {
+    setError(null);
+    setPosting((prev) => ({ ...prev, [brief.id]: true }));
+    try {
+      const res = await fetch("/api/admin/ad-briefs/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brief.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not post to Instagram");
+      setBriefs((prev) =>
+        prev.map((b) =>
+          b.id === brief.id ? { ...b, posted_at: new Date().toISOString(), instagram_post_id: data.postId } : b
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not post to Instagram");
+    } finally {
+      setPosting((prev) => ({ ...prev, [brief.id]: false }));
+    }
   }
 
   async function launch(brief: Brief) {
@@ -435,6 +461,33 @@ export default function AdBriefsPage() {
                       {brief.hashtags.map((h) => `#${h}`).join(" ")}
                     </p>
                   )}
+
+                  <div className="mt-4">
+                    {brief.posted_at ? (
+                      <p className="text-caption text-tan-gold">
+                        Posted to Instagram — {new Date(brief.posted_at).toLocaleString("en-IN", {
+                          timeZone: "Asia/Kolkata",
+                          day: "numeric",
+                          month: "short",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    ) : (
+                      <button
+                        onClick={() => postNow(brief)}
+                        disabled={
+                          posting[brief.id] ||
+                          (brief.is_carousel
+                            ? (brief.image_urls ?? []).filter(Boolean).length < 4
+                            : !brief.image_url)
+                        }
+                        className="border border-divider px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                      >
+                        {posting[brief.id] ? "Posting..." : "Post Now (No Ad Spend)"}
+                      </button>
+                    )}
+                  </div>
 
                   {brief.status !== "launched" && (
                     <div className="mt-4 flex items-center gap-3">
