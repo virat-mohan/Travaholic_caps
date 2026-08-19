@@ -21,22 +21,25 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  if (!body?.chapterSlug) {
-    return NextResponse.json({ error: "Missing chapterSlug" }, { status: 400 });
+  if (!body?.isGeneric && !body?.chapterSlug) {
+    return NextResponse.json({ error: "Missing chapterSlug (or set isGeneric for a brand-wide post)" }, { status: 400 });
   }
 
   try {
-    const chapter = chapters.find((c) => c.slug === body.chapterSlug);
-    const chapterName = chapter?.name ?? body.chapterSlug;
+    const isGeneric = !!body.isGeneric;
+    const chapter = isGeneric ? null : chapters.find((c) => c.slug === body.chapterSlug);
+    const chapterName = isGeneric ? null : (chapter?.name ?? body.chapterSlug);
 
-    const sales = (await getTopSellingChapters(30)).find((s) => s.chapterSlug === body.chapterSlug);
+    const sales = isGeneric
+      ? undefined
+      : (await getTopSellingChapters(30)).find((s) => s.chapterSlug === body.chapterSlug);
     const brief = await generateAdBrief(chapterName, sales, body.customInstructions || undefined);
 
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("ad_briefs")
       .insert({
-        chapter_slug: body.chapterSlug,
+        chapter_slug: isGeneric ? null : body.chapterSlug,
         headline: brief.headline,
         primary_text: brief.primaryText,
         cta: brief.cta,

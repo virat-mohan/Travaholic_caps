@@ -28,6 +28,7 @@ export default function AdBriefsPage() {
   const [briefs, setBriefs] = useState<Brief[]>([]);
   const [loading, setLoading] = useState(true);
   const [chapterSlug, setChapterSlug] = useState(chapters[0]?.slug ?? "");
+  const [isGeneric, setIsGeneric] = useState(false);
   const [customInstructions, setCustomInstructions] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +57,7 @@ export default function AdBriefsPage() {
       const res = await fetch("/api/admin/ad-briefs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chapterSlug, customInstructions }),
+        body: JSON.stringify({ chapterSlug: isGeneric ? undefined : chapterSlug, isGeneric, customInstructions }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not generate brief");
@@ -165,20 +166,50 @@ export default function AdBriefsPage() {
       </p>
 
       <div className="mt-8 border-t border-divider pt-6">
-        <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-          Chapter
-        </label>
-        <select
-          value={chapterSlug}
-          onChange={(e) => setChapterSlug(e.target.value)}
-          className="mt-3 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
-        >
-          {chapters.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setIsGeneric(false)}
+            className={`border px-3 py-1.5 text-caption uppercase tracking-[0.05em] ${
+              !isGeneric ? "border-ink bg-ink text-cream" : "border-divider text-ink"
+            }`}
+          >
+            Specific Chapter
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsGeneric(true)}
+            className={`border px-3 py-1.5 text-caption uppercase tracking-[0.05em] ${
+              isGeneric ? "border-ink bg-ink text-cream" : "border-divider text-ink"
+            }`}
+          >
+            Generic Brand Post
+          </button>
+        </div>
+
+        {isGeneric ? (
+          <p className="mt-3 text-micro text-secondary-text/70">
+            Not tied to one product — the copy covers the brand as a whole, and the CTA links to
+            the homepage instead of a Chapter page.
+          </p>
+        ) : (
+          <>
+            <label className="mt-4 block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+              Chapter
+            </label>
+            <select
+              value={chapterSlug}
+              onChange={(e) => setChapterSlug(e.target.value)}
+              className="mt-3 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+            >
+              {chapters.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
 
         <label className="mt-4 block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
           Custom Direction (optional)
@@ -214,7 +245,9 @@ export default function AdBriefsPage() {
             <div key={brief.id} className="border-t border-divider pt-6">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-caption uppercase tracking-[0.1em] text-secondary-text">
-                  {chapters.find((c) => c.slug === brief.chapter_slug)?.name ?? brief.chapter_slug}
+                  {brief.chapter_slug
+                    ? (chapters.find((c) => c.slug === brief.chapter_slug)?.name ?? brief.chapter_slug)
+                    : "Generic — Brand"}
                 </p>
                 <span className="text-micro uppercase tracking-[0.05em] text-tan-gold">
                   {brief.status}

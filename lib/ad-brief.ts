@@ -21,7 +21,7 @@ function extractJson(text: string) {
 }
 
 export async function generateAdBrief(
-  chapterName: string,
+  chapterName: string | null,
   sales?: ChapterSales,
   customInstructions?: string
 ): Promise<AdBrief> {
@@ -38,12 +38,18 @@ export async function generateAdBrief(
     ? `\nThe admin has given this specific direction for this brief — follow it, even if it overrides the default strategy above: "${customInstructions}"`
     : "";
 
+  // No chapter name means this is a generic brand post — not tied to one
+  // product, and the link it eventually points to (set at launch time) is
+  // the homepage/collection, not a single product page.
+  const productLine = chapterName
+    ? `Product being promoted: "${chapterName}".\n${salesLine}`
+    : `This is a generic brand awareness post — not about one specific product. Write about ${brand.brandName} as a whole (the collection, the "${brand.tagline}" idea, what makes the brand worth following), not any single Chapter/product by name.`;
+
   const prompt = `You are writing a Meta (Instagram/Facebook) ad brief for ${brand.brandName} ("${brand.tagline}"), a D2C brand selling a ${brand.productNoun}.
 
 Brand voice: ${brand.voice}
 
-Product being promoted: "${chapterName}".
-${salesLine}${overrideLine}
+${productLine}${overrideLine}
 
 Return ONLY a JSON object, no commentary, in this exact shape:
 {
