@@ -48,6 +48,8 @@ export async function POST(request: Request) {
         is_carousel: isCarousel,
         image_prompt: isCarousel ? null : brief.imagePrompt,
         image_prompts: isCarousel ? (brief.imagePrompts ?? null) : null,
+        creative_style: isCarousel ? null : (brief.creativeStyle ?? "ai_photo"),
+        overlay_text: isCarousel ? null : (brief.overlayText || null),
         hashtags: brief.hashtags,
       })
       .select()

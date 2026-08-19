@@ -678,3 +678,13 @@ create index if not exists return_requests_shipment_id_idx on return_requests (r
 alter table ad_briefs add column if not exists is_carousel boolean not null default false;
 alter table ad_briefs add column if not exists image_prompts text[];
 alter table ad_briefs add column if not exists image_urls text[];
+
+-- ============================================================
+-- Claude decides the creative approach per (non-carousel) brief — a real
+-- product photo with bold on-image text for promotional/urgent angles, or
+-- a clean text-free AI lifestyle photo for aspirational/editorial ones —
+-- instead of the admin guessing which style fits. overlay_text is only
+-- meaningful when creative_style is 'real_photo_text_overlay'.
+-- ============================================================
+alter table ad_briefs add column if not exists creative_style text; -- ai_photo | real_photo_text_overlay
+alter table ad_briefs add column if not exists overlay_text text;

@@ -15,6 +15,8 @@ type Brief = {
   is_carousel: boolean;
   image_prompt: string | null;
   image_prompts: string[] | null;
+  creative_style: string | null;
+  overlay_text: string | null;
   image_url: string | null;
   image_urls: (string | null)[] | null;
   image_source: string | null;
@@ -158,13 +160,36 @@ export default function AdBriefsPage() {
     }
   }
 
-  async function attachAsset(briefId: string, url: string) {
+  async function attachAsset(brief: Brief, url: string) {
+    setError(null);
+    // The brief itself decided whether this ad wants a real photo with
+    // bold on-image text or a plain attached photo — the picker just
+    // supplies which real photo to use either way.
+    if (brief.creative_style === "real_photo_text_overlay" && brief.overlay_text) {
+      try {
+        const res = await fetch("/api/admin/ad-briefs/composite-overlay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: brief.id, baseImageUrl: url }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Could not composite text overlay");
+        setBriefs((prev) =>
+          prev.map((b) => (b.id === brief.id ? { ...b, image_url: data.imageUrl, image_source: "real_with_text" } : b))
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not composite text overlay");
+      }
+      setPickerForId(null);
+      return;
+    }
+
     await fetch("/api/admin/ad-briefs", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: briefId, imageUrl: url, imageSource: "real" }),
+      body: JSON.stringify({ id: brief.id, imageUrl: url, imageSource: "real" }),
     });
-    setBriefs((prev) => prev.map((b) => (b.id === briefId ? { ...b, image_url: url, image_source: "real" } : b)));
+    setBriefs((prev) => prev.map((b) => (b.id === brief.id ? { ...b, image_url: url, image_source: "real" } : b)));
     setPickerForId(null);
   }
 
@@ -336,24 +361,35 @@ export default function AdBriefsPage() {
                           No image yet
                         </div>
                       )}
+                      <p className="mt-2 text-micro text-secondary-text/70">
+                        {brief.creative_style === "real_photo_text_overlay"
+                          ? `Recommended: real photo + "${brief.overlay_text}" overlay`
+                          : "Recommended: AI-generated lifestyle photo"}
+                      </p>
                       <div className="mt-2 space-y-1.5">
                         <button
                           onClick={() => generateImage(brief)}
-                          className="block w-full border border-ink px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream"
+                          className={`block w-full border px-2 py-1.5 text-micro uppercase tracking-[0.05em] hover:bg-ink hover:text-cream ${
+                            brief.creative_style === "real_photo_text_overlay"
+                              ? "border-divider text-ink hover:border-ink"
+                              : "border-ink text-ink"
+                          }`}
                         >
-                          Generate With AI
+                          {brief.image_url ? "Regenerate" : "Generate With AI"}
                         </button>
                         <button
                           onClick={() => setPickerForId(pickerForId === brief.id ? null : brief.id)}
-                          className="block w-full border border-divider px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink"
+                          className={`block w-full border px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink ${
+                            brief.creative_style === "real_photo_text_overlay" ? "border-ink" : "border-divider hover:border-ink"
+                          }`}
                         >
-                          Use Real Photo
+                          {brief.creative_style === "real_photo_text_overlay" ? "Use Real Photo (+ Text)" : "Use Real Photo"}
                         </button>
                       </div>
                       {pickerForId === brief.id && (
                         <div className="mt-2 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto border border-divider p-2">
                           {assets.map((a) => (
-                            <button key={a.id} onClick={() => attachAsset(brief.id, a.url)} className="relative aspect-square">
+                            <button key={a.id} onClick={() => attachAsset(brief, a.url)} className="relative aspect-square">
                               <Image src={a.url} alt={a.label ?? ""} fill sizes="80px" className="object-cover" />
                             </button>
                           ))}

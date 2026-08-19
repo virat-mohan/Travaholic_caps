@@ -2,6 +2,8 @@ import { getSetting } from "@/lib/settings";
 import { getBrandProfile } from "@/lib/brand";
 import type { ChapterSales } from "@/lib/sales-metrics";
 
+export type CreativeStyle = "ai_photo" | "real_photo_text_overlay";
+
 export type AdBrief = {
   headline: string;
   primaryText: string;
@@ -9,6 +11,8 @@ export type AdBrief = {
   targetAudience: string;
   imagePrompt: string;
   imagePrompts?: string[];
+  creativeStyle?: CreativeStyle;
+  overlayText?: string;
   hashtags: string[];
 };
 
@@ -62,7 +66,9 @@ Return ONLY a JSON object, no commentary, in this exact shape:
   ${
     isCarousel
       ? `"imagePrompts": "an array of EXACTLY 4 detailed visual scene descriptions for an image generator, one per carousel card — each a distinct angle/setting/moment (not 4 near-identical shots), together telling a small visual story or showing the product from different real-world contexts. Describe setting, lighting, mood and how the product should be worn/used in each. Do not describe any on-image text, headline or logo — clean lifestyle photos with no text baked in."`
-      : `"imagePrompt": "a detailed visual scene description for an image generator — describe the setting, lighting, mood and how the product should be worn/used. Do not describe any on-image text, headline or logo — the image should be a clean lifestyle photo with no text baked in."`
+      : `"imagePrompt": "a detailed visual scene description for an image generator — describe the setting, lighting, mood and how the product should be worn/used. Do not describe any on-image text, headline or logo — the image should be a clean lifestyle photo with no text baked in.",
+  "creativeStyle": "one of: ai_photo, real_photo_text_overlay — YOU decide which creative approach actually fits this specific ad, don't default to one. Pick real_photo_text_overlay for promotional/urgent/announcement-driven angles (a strong sales number to lean into, a new drop, a limited-time or scarcity angle, a direct-response feel) — real product photography with bold on-image text reads as more authentic and converts better for that kind of push. Pick ai_photo for aspirational/editorial/brand-story angles where a clean, text-free lifestyle photo feels more premium and sits more naturally in an Instagram feed.",
+  "overlayText": "ONLY meaningful when creativeStyle is real_photo_text_overlay: a short, bold line of on-image text, under 6 words (e.g. 'NEW DROP' or 'SELLING FAST' or 'BACK IN STOCK') to render directly on top of the photo. Leave as an empty string when creativeStyle is ai_photo."`
   },
   "hashtags": ["array of 8-15 relevant Instagram hashtags as plain strings without the # symbol, mixing broad reach tags (e.g. streetwear, travel) with niche/branded ones (e.g. the brand name, product name) — ready to prefix with # and post"]
 }`;
@@ -97,6 +103,8 @@ Return ONLY a JSON object, no commentary, in this exact shape:
     targetAudience: parsed.targetAudience,
     imagePrompt: parsed.imagePrompt ?? "",
     imagePrompts: Array.isArray(parsed.imagePrompts) ? parsed.imagePrompts.slice(0, 4) : undefined,
+    creativeStyle: parsed.creativeStyle === "real_photo_text_overlay" ? "real_photo_text_overlay" : "ai_photo",
+    overlayText: typeof parsed.overlayText === "string" ? parsed.overlayText : undefined,
     hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags : [],
   };
 }
