@@ -36,6 +36,7 @@ export async function renderInvoiceHtml(order: InvoiceOrder, items: InvoiceItem[
   const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-mono-white.png`;
 
   const date = new Date(order.created_at).toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",

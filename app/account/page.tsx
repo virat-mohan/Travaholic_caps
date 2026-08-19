@@ -19,7 +19,7 @@ type Order = { id: string; created_at: string; total: number; status: string; re
 type Loyalty = { balance: number; threshold: number; valueRupees: number; maxRedeemableRupees: number };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function AccountPage() {

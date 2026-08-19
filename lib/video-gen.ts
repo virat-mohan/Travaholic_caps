@@ -1,7 +1,11 @@
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
-const VEO_MODEL = "veo-3.0-generate-001";
+// "veo-3.0-generate-001" no longer exists for this API key — confirmed via
+// ListModels that only the 3.1 preview variants are available. Using the
+// standard-quality one; veo-3.1-fast-generate-preview trades quality for
+// speed/cost if that turns out to matter more for ad creative at volume.
+const VEO_MODEL = "veo-3.1-generate-preview";
 
 /**
  * Starts a Veo video generation job (long-running — Google's API returns an

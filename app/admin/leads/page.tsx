@@ -18,7 +18,7 @@ type Lead = {
 const STATUSES = ["new", "contacted", "converted", "closed"];
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" });
 }
 
 function sourceLabel(source: string, platform: string | null) {
