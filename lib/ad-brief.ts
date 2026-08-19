@@ -72,7 +72,10 @@ Return ONLY a JSON object, no commentary, in this exact shape:
   if (!res.ok) throw new Error(`Claude API error: ${res.status} ${await res.text()}`);
 
   const data = await res.json();
-  const text = data.content?.[0]?.text ?? "";
+  // Sonnet 5 returns extended-thinking content first — content[0] is a
+  // "thinking" block, not the text, so the actual JSON is wherever the
+  // "text"-typed block ends up, never reliably at a fixed index.
+  const text = data.content?.find((block: { type: string; text?: string }) => block.type === "text")?.text ?? "";
   const parsed = JSON.parse(extractJson(text));
 
   return {

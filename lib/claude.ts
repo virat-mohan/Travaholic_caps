@@ -75,7 +75,10 @@ Write 4-6 paragraphs in "body", including exactly one pull-quote paragraph start
   }
 
   const data = await res.json();
-  const text = data.content?.[0]?.text ?? "";
+  // Sonnet 5 returns extended-thinking content first — content[0] is a
+  // "thinking" block, not the text, so the actual JSON is wherever the
+  // "text"-typed block ends up, never reliably at a fixed index.
+  const text = data.content?.find((block: { type: string; text?: string }) => block.type === "text")?.text ?? "";
   const parsed = JSON.parse(extractJson(text));
 
   return {
