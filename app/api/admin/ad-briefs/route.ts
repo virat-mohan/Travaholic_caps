@@ -33,7 +33,8 @@ export async function POST(request: Request) {
     const sales = isGeneric
       ? undefined
       : (await getTopSellingChapters(30)).find((s) => s.chapterSlug === body.chapterSlug);
-    const brief = await generateAdBrief(chapterName, sales, body.customInstructions || undefined);
+    const isCarousel = !!body.isCarousel;
+    const brief = await generateAdBrief(chapterName, sales, body.customInstructions || undefined, isCarousel);
 
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
@@ -44,7 +45,9 @@ export async function POST(request: Request) {
         primary_text: brief.primaryText,
         cta: brief.cta,
         target_audience: brief.targetAudience,
-        image_prompt: brief.imagePrompt,
+        is_carousel: isCarousel,
+        image_prompt: isCarousel ? null : brief.imagePrompt,
+        image_prompts: isCarousel ? (brief.imagePrompts ?? null) : null,
         hashtags: brief.hashtags,
       })
       .select()
@@ -72,6 +75,7 @@ export async function PATCH(request: Request) {
   if (body.targetAudience != null) patch.target_audience = body.targetAudience;
   if (body.hashtags != null) patch.hashtags = body.hashtags;
   if (body.imageUrl != null) patch.image_url = body.imageUrl;
+  if (body.imageUrls != null) patch.image_urls = body.imageUrls;
   if (body.imageSource != null) patch.image_source = body.imageSource;
   if (body.status != null) patch.status = body.status;
 

@@ -8,6 +8,7 @@ export type AdBrief = {
   cta: string;
   targetAudience: string;
   imagePrompt: string;
+  imagePrompts?: string[];
   hashtags: string[];
 };
 
@@ -23,7 +24,8 @@ function extractJson(text: string) {
 export async function generateAdBrief(
   chapterName: string | null,
   sales?: ChapterSales,
-  customInstructions?: string
+  customInstructions?: string,
+  isCarousel?: boolean
 ): Promise<AdBrief> {
   const apiKey = await getSetting("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set — add it in /admin/settings first");
@@ -57,7 +59,11 @@ Return ONLY a JSON object, no commentary, in this exact shape:
   "primaryText": "string, 1-3 sentences, the actual ad body copy",
   "cta": "one of: SHOP_NOW, LEARN_MORE, SIGN_UP",
   "targetAudience": "one line describing who this ad should target (interests/demographics), for setting up Meta ad targeting",
-  "imagePrompt": "a detailed visual scene description for an image generator — describe the setting, lighting, mood and how the product should be worn/used. Do not describe any on-image text, headline or logo — the image should be a clean lifestyle photo with no text baked in.",
+  ${
+    isCarousel
+      ? `"imagePrompts": "an array of EXACTLY 4 detailed visual scene descriptions for an image generator, one per carousel card — each a distinct angle/setting/moment (not 4 near-identical shots), together telling a small visual story or showing the product from different real-world contexts. Describe setting, lighting, mood and how the product should be worn/used in each. Do not describe any on-image text, headline or logo — clean lifestyle photos with no text baked in."`
+      : `"imagePrompt": "a detailed visual scene description for an image generator — describe the setting, lighting, mood and how the product should be worn/used. Do not describe any on-image text, headline or logo — the image should be a clean lifestyle photo with no text baked in."`
+  },
   "hashtags": ["array of 8-15 relevant Instagram hashtags as plain strings without the # symbol, mixing broad reach tags (e.g. streetwear, travel) with niche/branded ones (e.g. the brand name, product name) — ready to prefix with # and post"]
 }`;
 
@@ -89,7 +95,8 @@ Return ONLY a JSON object, no commentary, in this exact shape:
     primaryText: parsed.primaryText,
     cta: parsed.cta,
     targetAudience: parsed.targetAudience,
-    imagePrompt: parsed.imagePrompt,
+    imagePrompt: parsed.imagePrompt ?? "",
+    imagePrompts: Array.isArray(parsed.imagePrompts) ? parsed.imagePrompts.slice(0, 4) : undefined,
     hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags : [],
   };
 }

@@ -12,8 +12,11 @@ type Brief = {
   cta: string;
   target_audience: string;
   hashtags: string[] | null;
-  image_prompt: string;
+  is_carousel: boolean;
+  image_prompt: string | null;
+  image_prompts: string[] | null;
   image_url: string | null;
+  image_urls: (string | null)[] | null;
   image_source: string | null;
   video_status: string | null;
   video_url: string | null;
@@ -29,6 +32,7 @@ export default function AdBriefsPage() {
   const [loading, setLoading] = useState(true);
   const [chapterSlug, setChapterSlug] = useState(chapters[0]?.slug ?? "");
   const [isGeneric, setIsGeneric] = useState(false);
+  const [isCarousel, setIsCarousel] = useState(false);
   const [customInstructions, setCustomInstructions] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +61,12 @@ export default function AdBriefsPage() {
       const res = await fetch("/api/admin/ad-briefs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chapterSlug: isGeneric ? undefined : chapterSlug, isGeneric, customInstructions }),
+        body: JSON.stringify({
+          chapterSlug: isGeneric ? undefined : chapterSlug,
+          isGeneric,
+          isCarousel,
+          customInstructions,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not generate brief");
@@ -82,6 +91,30 @@ export default function AdBriefsPage() {
       if (!res.ok) throw new Error(data.error ?? "Could not generate image");
       setBriefs((prev) =>
         prev.map((b) => (b.id === brief.id ? { ...b, image_url: data.imageUrl, image_source: "generated" } : b))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not generate image");
+    }
+  }
+
+  async function generateSlotImage(brief: Brief, slotIndex: number) {
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/ad-briefs/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brief.id, imagePrompt: brief.image_prompts?.[slotIndex], slotIndex }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not generate image");
+      setBriefs((prev) =>
+        prev.map((b) => {
+          if (b.id !== brief.id) return b;
+          const next = Array.isArray(b.image_urls) ? [...b.image_urls] : [];
+          while (next.length < slotIndex + 1) next.push(null);
+          next[slotIndex] = data.imageUrl;
+          return { ...b, image_urls: next, image_source: "generated" };
+        })
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate image");
@@ -187,6 +220,16 @@ export default function AdBriefsPage() {
           </button>
         </div>
 
+        <label className="mt-4 flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={isCarousel}
+            onChange={(e) => setIsCarousel(e.target.checked)}
+            className="h-4 w-4 accent-ink"
+          />
+          <span className="font-sans text-body-s text-ink">Carousel (4 images)</span>
+        </label>
+
         {isGeneric ? (
           <p className="mt-3 text-micro text-secondary-text/70">
             Not tied to one product — the copy covers the brand as a whole, and the CTA links to
@@ -256,37 +299,67 @@ export default function AdBriefsPage() {
 
               <div className="mt-4 grid gap-6 md:grid-cols-[200px_1fr]">
                 <div>
-                  {brief.image_url ? (
-                    <div className="relative aspect-square overflow-hidden bg-surface-alt">
-                      <Image src={brief.image_url} alt={brief.headline} fill sizes="200px" className="object-cover" />
+                  {brief.is_carousel ? (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[0, 1, 2, 3].map((i) => {
+                        const url = brief.image_urls?.[i];
+                        return (
+                          <div key={i}>
+                            {url ? (
+                              <div className="relative aspect-square overflow-hidden bg-surface-alt">
+                                <Image src={url} alt={`${brief.headline} — card ${i + 1}`} fill sizes="100px" className="object-cover" />
+                              </div>
+                            ) : (
+                              <div className="flex aspect-square items-center justify-center bg-surface-alt text-micro text-secondary-text">
+                                Card {i + 1}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => generateSlotImage(brief, i)}
+                              disabled={!brief.image_prompts?.[i]}
+                              className="mt-1 block w-full border border-ink px-1 py-1 text-micro uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream disabled:opacity-40"
+                            >
+                              {url ? "Regenerate" : "Generate"}
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
-                    <div className="flex aspect-square items-center justify-center bg-surface-alt text-micro text-secondary-text">
-                      No image yet
-                    </div>
-                  )}
-                  <div className="mt-2 space-y-1.5">
-                    <button
-                      onClick={() => generateImage(brief)}
-                      className="block w-full border border-ink px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream"
-                    >
-                      Generate With AI
-                    </button>
-                    <button
-                      onClick={() => setPickerForId(pickerForId === brief.id ? null : brief.id)}
-                      className="block w-full border border-divider px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink"
-                    >
-                      Use Real Photo
-                    </button>
-                  </div>
-                  {pickerForId === brief.id && (
-                    <div className="mt-2 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto border border-divider p-2">
-                      {assets.map((a) => (
-                        <button key={a.id} onClick={() => attachAsset(brief.id, a.url)} className="relative aspect-square">
-                          <Image src={a.url} alt={a.label ?? ""} fill sizes="80px" className="object-cover" />
+                    <>
+                      {brief.image_url ? (
+                        <div className="relative aspect-square overflow-hidden bg-surface-alt">
+                          <Image src={brief.image_url} alt={brief.headline} fill sizes="200px" className="object-cover" />
+                        </div>
+                      ) : (
+                        <div className="flex aspect-square items-center justify-center bg-surface-alt text-micro text-secondary-text">
+                          No image yet
+                        </div>
+                      )}
+                      <div className="mt-2 space-y-1.5">
+                        <button
+                          onClick={() => generateImage(brief)}
+                          className="block w-full border border-ink px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream"
+                        >
+                          Generate With AI
                         </button>
-                      ))}
-                    </div>
+                        <button
+                          onClick={() => setPickerForId(pickerForId === brief.id ? null : brief.id)}
+                          className="block w-full border border-divider px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink"
+                        >
+                          Use Real Photo
+                        </button>
+                      </div>
+                      {pickerForId === brief.id && (
+                        <div className="mt-2 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto border border-divider p-2">
+                          {assets.map((a) => (
+                            <button key={a.id} onClick={() => attachAsset(brief.id, a.url)} className="relative aspect-square">
+                              <Image src={a.url} alt={a.label ?? ""} fill sizes="80px" className="object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   <div className="mt-4 border-t border-divider pt-3">
@@ -340,7 +413,11 @@ export default function AdBriefsPage() {
                       />
                       <button
                         onClick={() => launch(brief)}
-                        disabled={!brief.image_url}
+                        disabled={
+                          brief.is_carousel
+                            ? (brief.image_urls ?? []).filter(Boolean).length < 4
+                            : !brief.image_url
+                        }
                         className="border border-ink bg-ink px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-cream disabled:opacity-40"
                       >
                         Launch (Paused)

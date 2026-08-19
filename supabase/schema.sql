@@ -667,3 +667,14 @@ create table if not exists return_requests (
 create index if not exists return_requests_order_id_idx on return_requests (order_id);
 create index if not exists return_requests_status_idx on return_requests (status);
 create index if not exists return_requests_shipment_id_idx on return_requests (return_shipment_id);
+
+-- ============================================================
+-- Carousel ad briefs — 4 distinct image prompts/images instead of one,
+-- launched as a Meta carousel creative (child_attachments) rather than a
+-- single-image link ad. image_prompt/image_url (singular) stay as they
+-- were for non-carousel briefs; a carousel brief uses the plural columns
+-- instead and leaves the singular ones null.
+-- ============================================================
+alter table ad_briefs add column if not exists is_carousel boolean not null default false;
+alter table ad_briefs add column if not exists image_prompts text[];
+alter table ad_briefs add column if not exists image_urls text[];

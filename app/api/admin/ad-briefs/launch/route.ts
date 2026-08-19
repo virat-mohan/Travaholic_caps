@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { createPausedMetaCampaign } from "@/lib/meta-ads";
+import { createPausedMetaCampaign, createPausedMetaCarouselCampaign } from "@/lib/meta-ads";
 import { getBrandProfile } from "@/lib/brand";
 
 export async function POST(request: Request) {
@@ -11,7 +11,14 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServerClient();
     const { data: brief } = await supabase.from("ad_briefs").select("*").eq("id", body.id).maybeSingle();
     if (!brief) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
-    if (!brief.image_url) {
+
+    const carouselImages: string[] = brief.is_carousel
+      ? (brief.image_urls ?? []).filter((url: string | null): url is string => !!url)
+      : [];
+    if (brief.is_carousel && carouselImages.length < 4) {
+      return NextResponse.json({ error: "Generate or attach all 4 carousel images before launching" }, { status: 400 });
+    }
+    if (!brief.is_carousel && !brief.image_url) {
       return NextResponse.json({ error: "Generate or attach an image before launching" }, { status: 400 });
     }
 
@@ -24,15 +31,25 @@ export async function POST(request: Request) {
     // the attribution capture on order creation.
     const landingUrl = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}ab=${brief.id}`;
 
-    const { campaignId, adSetId, adId } = await createPausedMetaCampaign({
-      headline: brief.headline,
-      primaryText: brief.primary_text,
-      cta: brief.cta,
-      imageUrl: brief.image_url,
-      landingUrl,
-      dailyBudgetRupees: body.dailyBudgetRupees ?? 500,
-      hashtags: brief.hashtags ?? undefined,
-    });
+    const { campaignId, adSetId, adId } = brief.is_carousel
+      ? await createPausedMetaCarouselCampaign({
+          headline: brief.headline,
+          primaryText: brief.primary_text,
+          cta: brief.cta,
+          imageUrls: carouselImages,
+          landingUrl,
+          dailyBudgetRupees: body.dailyBudgetRupees ?? 500,
+          hashtags: brief.hashtags ?? undefined,
+        })
+      : await createPausedMetaCampaign({
+          headline: brief.headline,
+          primaryText: brief.primary_text,
+          cta: brief.cta,
+          imageUrl: brief.image_url,
+          landingUrl,
+          dailyBudgetRupees: body.dailyBudgetRupees ?? 500,
+          hashtags: brief.hashtags ?? undefined,
+        });
 
     const { error } = await supabase
       .from("ad_briefs")
