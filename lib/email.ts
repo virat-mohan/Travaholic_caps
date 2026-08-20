@@ -359,8 +359,14 @@ export async function sendWarehouseNotificationEmail(
   items: InvoiceItem[],
   labelUrl: string | null
 ) {
-  const toEmail = await getSetting("WAREHOUSE_EMAIL");
-  if (!toEmail) return false;
+  const warehouseEmailSetting = await getSetting("WAREHOUSE_EMAIL");
+  if (!warehouseEmailSetting) return false;
+  // Comma-separated so more than one person (e.g. the warehouse manager and
+  // an admin) can be notified without needing separate settings.
+  const recipients = warehouseEmailSetting
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
 
   const brand = await getBrandProfile();
   const orderNumber = order.id.slice(0, 8).toUpperCase();
@@ -394,10 +400,11 @@ export async function sendWarehouseNotificationEmail(
     </div>
   `;
 
-  return sendEmail(
-    toEmail,
-    `Ship this — Order #${orderNumber}`,
-    html,
-    labelUrl ? [{ url: labelUrl, name: `label-${orderNumber}.pdf` }] : undefined
+  const attachments = labelUrl ? [{ url: labelUrl, name: `label-${orderNumber}.pdf` }] : undefined;
+  const results = await Promise.all(
+    recipients.map((recipient) =>
+      sendEmail(recipient, `Ship this — Order #${orderNumber}`, html, attachments)
+    )
   );
+  return results.every(Boolean);
 }
