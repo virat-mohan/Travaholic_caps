@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { createShiprocketOrder, assignShiprocketAwb, requestShiprocketPickup } from "@/lib/shiprocket";
+import {
+  createShiprocketOrder,
+  assignShiprocketAwb,
+  requestShiprocketPickup,
+  generateShiprocketLabel,
+} from "@/lib/shiprocket";
+import { sendWarehouseNotificationEmail } from "@/lib/email";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -83,6 +89,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         } catch (pickupErr) {
           console.error("Shiprocket pickup request failed", id, pickupErr);
           courierWarning = "Courier assigned, but the pickup request failed — schedule it from Shiprocket's dashboard.";
+        }
+
+        // Best-effort, same as the two steps above — a missing warehouse
+        // email setting, or the label not being ready yet, must never
+        // undo or block an otherwise-successful ship.
+        try {
+          const labelUrl = await generateShiprocketLabel(shipmentId);
+          await sendWarehouseNotificationEmail(
+            { ...order, shiprocket_awb_code: awbCode, courier_name: courierName },
+            items ?? [],
+            labelUrl
+          );
+        } catch (notifyErr) {
+          console.error("Warehouse notification email failed", id, notifyErr);
         }
       } else {
         courierWarning = "Order created, but no courier could be auto-assigned — assign one from Shiprocket's dashboard.";

@@ -288,6 +288,26 @@ export async function requestShiprocketPickup(shipmentId: string) {
   });
 }
 
+/**
+ * Generates the shipping label PDF (barcode, AWB, address) for a shipment
+ * that already has an AWB assigned — this is what a warehouse actually
+ * packs against. Returns null rather than throwing on failure so it can
+ * never block the Ship action itself; the caller decides what to do
+ * (currently: skip the warehouse email rather than fail the whole ship).
+ */
+export async function generateShiprocketLabel(shipmentId: string): Promise<string | null> {
+  try {
+    const data = await shiprocketFetch("/courier/generate/label", {
+      method: "POST",
+      body: JSON.stringify({ shipment_id: [Number(shipmentId)] }),
+    });
+    return data?.label_url ?? null;
+  } catch (err) {
+    console.error("Shiprocket label generation failed", shipmentId, err);
+    return null;
+  }
+}
+
 export async function trackShiprocketShipment(shipmentId: string) {
   const data = await shiprocketFetch(`/courier/track/shipment/${shipmentId}`);
   const tracking = data[shipmentId]?.tracking_data;

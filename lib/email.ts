@@ -25,7 +25,12 @@ function wrapEmailHtml(bodyHtml: string) {
 }
 
 /** Low-level Brevo send — every other function in this file (and lib/newsletter.ts) goes through this one. */
-export async function sendEmail(to: string, subject: string, bodyHtml: string) {
+export async function sendEmail(
+  to: string,
+  subject: string,
+  bodyHtml: string,
+  attachments?: { url: string; name: string }[]
+) {
   const apiKey = await getSetting("BREVO_API_KEY");
   if (!apiKey) {
     console.log(`BREVO_API_KEY not set — skipping email "${subject}" to ${to}`);
@@ -45,6 +50,9 @@ export async function sendEmail(to: string, subject: string, bodyHtml: string) {
         to: [{ email: to }],
         subject,
         htmlContent: wrapEmailHtml(bodyHtml),
+        // Brevo fetches the file from the URL itself — no need to download
+        // and base64-encode it ourselves.
+        ...(attachments && attachments.length > 0 ? { attachment: attachments } : {}),
       }),
     });
     if (!res.ok) {
@@ -329,4 +337,67 @@ export async function sendReturnRefundedEmail(toEmail: string, name: string | nu
     </div>
   `;
   return sendEmail(toEmail, `Return refunded — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+}
+
+/**
+ * Fires the moment an order is shipped and a courier/AWB is assigned —
+ * tells the warehouse manager what to pack and ship. Includes the full
+ * invoice inline (same renderInvoiceHtml the customer/admin invoice page
+ * uses) and attaches the actual Shiprocket shipping label PDF (barcode +
+ * AWB), not just a link to it, so the warehouse can print directly from
+ * the email. Best-effort: WAREHOUSE_EMAIL being unset, or the label PDF
+ * not being ready yet, must never fail the Ship action itself — the
+ * caller (the ship route) already treats this as non-blocking.
+ */
+export async function sendWarehouseNotificationEmail(
+  order: InvoiceOrder & {
+    id: string;
+    customer_phone: string;
+    shiprocket_awb_code: string | null;
+    courier_name: string | null;
+  },
+  items: InvoiceItem[],
+  labelUrl: string | null
+) {
+  const toEmail = await getSetting("WAREHOUSE_EMAIL");
+  if (!toEmail) return false;
+
+  const brand = await getBrandProfile();
+  const orderNumber = order.id.slice(0, 8).toUpperCase();
+  const invoiceHtml = await renderInvoiceHtml(order, items);
+
+  const itemLines = items
+    .map((item) => `<li style="margin-bottom:4px;">${item.quantity} × ${item.chapter_name}</li>`)
+    .join("");
+
+  const html = `
+    <div style="max-width:640px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <h2 style="font-size:20px;">New order to pack — #${orderNumber}</h2>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        ${order.customer_name} · ${order.customer_phone}<br/>
+        ${order.delivery_address}${order.delivery_city ? `, ${order.delivery_city}` : ""}${order.delivery_state ? `, ${order.delivery_state}` : ""}${order.delivery_pincode ? ` — ${order.delivery_pincode}` : ""}
+      </p>
+      <ul style="font-size:14px;color:#1a1a1a;padding-left:20px;">${itemLines}</ul>
+      <p style="font-size:14px;color:#444;">
+        Courier: <strong>${order.courier_name ?? "assigned"}</strong> · AWB: <strong>${order.shiprocket_awb_code ?? "pending"}</strong>
+      </p>
+      ${
+        labelUrl
+          ? `<p style="font-size:13px;color:#666;">Shipping label is attached to this email, and also available at <a href="${labelUrl}">${labelUrl}</a>.</p>`
+          : `<p style="font-size:13px;color:#b8492f;">Label wasn't ready yet when this email sent — check the order in Shiprocket directly.</p>`
+      }
+      <div style="margin-top:24px;border-top:1px solid #ddd;padding-top:16px;">
+        <p style="font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-bottom:8px;">Invoice</p>
+        ${invoiceHtml}
+      </div>
+      <p style="margin-top:24px;font-size:12px;color:#999;">${brand.brandName} · Internal warehouse notification</p>
+    </div>
+  `;
+
+  return sendEmail(
+    toEmail,
+    `Ship this — Order #${orderNumber}`,
+    html,
+    labelUrl ? [{ url: labelUrl, name: `label-${orderNumber}.pdf` }] : undefined
+  );
 }
