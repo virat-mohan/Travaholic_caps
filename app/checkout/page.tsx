@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
-import { trackEvent, getSessionKey, getAttribution, getReferralCode, setReferralCode } from "@/lib/client-tracking";
+import { trackEvent, getSessionKey, getAttribution, getReferralCode } from "@/lib/client-tracking";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
@@ -59,13 +59,15 @@ export default function CheckoutPage() {
     keyId: null,
     codAdvanceRupees: 99,
   });
+  // Only seeded from a real `?ref=` link capture (see captureReferral in
+  // lib/client-tracking.ts) — typing a code here is deliberately local
+  // component state only, not persisted, so a code tried once doesn't keep
+  // silently re-applying itself on unrelated future checkouts.
   const [referralCodeInput, setReferralCodeInput] = useState(() => getReferralCode() ?? "");
   const [referralPreview, setReferralPreview] = useState<{ checked: string; valid: boolean; discountRupees: number } | null>(null);
   const [referralChecking, setReferralChecking] = useState(false);
   function updateReferralCode(value: string) {
-    const trimmed = value.trim().toUpperCase();
     setReferralCodeInput(value);
-    setReferralCode(trimmed || null);
   }
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
