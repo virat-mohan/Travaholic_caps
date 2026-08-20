@@ -253,7 +253,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
             <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
               Continue Exploring — {chapter.series}
             </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
+            <div className="grid grid-cols-3 gap-x-4 gap-y-8 md:grid-cols-5">
               {others.map((c, i) => (
                 <ChapterCard
                   key={c.slug}

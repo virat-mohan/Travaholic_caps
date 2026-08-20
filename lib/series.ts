@@ -3,6 +3,11 @@ import { chapters } from "@/lib/chapters";
 
 export const seriesOrder: { name: StorySeries; slug: string; blurb: string }[] = [
   {
+    name: "The Essentials",
+    slug: "the-essentials",
+    blurb: "No print, no gimmick — the one cap that goes with everything you own.",
+  },
+  {
     name: "Summer Escape",
     slug: "summer-escape",
     blurb: "Endless coastlines, warm evenings, memories made under open skies.",
@@ -31,6 +36,11 @@ export const seriesOrder: { name: StorySeries; slug: string; blurb: string }[] =
     name: "Desert Trails",
     slug: "desert-trails",
     blurb: "Sand, heat, and the last good hour before noon.",
+  },
+  {
+    name: "Trail Markers",
+    slug: "trail-markers",
+    blurb: "The small, stubborn flash of colour that says keep going, you're close.",
   },
 ];
 

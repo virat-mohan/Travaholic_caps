@@ -71,7 +71,7 @@ export default async function Home() {
           </h2>
           <div className="-mx-6 flex gap-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] md:-mx-12 md:px-12 [&::-webkit-scrollbar]:hidden">
             {featured.map((chapter, i) => (
-              <div key={chapter.slug} className="w-[46vw] shrink-0 md:w-[280px]">
+              <div key={chapter.slug} className="w-[38vw] shrink-0 md:w-[220px]">
                 <ChapterCard
                   chapter={chapter}
                   index={i}

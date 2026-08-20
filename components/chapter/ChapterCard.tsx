@@ -33,7 +33,7 @@ export function ChapterCard({
             src={chapterImageSrc(chapter.folder, chapter.sideImage)}
             alt={chapter.name}
             fill
-            sizes="(min-width: 1024px) 25vw, 50vw"
+            sizes="(min-width: 1024px) 20vw, 33vw"
             className="object-cover object-bottom transition-transform duration-500 ease-out group-hover:scale-105"
           />
           {stockLabel && (
