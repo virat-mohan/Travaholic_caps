@@ -258,7 +258,7 @@ export const chapters: Chapter[] = [
   {
     slug: "travaholic-orange",
     name: "Travaholic Orange",
-    series: "Trail Markers",
+    series: "The Essentials",
     folder: "Travaholic Orange",
     images: [
       "_MG_0133 final.jpg",

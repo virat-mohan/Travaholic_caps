@@ -46,30 +46,31 @@ export function CollectionItem({
           {chapter.name}
         </p>
       </Link>
-      <p className="mt-1 line-clamp-2 text-caption text-secondary-text">{chapter.story}</p>
+      <p className="mt-1 line-clamp-2 min-h-[2lh] text-caption text-secondary-text">{chapter.story}</p>
       <p className="mt-2 font-sans text-body-s text-ink">₹{chapter.price.toLocaleString("en-IN")}</p>
 
-      {!disabled && (
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Decrease quantity"
-            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            className="flex h-8 w-8 items-center justify-center border border-ink/30 text-ink hover:border-ink"
-          >
-            <Minus size={14} />
-          </button>
-          <span className="w-6 text-center font-sans text-body-s text-ink">{quantity}</span>
-          <button
-            type="button"
-            aria-label="Increase quantity"
-            onClick={() => setQuantity((q) => q + 1)}
-            className="flex h-8 w-8 items-center justify-center border border-ink/30 text-ink hover:border-ink"
-          >
-            <Plus size={14} />
-          </button>
-        </div>
-      )}
+      {/* Kept in the layout (just hidden) rather than unmounted when sold
+          out, so every card in the row reserves the same height and the
+          Add to Cart / Sold Out buttons below all land on the same line. */}
+      <div className={`mt-3 flex items-center gap-2 ${disabled ? "invisible" : ""}`}>
+        <button
+          type="button"
+          aria-label="Decrease quantity"
+          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+          className="flex h-8 w-8 items-center justify-center border border-ink/30 text-ink hover:border-ink"
+        >
+          <Minus size={14} />
+        </button>
+        <span className="w-6 text-center font-sans text-body-s text-ink">{quantity}</span>
+        <button
+          type="button"
+          aria-label="Increase quantity"
+          onClick={() => setQuantity((q) => q + 1)}
+          className="flex h-8 w-8 items-center justify-center border border-ink/30 text-ink hover:border-ink"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
 
       <div className="mt-3 flex flex-col gap-2 [&>button]:w-full [&>div>button]:w-full">
         <AddToCartButton chapter={chapter} image={image} disabled={disabled} quantity={quantity} />

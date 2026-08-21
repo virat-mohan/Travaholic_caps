@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo_Black, Manrope } from "next/font/google";
 import { Navbar } from "@/components/navigation/Navbar";
+import { ScrollToTop } from "@/components/navigation/ScrollToTop";
 import { SplashIntro } from "@/components/hero/SplashIntro";
 import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
 import { CartProvider } from "@/lib/cart";
@@ -93,6 +94,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
         <MetaPixelTracker pixelId={pixelId} />
         <CartProvider>
+          <ScrollToTop />
           <SplashIntro />
           <Navbar />
           {children}

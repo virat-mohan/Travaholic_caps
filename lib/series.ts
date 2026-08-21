@@ -5,7 +5,7 @@ export const seriesOrder: { name: StorySeries; slug: string; blurb: string }[] =
   {
     name: "The Essentials",
     slug: "the-essentials",
-    blurb: "No print, no gimmick — the one cap that goes with everything you own.",
+    blurb: "No print, no gimmick — the ones that go with everything you own.",
   },
   {
     name: "Summer Escape",
@@ -36,11 +36,6 @@ export const seriesOrder: { name: StorySeries; slug: string; blurb: string }[] =
     name: "Desert Trails",
     slug: "desert-trails",
     blurb: "Sand, heat, and the last good hour before noon.",
-  },
-  {
-    name: "Trail Markers",
-    slug: "trail-markers",
-    blurb: "The small, stubborn flash of colour that says keep going, you're close.",
   },
 ];
 

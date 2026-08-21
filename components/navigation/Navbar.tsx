@@ -10,7 +10,7 @@ import { useCart } from "@/lib/cart";
 const leftLinks = [
   { label: "Collection", href: "/" },
   { label: "Story Series", href: "/series" },
-  { label: "Travel Inspiration", href: "/#pick-your-world" },
+  { label: "Travel Inspiration", href: "/travel-inspiration" },
 ];
 
 const rightLinks = [
@@ -40,14 +40,17 @@ export function Navbar() {
           ))}
         </div>
 
-        <Link href="/" className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+        <Link
+          href="/"
+          className="absolute left-1/2 top-full z-10 -translate-x-1/2 -translate-y-[62%]"
+        >
           <Image
-            src="/images/brand/travaholic-wordmark-white.png"
+            src="/images/brand/travaholic-logo-color-v2.png"
             alt="Travaholic"
-            width={1200}
-            height={130}
-            style={{ height: "22px", width: "auto" }}
-            className="md:!h-[30px]"
+            width={340}
+            height={340}
+            style={{ height: "120px", width: "auto" }}
+            className="drop-shadow-[0_4px_16px_rgba(0,0,0,0.35)] md:!h-[170px]"
             priority
           />
         </Link>

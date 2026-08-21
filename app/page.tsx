@@ -1,4 +1,3 @@
-import { ExploreGlobe } from "@/components/globe/ExploreGlobe";
 import { CollectionItem } from "@/components/collection/CollectionItem";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
@@ -37,11 +36,7 @@ export default async function Home() {
             ))}
           </div>
         </section>
-      </main>
 
-      <ExploreGlobe />
-
-      <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
         <section className="grid grid-cols-2 gap-8 border-t border-divider py-24 md:grid-cols-4 md:py-30">
           {pillars.map((p) => (
             <div key={p.title}>

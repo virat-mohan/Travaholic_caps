@@ -5,8 +5,7 @@ export type StorySeries =
   | "Desert Trails"
   | "Above The Clouds"
   | "Into The Wild"
-  | "Urban Nomad"
-  | "Trail Markers";
+  | "Urban Nomad";
 
 export type Chapter = {
   slug: string;

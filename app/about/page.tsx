@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -7,28 +6,7 @@ export default function AboutPage() {
   return (
     <>
       <main className="mx-auto w-full max-w-[1440px] px-6 pt-32 pb-24 md:px-12 md:pt-40">
-        <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
-          Our Story
-        </p>
-        <h1 className="mt-2 font-display text-heading-xl uppercase text-ink md:text-display-m">
-          Stories You Can Wear.
-        </h1>
-
-        <div className="mx-auto mt-16 max-w-[760px] text-center">
-          <p className="font-display text-heading-l text-charcoal md:text-heading-xl">
-            My love for caps was inspired by an outdoorsy childhood in Durban — surfing, hiking,
-            hanging by the beach, seldom without a cap on my head.
-          </p>
-          <p className="mt-6 text-body text-secondary-text">
-            Every Chapter starts as a sketch, old-school charcoal and paper, before it&apos;s
-            digitised and sampled until the colours carry the memory of the place that inspired
-            it. A cap has got to be your favourite travel companion — not a product you bought,
-            a moment you&apos;re still wearing.
-          </p>
-          <p className="mt-4 text-caption text-secondary-text">— Ishan Seth, Founder</p>
-        </div>
-
-        <div className="mt-16 grid grid-cols-1 gap-12 border-t border-divider pt-16 md:grid-cols-2 md:gap-16">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 md:gap-16">
           <div>
             <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface-alt">
               <Image
@@ -40,12 +18,6 @@ export default function AboutPage() {
                 priority
               />
             </div>
-            <p className="mt-3 text-caption uppercase tracking-[0.05em] text-secondary-text">
-              Wearing{" "}
-              <Link href="/chapter/wildling" className="text-ink underline underline-offset-4">
-                Wildling
-              </Link>
-            </p>
           </div>
 
           <div>
