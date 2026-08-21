@@ -90,7 +90,6 @@ export default function CheckoutPage() {
   // automatically instead of retyping everything. "Continue as guest" skips
   // straight to the manual form for anyone who'd rather not verify.
   const [identityStep, setIdentityStep] = useState<IdentityStep>("checking");
-  const [identifyPhone, setIdentifyPhone] = useState("");
   const [identifyEmail, setIdentifyEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [identityLoading, setIdentityLoading] = useState(false);
@@ -250,8 +249,8 @@ export default function CheckoutPage() {
 
   async function sendIdentifyCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!identifyPhone.trim() && !identifyEmail.trim()) {
-      setIdentityError("Enter a phone number or an email address.");
+    if (!identifyEmail.trim()) {
+      setIdentityError("Enter an email address.");
       return;
     }
     setIdentityLoading(true);
@@ -260,7 +259,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: identifyPhone.trim() || null, email: identifyEmail.trim() || null }),
+        body: JSON.stringify({ email: identifyEmail.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not send code");
@@ -281,8 +280,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: identifyPhone.trim() || null,
-          email: identifyEmail.trim() || null,
+          email: identifyEmail.trim(),
           code: otpCode,
         }),
       });
@@ -515,30 +513,13 @@ export default function CheckoutPage() {
         {(identityStep === "identify" || identityStep === "otp") && (
           <>
             <p className="mt-4 max-w-md text-body-s text-secondary-text">
-              Enter your phone or email — if you&apos;ve ordered before, we&apos;ll pull in your
-              address and Travaholic Miles automatically.
+              Enter your email — if you&apos;ve ordered before, we&apos;ll pull in your address
+              and Travaholic Miles automatically.
             </p>
             {orderSummary}
 
             {identityStep === "identify" ? (
               <form onSubmit={sendIdentifyCode} className="mt-8 space-y-5">
-                <div>
-                  <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={identifyPhone}
-                    onChange={(e) => setIdentifyPhone(e.target.value)}
-                    placeholder="10-digit mobile number"
-                    className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
-                  />
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-px flex-1 bg-divider" />
-                  <span className="text-micro uppercase tracking-[0.1em] text-secondary-text">Or</span>
-                  <div className="h-px flex-1 bg-divider" />
-                </div>
                 <div>
                   <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
                     Email
@@ -570,7 +551,7 @@ export default function CheckoutPage() {
             ) : (
               <form onSubmit={verifyIdentifyCode} className="mt-8 space-y-5">
                 <p className="text-body-s text-secondary-text">
-                  Enter the 6-digit code sent to {identifyEmail.trim() || identifyPhone.trim()}.
+                  Enter the 6-digit code sent to {identifyEmail.trim()}.
                 </p>
                 <input
                   required

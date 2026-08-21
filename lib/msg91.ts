@@ -23,6 +23,18 @@ export async function sendMsg91Flow(
   variables: string[],
   mediaUrl?: string
 ) {
+  // Hard off-switch for launch — going live on email only, WhatsApp/SMS is
+  // being set up separately. This is the one choke point every WhatsApp
+  // send in the app routes through (OTP, order confirmation, NDR/RTO
+  // nudges, referral invites, abandoned cart, win-back), so flipping this
+  // one setting is enough to silence all of them without touching each
+  // call site. Set WHATSAPP_SMS_ENABLED to "true" in /admin/settings once
+  // MSG91 is actually configured and ready to go live.
+  const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
+  if (enabled !== "true") {
+    return { sent: false as const };
+  }
+
   const authKey = await getSetting("MSG91_AUTH_KEY");
   if (!authKey || !flowSlug) {
     return { sent: false as const };

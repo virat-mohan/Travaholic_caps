@@ -39,6 +39,7 @@ export const SETTINGS_KEYS = [
   "MSG91_RTO_REFUNDED_TEMPLATE_ID",
   "RETURN_WINDOW_DAYS",
   "WAREHOUSE_EMAIL",
+  "WHATSAPP_SMS_ENABLED",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

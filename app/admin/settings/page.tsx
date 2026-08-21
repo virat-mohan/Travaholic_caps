@@ -40,6 +40,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
   {
     label: "MSG91 (WhatsApp / SMS)",
     fields: [
+      { key: "WHATSAPP_SMS_ENABLED", label: "Enable WhatsApp/SMS", hint: "Off by default at launch — every WhatsApp/SMS send in the app (OTP, order confirmation, NDR/RTO nudges, referral invites, abandoned cart, win-back) is silenced until this is set to exactly \"true\". Email keeps working regardless. Flip this on once MSG91 is actually configured below." },
       { key: "MSG91_AUTH_KEY", label: "MSG91 Auth Key", hint: "From MSG91 dashboard → API keys. Shared by all MSG91 sends below." },
       { key: "MSG91_OTP_TEMPLATE_ID", label: "MSG91 OTP Flow Slug", hint: "Not a numeric ID — the Flow's URL slug (e.g. \"login-otp\"), found via the </> \"View Code\" button on the Flow builder canvas. One variable (VAR1) for the code." },
       { key: "MSG91_ORDER_CONFIRMATION_TEMPLATE_ID", label: "MSG91 Order Confirmation Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: customer name, order number, total." },
