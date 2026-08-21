@@ -1,10 +1,11 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const columns = [
   {
     title: "Brand",
     links: [
-      { label: "About", href: "/about" },
+      { label: "My Story", href: "/about" },
       { label: "Journal", href: "/journal" },
       { label: "Explorers", href: "/community" },
     ],
@@ -83,13 +84,15 @@ export function FooterEditorial() {
         </div>
       </div>
 
-      <p
-        aria-hidden
-        className="font-display mt-10 select-none overflow-hidden whitespace-nowrap text-center uppercase leading-[0.8] text-ink"
-        style={{ fontSize: "clamp(3.5rem, 14vw, 12rem)" }}
-      >
-        Travaholic
-      </p>
+      <div aria-hidden className="mt-10 flex w-full justify-center overflow-hidden px-6">
+        <Image
+          src="/images/brand/travaholic-wordmark-black.png"
+          alt=""
+          width={1200}
+          height={130}
+          className="h-auto w-full max-w-[900px]"
+        />
+      </div>
     </footer>
   );
 }

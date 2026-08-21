@@ -9,10 +9,12 @@ export function BuyNowButton({
   chapter,
   image,
   disabled = false,
+  quantity = 1,
 }: {
   chapter: Chapter;
   image: string;
   disabled?: boolean;
+  quantity?: number;
 }) {
   const { clear, addItem } = useCart();
   const router = useRouter();
@@ -23,7 +25,7 @@ export function BuyNowButton({
   function handleClick() {
     setLoading(true);
     clear();
-    addItem(chapter, image);
+    addItem(chapter, image, quantity);
     router.push("/checkout");
   }
 

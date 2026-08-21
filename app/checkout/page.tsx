@@ -73,7 +73,10 @@ export default function CheckoutPage() {
   const [payError, setPayError] = useState<string | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [redeemMiles, setRedeemMiles] = useState(false);
-  const [paymentType, setPaymentType] = useState<"prepaid" | "cod_advance">("prepaid");
+  // COD is off at launch — every order is prepaid in full. Kept as a
+  // constant (not a toggle) rather than deleting payment_type plumbing
+  // downstream, so COD can come back later without re-threading it.
+  const paymentType = "prepaid" as const;
   const [shippingCharge, setShippingCharge] = useState<number | null>(null);
   const [shippingUnavailable, setShippingUnavailable] = useState(false);
   // Distinct from shippingUnavailable: this specifically means Shiprocket
@@ -320,7 +323,7 @@ export default function CheckoutPage() {
         amount: Math.round(createData.chargeAmount * 100),
         currency: "INR",
         name: "Travaholic",
-        description: paymentType === "cod_advance" ? "COD advance payment" : "Order payment",
+        description: "Order payment",
         prefill: { name: form.name, email: form.email, contact: form.phone },
         handler: async (response: {
           razorpay_order_id: string;
@@ -795,41 +798,6 @@ export default function CheckoutPage() {
                   </span>
                 </label>
 
-                {razorpay.enabled && (
-                  <div className="mt-6 border-t border-divider pt-6">
-                    <p className="text-caption uppercase tracking-[0.1em] text-secondary-text">
-                      Payment
-                    </p>
-                    <div className="mt-3 space-y-2">
-                      <label className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          name="paymentType"
-                          checked={paymentType === "prepaid"}
-                          onChange={() => setPaymentType("prepaid")}
-                          className="mt-1 h-4 w-4 accent-ink"
-                        />
-                        <span className="font-sans text-body-s text-ink">
-                          Pay in full now — ₹{total.toLocaleString("en-IN")}
-                        </span>
-                      </label>
-                      <label className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          name="paymentType"
-                          checked={paymentType === "cod_advance"}
-                          onChange={() => setPaymentType("cod_advance")}
-                          className="mt-1 h-4 w-4 accent-ink"
-                        />
-                        <span className="font-sans text-body-s text-ink">
-                          Cash on Delivery — pay ₹{razorpay.codAdvanceRupees} now to confirm, rest (₹
-                          {Math.max(0, total - razorpay.codAdvanceRupees).toLocaleString("en-IN")}) on
-                          delivery
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {payError && <p className="text-body-s text-paint-orange">{payError}</p>}
@@ -844,9 +812,7 @@ export default function CheckoutPage() {
                   : razorpay.enabled
                     ? paying
                       ? "Processing..."
-                      : paymentType === "cod_advance"
-                        ? `Pay ₹${Math.min(razorpay.codAdvanceRupees, total).toLocaleString("en-IN")} to Confirm`
-                        : `Pay ₹${total.toLocaleString("en-IN")}`
+                      : `Pay ₹${total.toLocaleString("en-IN")}`
                     : "Place Order via WhatsApp"}
               </button>
             </form>

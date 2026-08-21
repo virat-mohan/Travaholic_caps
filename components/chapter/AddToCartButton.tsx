@@ -9,10 +9,12 @@ export function AddToCartButton({
   chapter,
   image,
   disabled = false,
+  quantity = 1,
 }: {
   chapter: Chapter;
   image: string;
   disabled?: boolean;
+  quantity?: number;
 }) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
@@ -47,7 +49,7 @@ export function AddToCartButton({
   return (
     <button
       onClick={() => {
-        addItem(chapter, image);
+        addItem(chapter, image, quantity);
         setAdded(true);
       }}
       className="border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink"

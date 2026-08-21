@@ -14,7 +14,21 @@ export default function AboutPage() {
           Stories You Can Wear.
         </h1>
 
-        <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-2 md:gap-16">
+        <div className="mx-auto mt-16 max-w-[760px] text-center">
+          <p className="font-display text-heading-l text-charcoal md:text-heading-xl">
+            My love for caps was inspired by an outdoorsy childhood in Durban — surfing, hiking,
+            hanging by the beach, seldom without a cap on my head.
+          </p>
+          <p className="mt-6 text-body text-secondary-text">
+            Every Chapter starts as a sketch, old-school charcoal and paper, before it&apos;s
+            digitised and sampled until the colours carry the memory of the place that inspired
+            it. A cap has got to be your favourite travel companion — not a product you bought,
+            a moment you&apos;re still wearing.
+          </p>
+          <p className="mt-4 text-caption text-secondary-text">— Ishan Seth, Founder</p>
+        </div>
+
+        <div className="mt-16 grid grid-cols-1 gap-12 border-t border-divider pt-16 md:grid-cols-2 md:gap-16">
           <div>
             <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface-alt">
               <Image

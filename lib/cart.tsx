@@ -14,7 +14,7 @@ export type CartItem = {
 
 type CartContextValue = {
   items: CartItem[];
-  addItem: (chapter: Chapter, image: string) => void;
+  addItem: (chapter: Chapter, image: string, quantity?: number) => void;
   removeItem: (slug: string) => void;
   setQuantity: (slug: string, quantity: number) => void;
   clear: () => void;
@@ -44,18 +44,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, loaded]);
 
-  function addItem(chapter: Chapter, image: string) {
-    trackEvent("AddToCart", { chapterSlug: chapter.slug, value: chapter.price });
+  function addItem(chapter: Chapter, image: string, quantity = 1) {
+    trackEvent("AddToCart", { chapterSlug: chapter.slug, value: chapter.price * quantity });
     setItems((prev) => {
       const existing = prev.find((i) => i.slug === chapter.slug);
       if (existing) {
         return prev.map((i) =>
-          i.slug === chapter.slug ? { ...i, quantity: i.quantity + 1 } : i
+          i.slug === chapter.slug ? { ...i, quantity: i.quantity + quantity } : i
         );
       }
       return [
         ...prev,
-        { slug: chapter.slug, name: chapter.name, price: chapter.price, image, quantity: 1 },
+        { slug: chapter.slug, name: chapter.name, price: chapter.price, image, quantity },
       ];
     });
   }

@@ -1,9 +1,7 @@
 import { ExploreGlobe } from "@/components/globe/ExploreGlobe";
-import { ChapterCard } from "@/components/chapter/ChapterCard";
-import { SeriesCard } from "@/components/series/SeriesCard";
+import { CollectionItem } from "@/components/collection/CollectionItem";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
-import { seriesOrder } from "@/lib/series";
 import { getAllChapters } from "@/lib/chapters-dynamic";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 
@@ -16,34 +14,27 @@ const pillars = [
 
 export default async function Home() {
   const chapters = await getAllChapters();
-  const featured = [...chapters].reverse();
+  const collection = [...chapters].reverse();
   const inventory = await getInventoryMap();
 
   return (
     <>
       <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
-        <section className="pt-8 md:pt-12">
+        <section className="pb-24 pt-8 md:pb-30 md:pt-12">
           <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
-            The Collection
+            Shop
           </p>
           <h1 className="mb-8 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
-            Story Series.
+            The Collection.
           </h1>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {seriesOrder.map((s, i) => {
-              const rep = chapters.find((c) => c.series === s.name);
-              if (!rep) return null;
-              return (
-                <SeriesCard
-                  key={s.slug}
-                  name={s.name}
-                  slug={s.slug}
-                  blurb={s.blurb}
-                  representative={rep}
-                  index={i}
-                />
-              );
-            })}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+            {collection.map((chapter) => (
+              <CollectionItem
+                key={chapter.slug}
+                chapter={chapter}
+                stockLabel={stockLabelFor(inventory[chapter.slug])}
+              />
+            ))}
           </div>
         </section>
       </main>
@@ -51,37 +42,6 @@ export default async function Home() {
       <ExploreGlobe />
 
       <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
-        <section className="mx-auto max-w-[760px] py-24 text-center md:py-30">
-          <p className="font-display text-heading-l text-charcoal md:text-heading-xl">
-            My love for caps was inspired by an outdoorsy childhood in Durban — surfing, hiking,
-            hanging by the beach, seldom without a cap on my head.
-          </p>
-          <p className="mt-6 text-body text-secondary-text">
-            Every Chapter starts as a sketch, old-school charcoal and paper, before it's
-            digitised and sampled until the colours carry the memory of the place that inspired
-            it. A cap has got to be your favourite travel companion — not a product you bought,
-            a moment you're still wearing.
-          </p>
-          <p className="mt-4 text-caption text-secondary-text">— Ishan Seth, Founder</p>
-        </section>
-
-        <section className="pb-24 md:pb-30">
-          <h2 className="mb-8 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
-            Featured Chapters.
-          </h2>
-          <div className="-mx-6 flex gap-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] md:-mx-12 md:px-12 [&::-webkit-scrollbar]:hidden">
-            {featured.map((chapter, i) => (
-              <div key={chapter.slug} className="w-[38vw] shrink-0 md:w-[220px]">
-                <ChapterCard
-                  chapter={chapter}
-                  index={i}
-                  stockLabel={stockLabelFor(inventory[chapter.slug])}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section className="grid grid-cols-2 gap-8 border-t border-divider py-24 md:grid-cols-4 md:py-30">
           {pillars.map((p) => (
             <div key={p.title}>

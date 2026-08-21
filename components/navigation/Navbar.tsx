@@ -7,13 +7,19 @@ import { ShoppingBag, Menu, X, User } from "lucide-react";
 import { seriesOrder } from "@/lib/series";
 import { useCart } from "@/lib/cart";
 
-const links = [
-  { label: "Collection", href: "/series" },
+const leftLinks = [
+  { label: "Collection", href: "/" },
+  { label: "Story Series", href: "/series" },
   { label: "Travel Inspiration", href: "/#pick-your-world" },
+];
+
+const rightLinks = [
   { label: "Explorers", href: "/community" },
   { label: "Journal", href: "/journal" },
-  { label: "About", href: "/about" },
+  { label: "My Story", href: "/about" },
 ];
+
+const links = [...leftLinks, ...rightLinks];
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -23,7 +29,7 @@ export function Navbar() {
     <header className="sticky inset-x-0 top-0 z-50 border-b border-[var(--color-divider)] bg-near-black">
       <nav className="relative mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-6 md:h-28 md:px-12">
         <div className="hidden items-center gap-8 md:flex">
-          {links.map((link) => (
+          {leftLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -34,22 +40,30 @@ export function Navbar() {
           ))}
         </div>
 
-        <Link
-          href="/"
-          className="absolute left-1/2 top-full z-10 -translate-x-1/2 -translate-y-[62%]"
-        >
+        <Link href="/" className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
           <Image
-            src="/images/brand/travaholic-logo-color-v2.png"
+            src="/images/brand/travaholic-wordmark-white.png"
             alt="Travaholic"
-            width={340}
-            height={340}
-            style={{ height: "120px", width: "auto" }}
-            className="drop-shadow-[0_4px_16px_rgba(0,0,0,0.35)] md:!h-[170px]"
+            width={1200}
+            height={130}
+            style={{ height: "22px", width: "auto" }}
+            className="md:!h-[30px]"
             priority
           />
         </Link>
 
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-6">
+          <div className="hidden items-center gap-8 md:flex">
+            {rightLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="font-sans text-micro uppercase tracking-[0.15em] text-cream/80 transition-colors hover:text-cream"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
           <button
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             onClick={() => setMenuOpen((v) => !v)}
@@ -76,7 +90,7 @@ export function Navbar() {
           <div className="mx-auto grid w-full max-w-[1440px] grid-cols-2 gap-10 px-6 py-10 md:grid-cols-4 md:px-12">
             <div>
               <p className="mb-4 text-caption uppercase tracking-[0.1em] text-cream/50">
-                Collection
+                Story Series
               </p>
               <ul className="space-y-3">
                 {seriesOrder.map((s) => (
