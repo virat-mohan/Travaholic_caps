@@ -42,7 +42,7 @@ export function CollectionItem({
             </span>
           )}
         </div>
-        <p className="mt-3 font-sans text-body-s uppercase tracking-[0.03em] text-ink">
+        <p className="mt-3 line-clamp-2 min-h-[2lh] font-sans text-body-s uppercase tracking-[0.03em] text-ink">
           {chapter.name}
         </p>
       </Link>

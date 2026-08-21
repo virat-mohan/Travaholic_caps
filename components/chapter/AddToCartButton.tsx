@@ -22,7 +22,7 @@ export function AddToCartButton({
   if (added) {
     return (
       <div className="flex items-center gap-4">
-        <span className="font-sans text-body-s uppercase tracking-[0.05em] text-ink">
+        <span className="font-sans text-caption uppercase tracking-[0.05em] text-ink">
           Added to cart
         </span>
         <Link
@@ -39,7 +39,7 @@ export function AddToCartButton({
     return (
       <button
         disabled
-        className="cursor-not-allowed border border-divider bg-surface-alt px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-secondary-text"
+        className="cursor-not-allowed border border-divider bg-surface-alt px-6 py-2.5 font-sans text-caption font-medium uppercase tracking-[0.12em] text-secondary-text"
       >
         Sold Out
       </button>
@@ -52,7 +52,7 @@ export function AddToCartButton({
         addItem(chapter, image, quantity);
         setAdded(true);
       }}
-      className="border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink"
+      className="border border-ink bg-ink px-6 py-2.5 font-sans text-caption font-medium uppercase tracking-[0.12em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink"
     >
       Add to Cart
     </button>
