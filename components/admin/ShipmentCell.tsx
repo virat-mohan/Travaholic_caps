@@ -38,10 +38,9 @@ export function ShipmentCell({
         courierName: data.courierName ?? s.courierName,
       }));
       if (data.courierWarning) setWarning(data.courierWarning);
-      // The row's shipment-status dropdown is a separate component with its
-      // own local state (server-driven, set once at page load) — a plain
-      // client-state update here wouldn't touch it. Refreshing the server
-      // component is what actually syncs it to "processing".
+      // The row's shipment-status cell is a separate, read-only server-rendered
+      // cell — a plain client-state update here wouldn't touch it. Refreshing
+      // the server component is what actually syncs it to "processing".
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not ship");
@@ -58,6 +57,9 @@ export function ShipmentCell({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not check tracking");
       setState((s) => ({ ...s, awbCode: data.awbCode ?? s.awbCode, courierName: data.courierName ?? s.courierName }));
+      // The shipment-status cell is a separate, read-only server-rendered
+      // cell — a refresh here is what syncs it to what this call just wrote.
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not check tracking");
     } finally {

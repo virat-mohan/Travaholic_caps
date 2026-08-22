@@ -2,13 +2,6 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { trackShiprocketShipment } from "@/lib/shiprocket";
 
-const STATUS_MAP: Record<string, string> = {
-  "in transit": "shipped",
-  delivered: "delivered",
-  "out for delivery": "shipped",
-  pickup: "processing",
-};
-
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -24,9 +17,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const tracking = await trackShiprocketShipment(order.shiprocket_shipment_id);
-    const shipmentStatus = tracking.status
-      ? STATUS_MAP[tracking.status.toLowerCase()] ?? "processing"
-      : "processing";
+    // Store Shiprocket's own status string verbatim (same convention the
+    // webhook uses) rather than squeezing it into a fixed enum — so this
+    // manual refresh and the live webhook always agree on what's displayed.
+    const shipmentStatus = tracking.status ? tracking.status.toLowerCase() : "processing";
 
     const { error } = await supabase
       .from("orders")

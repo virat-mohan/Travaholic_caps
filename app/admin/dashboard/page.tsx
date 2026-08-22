@@ -147,12 +147,8 @@ export default async function AdminDashboardPage() {
                   <td className="py-3">
                     <OrderStatusCell orderId={o.id} field="status" value={o.status} />
                   </td>
-                  <td className="py-3">
-                    <OrderStatusCell
-                      orderId={o.id}
-                      field="shipmentStatus"
-                      value={o.shipment_status ?? "not_shipped"}
-                    />
+                  <td className="py-3 text-caption text-secondary-text">
+                    {(o.shipment_status ?? "not_shipped").replace(/_/g, " ")}
                   </td>
                   <td className="py-3">
                     <ShipmentCell

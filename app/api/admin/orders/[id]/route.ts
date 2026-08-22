@@ -6,9 +6,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Missing body" }, { status: 400 });
 
+  // shipment_status is intentionally not editable here — it's set only by
+  // the Shiprocket webhook and the "Refresh Tracking" action, so the
+  // dashboard always reflects what Shiprocket actually reports.
   const patch: Record<string, string> = {};
   if (body.status) patch.status = body.status;
-  if (body.shipmentStatus) patch.shipment_status = body.shipmentStatus;
   if (body.refundStatus) patch.refund_status = body.refundStatus;
 
   if (Object.keys(patch).length === 0) {

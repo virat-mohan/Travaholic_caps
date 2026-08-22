@@ -75,6 +75,19 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
   );
 }
 
+const ORDER_NOTIFICATION_RECIPIENTS = ["viratmohan@gmail.com", "travaholiccaps@gmail.com"];
+
+/** Internal heads-up the moment an order is confirmed — same invoice, sent to the team instead of the customer. */
+export async function sendOrderNotificationEmail(order: InvoiceOrder, items: InvoiceItem[]) {
+  const invoiceHtml = await renderInvoiceHtml(order, items);
+  const orderNumber = order.id.slice(0, 8).toUpperCase();
+  await Promise.all(
+    ORDER_NOTIFICATION_RECIPIENTS.map((to) =>
+      sendEmail(to, `New order confirmed — #${orderNumber}`, invoiceHtml)
+    )
+  );
+}
+
 /** Login OTP by email — the active channel while WhatsApp/SMS delivery is still being set up. */
 export async function sendOtpEmail(email: string, code: string) {
   const brand = await getBrandProfile();

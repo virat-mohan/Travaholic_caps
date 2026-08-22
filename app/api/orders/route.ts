@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
 import { getCurrentCustomer, findOrCreateCustomerForGuest } from "@/lib/auth";
 import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
-import { sendInvoiceEmail } from "@/lib/email";
+import { sendInvoiceEmail, sendOrderNotificationEmail } from "@/lib/email";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
 import { recordGuestCheckoutLead } from "@/lib/leads";
 import { getShippingRate } from "@/lib/shiprocket";
@@ -188,14 +188,15 @@ export async function POST(request: Request) {
     }
 
     // Best-effort — a failed email must never fail the order itself.
-    await sendInvoiceEmail(
-      order,
-      body.items.map((item) => ({
-        chapter_name: item.name,
-        unit_price: item.price,
-        quantity: item.quantity,
-      }))
-    );
+    const emailItems = body.items.map((item) => ({
+      chapter_name: item.name,
+      unit_price: item.price,
+      quantity: item.quantity,
+    }));
+    await Promise.allSettled([
+      sendInvoiceEmail(order, emailItems),
+      sendOrderNotificationEmail(order, emailItems),
+    ]);
 
     return NextResponse.json({ orderId: order.id });
   } catch (err) {

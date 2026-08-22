@@ -6,7 +6,7 @@ import { getShippingRate } from "@/lib/shiprocket";
 import { getCodAdvanceRupees } from "@/lib/order-pricing";
 import { findOrCreateCustomerForGuest } from "@/lib/auth";
 import { earnMilesForOrder } from "@/lib/loyalty";
-import { sendInvoiceEmail } from "@/lib/email";
+import { sendInvoiceEmail, sendOrderNotificationEmail } from "@/lib/email";
 import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-notify";
 
 type ManualOrderItem = { slug: string; quantity: number };
@@ -160,6 +160,7 @@ export async function POST(request: Request) {
 
     await Promise.allSettled([
       sendInvoiceEmail(order, orderItems),
+      sendOrderNotificationEmail(order, orderItems),
       sendOrderConfirmationWhatsApp(order, orderItems),
     ]);
 

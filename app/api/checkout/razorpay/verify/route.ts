@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
-import { sendInvoiceEmail } from "@/lib/email";
+import { sendInvoiceEmail, sendOrderNotificationEmail } from "@/lib/email";
 import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-notify";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
 import { computeTrustedOrderTotal, getCodAdvanceRupees } from "@/lib/order-pricing";
@@ -193,6 +193,7 @@ export async function POST(request: Request) {
     // Best-effort — a failed email/WhatsApp send shouldn't fail the order.
     await Promise.allSettled([
       sendInvoiceEmail(savedOrder, orderItems),
+      sendOrderNotificationEmail(savedOrder, orderItems),
       sendOrderConfirmationWhatsApp(savedOrder, orderItems),
     ]);
 
