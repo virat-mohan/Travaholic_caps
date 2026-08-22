@@ -91,7 +91,7 @@ export default function PrivacyPolicyPage() {
             <p className="mt-3">
               Travaholic, C-152, Industrial Phase-1, Okhla, South Delhi, Delhi, 110020
               <br />
-              iamtravoholic@gmail.com · +91-9958871283
+              travaholiccaps@gmail.com · +91 88003 39125
             </p>
           </section>
         </div>

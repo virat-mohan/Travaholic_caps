@@ -12,7 +12,7 @@ import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
 
-const WHATSAPP_NUMBER = "919958871283";
+const WHATSAPP_NUMBER = "918800339125";
 
 declare global {
   interface Window {

@@ -23,7 +23,7 @@ export default function RefundPolicyPage() {
             <p className="mt-3">
               You can cancel an order for a full refund any time before it&apos;s shipped. Once an order has
               shipped, it can no longer be cancelled — you&apos;re welcome to return it instead (see below).
-              To cancel, message us on WhatsApp at +91-9958871283 or email iamtravoholic@gmail.com with
+              To cancel, message us on WhatsApp at +91 88003 39125 or email travaholiccaps@gmail.com with
               your order number.
             </p>
           </section>
@@ -33,7 +33,7 @@ export default function RefundPolicyPage() {
             <p className="mt-3">
               We accept returns and exchanges within 7 days of delivery, as long as the cap is unused,
               unworn, and in its original condition with tags attached. To start a return, email us at
-              iamtravoholic@gmail.com with your order number and the reason for return — we&apos;ll confirm
+              travaholiccaps@gmail.com with your order number and the reason for return — we&apos;ll confirm
               pickup or return-shipping instructions.
             </p>
             <p className="mt-3">
@@ -61,7 +61,7 @@ export default function RefundPolicyPage() {
 
           <section>
             <h2 className="font-display text-heading-s uppercase text-ink">Contact Us</h2>
-            <p className="mt-3">iamtravoholic@gmail.com · +91-9958871283</p>
+            <p className="mt-3">travaholiccaps@gmail.com · +91 88003 39125</p>
           </section>
         </div>
       </main>

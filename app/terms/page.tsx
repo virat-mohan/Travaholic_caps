@@ -94,7 +94,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="font-display text-heading-s uppercase text-ink">Contact Us</h2>
-            <p className="mt-3">iamtravoholic@gmail.com · +91-9958871283</p>
+            <p className="mt-3">travaholiccaps@gmail.com · +91 88003 39125</p>
           </section>
         </div>
       </main>

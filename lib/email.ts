@@ -88,6 +88,23 @@ export async function sendOrderNotificationEmail(order: InvoiceOrder, items: Inv
   );
 }
 
+/** Contact-us form submission — forwarded to the team as-is, replies go straight to the customer. */
+export async function sendContactFormEmail(name: string, email: string, message: string) {
+  const html = `
+    <div style="max-width:560px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
+      <p style="font-size:13px;color:#666;">New contact form submission</p>
+      <p style="font-size:15px;margin:4px 0;"><strong>Name:</strong> ${name}</p>
+      <p style="font-size:15px;margin:4px 0;"><strong>Email:</strong> ${email}</p>
+      <p style="font-size:15px;margin:16px 0 4px;"><strong>Message:</strong></p>
+      <p style="font-size:15px;white-space:pre-wrap;">${message}</p>
+    </div>
+  `;
+  const results = await Promise.all(
+    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, `Contact form — ${name}`, html))
+  );
+  return results.some(Boolean);
+}
+
 /** Login OTP by email — the active channel while WhatsApp/SMS delivery is still being set up. */
 export async function sendOtpEmail(email: string, code: string) {
   const brand = await getBrandProfile();

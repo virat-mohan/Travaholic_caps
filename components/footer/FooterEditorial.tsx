@@ -21,8 +21,9 @@ const columns = [
   {
     title: "Contact",
     links: [
-      { label: "+91-9958871283", href: "https://wa.me/919958871283" },
-      { label: "iamtravoholic@gmail.com", href: "mailto:iamtravoholic@gmail.com" },
+      { label: "Contact Us", href: "/contact" },
+      { label: "+91 88003 39125 (WhatsApp)", href: "https://wa.me/918800339125" },
+      { label: "travaholiccaps@gmail.com", href: "mailto:travaholiccaps@gmail.com" },
       { label: "Instagram", href: "https://instagram.com/travaholiccaps" },
       { label: "Facebook", href: "https://facebook.com/profile.php?id=100080234022161" },
     ],

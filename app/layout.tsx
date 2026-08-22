@@ -4,6 +4,7 @@ import { Navbar } from "@/components/navigation/Navbar";
 import { ScrollToTop } from "@/components/navigation/ScrollToTop";
 import { SplashIntro } from "@/components/hero/SplashIntro";
 import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
+import { WhatsAppFloatButton } from "@/components/contact/WhatsAppFloatButton";
 import { CartProvider } from "@/lib/cart";
 import { getSetting } from "@/lib/settings";
 import "./globals.css";
@@ -98,6 +99,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <SplashIntro />
           <Navbar />
           {children}
+          <WhatsAppFloatButton />
         </CartProvider>
       </body>
     </html>
