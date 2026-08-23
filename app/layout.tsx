@@ -58,7 +58,7 @@ const organizationJsonLd = {
   "@type": "Organization",
   name: "Travaholic",
   url: SITE_URL,
-  logo: `${SITE_URL}/images/brand/travaholic-logo-color-v2.png`,
+  logo: `${SITE_URL}/images/brand/travaholic-logo-color-black-text.png`,
   description: DESCRIPTION,
   address: {
     "@type": "PostalAddress",
