@@ -20,6 +20,10 @@ type CartContextValue = {
   clear: () => void;
   count: number;
   subtotal: number;
+  /** True once the initial localStorage read has completed — callers that add
+   * items programmatically on mount (e.g. a cart deep-link) must wait for
+   * this, otherwise the hydration read commits after their add and wipes it. */
+  loaded: boolean;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -81,7 +85,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, setQuantity, clear, count, subtotal }}
+      value={{ items, addItem, removeItem, setQuantity, clear, count, subtotal, loaded }}
     >
       {children}
     </CartContext.Provider>

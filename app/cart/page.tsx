@@ -1,13 +1,44 @@
 "use client";
 
+import { Suspense, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
+import { parseCartDeepLink } from "@/lib/cart-deep-link";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
+
+/**
+ * Lands a WhatsApp-catalog order (or any pre-built cart shared as a link)
+ * straight into the real checkout flow — one-time on mount, then the
+ * `items` param is stripped so refreshing/back-nav doesn't re-add it.
+ * Split out because useSearchParams() requires a Suspense boundary.
+ */
+function CartDeepLinkApplier() {
+  const { addItem, loaded } = useCart();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const appliedDeepLink = useRef(false);
+
+  useEffect(() => {
+    if (appliedDeepLink.current || !loaded) return;
+    const itemsParam = searchParams.get("items");
+    if (!itemsParam) return;
+    appliedDeepLink.current = true;
+
+    for (const { chapter, image, quantity } of parseCartDeepLink(itemsParam)) {
+      addItem(chapter, image, quantity);
+    }
+    router.replace("/cart");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, loaded]);
+
+  return null;
+}
 
 export default function CartPage() {
   const { items, setQuantity, removeItem, subtotal } = useCart();
@@ -17,6 +48,9 @@ export default function CartPage() {
 
   return (
     <>
+      <Suspense fallback={null}>
+        <CartDeepLinkApplier />
+      </Suspense>
       <main className="mx-auto w-full max-w-[900px] px-6 pt-32 pb-24 md:px-12 md:pt-40">
         <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">Your Cart</p>
         <h1 className="mt-2 font-display text-heading-xl uppercase text-ink md:text-display-m">
