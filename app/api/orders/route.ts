@@ -8,6 +8,7 @@ import { applyNewsletterOptIn } from "@/lib/newsletter";
 import { recordGuestCheckoutLead } from "@/lib/leads";
 import { getShippingRate } from "@/lib/shiprocket";
 import { resolveReferralDiscount, rewardReferrer } from "@/lib/referrals";
+import { resolveCouponDiscount, redeemCoupon } from "@/lib/coupons";
 
 type OrderPayload = {
   customer: {
@@ -28,6 +29,7 @@ type OrderPayload = {
   redeemMilesRupees?: number;
   newsletterOptIn?: boolean;
   attributedAdBriefId?: string | null;
+  couponCode?: string | null;
   referralCode?: string | null;
 };
 
@@ -80,6 +82,9 @@ export async function POST(request: Request) {
     const referral = await resolveReferralDiscount(body.referralCode, customer?.id ?? null, body.customer.phone);
     const referralDiscountAmount = referral ? Math.min(referral.discountRupees, body.subtotal) : 0;
 
+    const coupon = await resolveCouponDiscount(body.couponCode, body.subtotal);
+    const couponDiscountAmount = coupon ? coupon.discountRupees : 0;
+
     // Guest checkout (no OTP session) still gets a real customer record —
     // matched/deduped by phone/email, never a logged-in session — so Miles
     // and a referral code work for them too, not just people who verified.
@@ -90,7 +95,12 @@ export async function POST(request: Request) {
     const effectiveCustomerId = customer?.id ?? guestCustomer?.id ?? null;
 
     const total =
-      body.subtotal - discountAmount - loyaltyDiscountAmount - referralDiscountAmount + shippingCharge;
+      body.subtotal -
+      discountAmount -
+      loyaltyDiscountAmount -
+      referralDiscountAmount -
+      couponDiscountAmount +
+      shippingCharge;
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -116,6 +126,8 @@ export async function POST(request: Request) {
             : null,
         referral_code_used: referral ? body.referralCode?.toUpperCase() : null,
         referral_discount_amount: referralDiscountAmount,
+        coupon_code_used: coupon ? coupon.code : null,
+        coupon_discount_amount: couponDiscountAmount,
       })
       .select()
       .single();
@@ -185,6 +197,10 @@ export async function POST(request: Request) {
         email: body.customer.email,
         chapterName: body.items[0]?.name,
       });
+    }
+
+    if (coupon) {
+      await redeemCoupon(coupon.couponId, order.id, couponDiscountAmount, body.customer.phone, body.customer.email);
     }
 
     // Best-effort — a failed email must never fail the order itself.

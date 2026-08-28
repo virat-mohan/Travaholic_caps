@@ -73,6 +73,12 @@ const GROUPS: { label: string; fields: Field[] }[] = [
     ],
   },
   {
+    label: "Finance",
+    fields: [
+      { key: "COGS_PER_CAP_RUPEES", label: "Cost Per Cap (₹)", hint: "What you pay the vendor per cap, used to compute COGS on the P&L page. Defaults to ₹250 if unset." },
+    ],
+  },
+  {
     label: "System",
     fields: [
       { key: "CRON_SECRET", label: "Cron Secret", hint: "Protects /api/cron/* routes — set this once you wire up Vercel Cron or another scheduler." },

@@ -36,9 +36,10 @@ export function InventoryRow({
       <td className="py-3">
         <input
           type="number"
+          min={0}
           value={value}
           onChange={(e) => {
-            setValue(Number(e.target.value));
+            setValue(Math.max(0, Number(e.target.value) || 0));
             setSaved(false);
           }}
           className="w-24 border border-divider bg-surface px-2 py-1 font-sans text-body-s text-ink"

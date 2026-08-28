@@ -8,6 +8,10 @@ export async function PATCH(request: Request) {
   if (!body?.chapterSlug || typeof body.stockOnHand !== "number") {
     return NextResponse.json({ error: "Missing chapterSlug or stockOnHand" }, { status: 400 });
   }
+  // Floored server-side too — the client already clamps, but stock going
+  // negative from a stray typed value (e.g. "-31") must never be possible
+  // even if a request bypasses the UI.
+  const stockOnHand = Math.max(0, Math.round(body.stockOnHand));
 
   try {
     const supabase = getSupabaseServerClient();
@@ -21,12 +25,12 @@ export async function PATCH(request: Request) {
 
     const { error } = await supabase
       .from("inventory")
-      .upsert({ chapter_slug: body.chapterSlug, stock_on_hand: body.stockOnHand, updated_at: new Date().toISOString() });
+      .upsert({ chapter_slug: body.chapterSlug, stock_on_hand: stockOnHand, updated_at: new Date().toISOString() });
     if (error) throw error;
 
     // Restock notifications — best-effort, a failed send must never fail
     // the inventory update itself.
-    if (wasSoldOut && body.stockOnHand > 0) {
+    if (wasSoldOut && stockOnHand > 0) {
       try {
         const chapter = chapters.find((c) => c.slug === body.chapterSlug);
         const { data: pending } = await supabase

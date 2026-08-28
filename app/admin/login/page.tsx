@@ -24,7 +24,7 @@ function AdminLoginForm() {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error ?? "Login failed");
       }
-      router.push(params.get("next") || "/admin/dashboard");
+      router.push(params.get("next") || "/admin/orders");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

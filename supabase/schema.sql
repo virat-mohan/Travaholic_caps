@@ -697,3 +697,54 @@ alter table ad_briefs add column if not exists overlay_text text;
 -- ============================================================
 alter table ad_briefs add column if not exists posted_at timestamptz;
 alter table ad_briefs add column if not exists instagram_post_id text;
+
+-- ============================================================
+-- Coupon codes — separate from the referral-code mechanism (which is
+-- per-customer and rewards the referrer) and the discount_rules engine
+-- (which is a single always-on "buy N get X% off" rule). A coupon is
+-- admin-created, has its own code string, optional expiry and usage cap,
+-- and every redemption is logged so "how many times, by who" is a real
+-- query instead of a guess.
+-- ============================================================
+create table if not exists coupon_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  discount_type text not null default 'flat', -- flat | percent
+  discount_value numeric not null,
+  expires_at timestamptz,
+  usage_limit integer, -- null = unlimited
+  times_used integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists coupon_redemptions (
+  id uuid primary key default gen_random_uuid(),
+  coupon_id uuid not null references coupon_codes(id),
+  order_id uuid references orders(id),
+  customer_phone text,
+  customer_email text,
+  discount_amount numeric not null,
+  redeemed_at timestamptz not null default now()
+);
+create index if not exists coupon_redemptions_coupon_idx on coupon_redemptions (coupon_id);
+
+alter table orders add column if not exists coupon_code_used text;
+alter table orders add column if not exists coupon_discount_amount numeric not null default 0;
+
+-- ============================================================
+-- Manual expense log — the input side of a real P&L. Free-text category
+-- rather than an enum since a solo operator's expense categories evolve
+-- faster than a migration cycle; reporting can still group by whatever
+-- categories are actually in use.
+-- ============================================================
+create table if not exists expenses (
+  id uuid primary key default gen_random_uuid(),
+  expense_date date not null,
+  category text not null,
+  paid_by text not null,
+  description text,
+  amount numeric not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists expenses_date_idx on expenses (expense_date desc);

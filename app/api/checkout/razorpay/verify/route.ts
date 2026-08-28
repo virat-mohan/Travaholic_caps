@@ -9,6 +9,7 @@ import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
 import { recordGuestCheckoutLead } from "@/lib/leads";
 import { rewardReferrer } from "@/lib/referrals";
+import { redeemCoupon } from "@/lib/coupons";
 import { findOrCreateCustomerForGuest } from "@/lib/auth";
 
 type OrderPayload = {
@@ -30,6 +31,7 @@ type OrderPayload = {
   paymentType?: "prepaid" | "cod_advance";
   attributedAdBriefId?: string | null;
   referralCode?: string | null;
+  couponCode?: string | null;
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -77,7 +79,8 @@ export async function POST(request: Request) {
       payload.redeemMilesRupees,
       payload.customer.pincode,
       payload.referralCode,
-      payload.customer.phone
+      payload.customer.phone,
+      payload.couponCode
     );
 
     // Guest checkout (no OTP session) still gets a real customer record —
@@ -118,6 +121,8 @@ export async function POST(request: Request) {
         attributed_ad_brief_id: attributedAdBriefId,
         referral_code_used: pricing.referral ? payload.referralCode?.toUpperCase() : null,
         referral_discount_amount: pricing.referralDiscountAmount,
+        coupon_code_used: pricing.coupon ? pricing.coupon.code : null,
+        coupon_discount_amount: pricing.couponDiscountAmount,
         is_gift: payload.isGift ?? false,
         gift_note: payload.giftNote ?? null,
         customer_id: effectiveCustomerId,
@@ -188,6 +193,16 @@ export async function POST(request: Request) {
         email: payload.customer.email,
         chapterName: pricing.items[0]?.name,
       });
+    }
+
+    if (pricing.coupon) {
+      await redeemCoupon(
+        pricing.coupon.couponId,
+        savedOrder.id,
+        pricing.couponDiscountAmount,
+        payload.customer.phone,
+        payload.customer.email
+      );
     }
 
     // Best-effort — a failed email/WhatsApp send shouldn't fail the order.

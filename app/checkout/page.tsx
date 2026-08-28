@@ -69,6 +69,9 @@ export default function CheckoutPage() {
   function updateReferralCode(value: string) {
     setReferralCodeInput(value);
   }
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [couponPreview, setCouponPreview] = useState<{ checked: string; valid: boolean; discountRupees: number } | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
@@ -101,8 +104,14 @@ export default function CheckoutPage() {
     referralPreview?.checked === normalizedReferralCode && referralPreview.valid
       ? Math.min(referralPreview.discountRupees, subtotal)
       : 0;
+  const normalizedCouponCode = couponCodeInput.trim().toUpperCase();
+  const couponDiscount =
+    couponPreview?.checked === normalizedCouponCode && couponPreview.valid
+      ? Math.min(couponPreview.discountRupees, subtotal)
+      : 0;
   const total =
-    Math.max(0, subtotal - discount - loyaltyDiscount - referralDiscount) + (shippingCharge ?? 0);
+    Math.max(0, subtotal - discount - loyaltyDiscount - referralDiscount - couponDiscount) +
+    (shippingCharge ?? 0);
   const unitCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   // Live referral-code validation — mirrors resolveReferralDiscount's rules
@@ -129,6 +138,28 @@ export default function CheckoutPage() {
     }, 500);
     return () => clearTimeout(timeout);
   }, [normalizedReferralCode, form.phone]);
+
+  // Live coupon-code validation, same debounced-preview pattern as referral codes.
+  useEffect(() => {
+    const code = normalizedCouponCode;
+    const timeout = setTimeout(() => {
+      if (!code) {
+        setCouponPreview(null);
+        return;
+      }
+      setCouponChecking(true);
+      fetch("/api/checkout/coupon-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ couponCode: code, subtotal }),
+      })
+        .then((res) => res.json())
+        .then((data) => setCouponPreview({ checked: code, valid: !!data.valid, discountRupees: data.discountRupees ?? 0 }))
+        .catch(() => setCouponPreview({ checked: code, valid: false, discountRupees: 0 }))
+        .finally(() => setCouponChecking(false));
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [normalizedCouponCode, subtotal]);
 
   // Live pass-through shipping quote from Shiprocket, by pincode — a
   // display-only preview; the actual charge is recomputed server-side from
@@ -310,6 +341,7 @@ export default function CheckoutPage() {
           paymentType,
           phone: form.phone,
           referralCode: referralCodeInput.trim().toUpperCase() || null,
+          couponCode: couponCodeInput.trim().toUpperCase() || null,
         }),
       });
       const createData = await createRes.json();
@@ -345,6 +377,7 @@ export default function CheckoutPage() {
                   paymentType,
                   attributedAdBriefId: getAttribution(),
                   referralCode: referralCodeInput.trim().toUpperCase() || null,
+          couponCode: couponCodeInput.trim().toUpperCase() || null,
                 },
               }),
             });
@@ -400,6 +433,7 @@ export default function CheckoutPage() {
           newsletterOptIn,
           attributedAdBriefId: getAttribution(),
           referralCode: referralCodeInput.trim().toUpperCase() || null,
+          couponCode: couponCodeInput.trim().toUpperCase() || null,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -474,6 +508,12 @@ export default function CheckoutPage() {
         <div className="flex items-center justify-between text-body-s">
           <span className="text-tan-gold">Referral Code ({normalizedReferralCode})</span>
           <span className="text-tan-gold">−₹{referralDiscount.toLocaleString("en-IN")}</span>
+        </div>
+      )}
+      {couponDiscount > 0 && (
+        <div className="flex items-center justify-between text-body-s">
+          <span className="text-tan-gold">Coupon ({normalizedCouponCode})</span>
+          <span className="text-tan-gold">−₹{couponDiscount.toLocaleString("en-IN")}</span>
         </div>
       )}
       {shippingCharge != null && (
@@ -648,6 +688,31 @@ export default function CheckoutPage() {
                       Code applied — ₹{referralDiscount.toLocaleString("en-IN")} off
                     </span>
                   ) : referralPreview?.checked === normalizedReferralCode ? (
+                    <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
+                  ) : null}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4">
+              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                Coupon Code (Optional)
+              </label>
+              <input
+                value={couponCodeInput}
+                onChange={(e) => setCouponCodeInput(e.target.value)}
+                placeholder="Have a coupon? Enter it here"
+                className="mt-3 w-full max-w-[280px] border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
+              />
+              {normalizedCouponCode && (
+                <p className="mt-2 text-caption">
+                  {couponChecking ? (
+                    <span className="text-secondary-text">Checking code...</span>
+                  ) : couponPreview?.checked === normalizedCouponCode && couponPreview.valid ? (
+                    <span className="text-tan-gold">
+                      Code applied — ₹{couponDiscount.toLocaleString("en-IN")} off
+                    </span>
+                  ) : couponPreview?.checked === normalizedCouponCode ? (
                     <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
                   ) : null}
                 </p>

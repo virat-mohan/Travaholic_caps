@@ -14,7 +14,8 @@ export async function POST(request: Request) {
       body.redeemMilesRupees,
       body.pincode,
       body.referralCode,
-      body.phone
+      body.phone,
+      body.couponCode
     );
     if (pricing.total <= 0) {
       return NextResponse.json({ error: "Order total must be greater than zero" }, { status: 400 });
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
       discountAmount: pricing.discountAmount,
       loyaltyDiscountAmount: pricing.loyaltyDiscountAmount,
       referralDiscountAmount: pricing.referralDiscountAmount,
+      couponDiscountAmount: pricing.couponDiscountAmount,
       shippingCharge: pricing.shippingCharge,
       total: pricing.total,
       chargeAmount,

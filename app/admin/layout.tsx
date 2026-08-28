@@ -7,8 +7,9 @@ const NAV_SECTIONS = [
   {
     label: "Store",
     links: [
-      { href: "/admin/dashboard", label: "Dashboard" },
+      { href: "/admin/orders", label: "Orders" },
       { href: "/admin/orders/new", label: "Add Manual Order" },
+      { href: "/admin/inventory", label: "Inventory" },
       { href: "/admin/edit-chapter", label: "Edit Chapters" },
       { href: "/admin/add-chapter", label: "Add Chapter" },
       { href: "/admin/discounts", label: "Discount Rules" },
@@ -51,6 +52,14 @@ const NAV_SECTIONS = [
       { href: "/admin/brand-profile", label: "Brand Profile" },
       { href: "/admin/reports", label: "Growth Reports" },
       { href: "/admin/agent-log", label: "Ad Agent" },
+    ],
+  },
+  {
+    label: "Finance",
+    links: [
+      { href: "/admin/pnl", label: "P&L" },
+      { href: "/admin/expenses", label: "Expenses" },
+      { href: "/admin/coupons", label: "Coupon Codes" },
     ],
   },
   {

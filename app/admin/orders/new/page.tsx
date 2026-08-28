@@ -102,7 +102,7 @@ export default function NewManualOrderPage() {
             Add Another
           </button>
           <button
-            onClick={() => router.push("/admin/dashboard")}
+            onClick={() => router.push("/admin/orders")}
             className="text-body-s text-secondary-text underline"
           >
             Back to Dashboard

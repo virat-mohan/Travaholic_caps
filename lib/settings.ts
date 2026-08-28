@@ -40,6 +40,7 @@ export const SETTINGS_KEYS = [
   "RETURN_WINDOW_DAYS",
   "WAREHOUSE_EMAIL",
   "WHATSAPP_SMS_ENABLED",
+  "COGS_PER_CAP_RUPEES",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];
