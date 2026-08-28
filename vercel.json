@@ -2,6 +2,7 @@
   "crons": [
     { "path": "/api/cron/abandon-sweep", "schedule": "0 5 * * *" },
     { "path": "/api/cron/ad-agent", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/winback", "schedule": "0 7 * * *" }
+    { "path": "/api/cron/winback", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/sales-signal-briefs", "schedule": "0 8 * * 1" }
   ]
 }

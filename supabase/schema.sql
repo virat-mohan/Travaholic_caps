@@ -748,3 +748,12 @@ create table if not exists expenses (
   created_at timestamptz not null default now()
 );
 create index if not exists expenses_date_idx on expenses (expense_date desc);
+
+-- ============================================================
+-- Sales-signal ad briefs — auto-drafted (never auto-launched) when a
+-- chapter is selling fast or has visibly cooled off week-over-week.
+-- sales_signal + the guard query in lib/sales-signal-briefs.ts prevent
+-- re-drafting the same chapter/signal every single day.
+-- ============================================================
+alter table ad_briefs add column if not exists auto_generated boolean not null default false;
+alter table ad_briefs add column if not exists sales_signal text; -- selling_fast | cooling_off

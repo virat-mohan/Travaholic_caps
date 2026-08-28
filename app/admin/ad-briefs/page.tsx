@@ -27,6 +27,8 @@ type Brief = {
   status: string;
   meta_campaign_id: string | null;
   created_at: string;
+  auto_generated: boolean;
+  sales_signal: string | null;
 };
 
 type Asset = { id: string; url: string; label: string | null; tags: string[] };
@@ -447,6 +449,11 @@ export default function AdBriefsPage() {
                 </div>
 
                 <div>
+                  {brief.auto_generated && (
+                    <span className="mb-2 inline-block border border-tan-gold px-2 py-1 text-micro uppercase tracking-[0.05em] text-tan-gold">
+                      Auto-drafted — {brief.sales_signal === "selling_fast" ? "Selling Fast" : "Cooling Off"}
+                    </span>
+                  )}
                   <h2 className="font-display text-heading-s uppercase text-ink">{brief.headline}</h2>
                   <p className="mt-2 text-body-s text-ink">{brief.primary_text}</p>
                   <p className="mt-3 text-caption text-secondary-text">CTA: {brief.cta}</p>

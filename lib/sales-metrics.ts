@@ -7,15 +7,15 @@ export type ChapterSales = {
   revenue: number;
 };
 
-/** Aggregates order_items over the last `days` days, ranked by units sold. */
-export async function getTopSellingChapters(days = 30): Promise<ChapterSales[]> {
+/** Aggregates order_items between two ISO timestamps (end exclusive), ranked by units sold. */
+export async function getChapterSalesInRange(sinceIso: string, untilIso: string): Promise<ChapterSales[]> {
   const supabase = getSupabaseServerClient();
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
   const { data: orders } = await supabase
     .from("orders")
     .select("id")
-    .gte("created_at", since);
+    .gte("created_at", sinceIso)
+    .lt("created_at", untilIso);
 
   const orderIds = (orders ?? []).map((o) => o.id);
   if (orderIds.length === 0) return [];
@@ -42,4 +42,10 @@ export async function getTopSellingChapters(days = 30): Promise<ChapterSales[]> 
   }
 
   return [...bySlug.values()].sort((a, b) => b.unitsSold - a.unitsSold);
+}
+
+/** Aggregates order_items over the last `days` days, ranked by units sold. */
+export async function getTopSellingChapters(days = 30): Promise<ChapterSales[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  return getChapterSalesInRange(since, new Date().toISOString());
 }

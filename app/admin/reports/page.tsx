@@ -29,6 +29,8 @@ export default function ReportsPage() {
   const [sweepResult, setSweepResult] = useState<string | null>(null);
   const [winbackRunning, setWinbackRunning] = useState(false);
   const [winbackResult, setWinbackResult] = useState<string | null>(null);
+  const [salesSignalRunning, setSalesSignalRunning] = useState(false);
+  const [salesSignalResult, setSalesSignalResult] = useState<string | null>(null);
 
   function load() {
     fetch("/api/admin/reports")
@@ -84,6 +86,22 @@ export default function ReportsPage() {
     }
   }
 
+  async function runSalesSignalSweep() {
+    setSalesSignalRunning(true);
+    setSalesSignalResult(null);
+    try {
+      const res = await fetch("/api/cron/sales-signal-briefs");
+      const data = await res.json();
+      setSalesSignalResult(
+        res.ok
+          ? `${data.drafted?.length ?? 0} brief(s) drafted, ${data.skipped?.length ?? 0} skipped — review in Ad Brief Generator.`
+          : "Sweep failed."
+      );
+    } finally {
+      setSalesSignalRunning(false);
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1100px] px-6 pt-28 pb-24 md:px-12">
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Growth Reports</h1>
@@ -119,6 +137,17 @@ export default function ReportsPage() {
           {winbackRunning ? "Running..." : "Run Win-Back Sweep Now"}
         </button>
         {winbackResult && <p className="text-caption text-secondary-text">{winbackResult}</p>}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <button
+          onClick={runSalesSignalSweep}
+          disabled={salesSignalRunning}
+          className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
+        >
+          {salesSignalRunning ? "Running..." : "Run Sales-Signal Brief Sweep Now"}
+        </button>
+        {salesSignalResult && <p className="text-caption text-secondary-text">{salesSignalResult}</p>}
       </div>
 
       <div className="mt-10 overflow-x-auto">
