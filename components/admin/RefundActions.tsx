@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const CANCELLABLE_SHIPMENT_STATUSES = new Set(["not_shipped", "processing"]);
 
@@ -21,9 +22,11 @@ export function RefundActions({
   status: string;
   shipmentStatus: string;
 }) {
+  const router = useRouter();
   const [refunding, setRefunding] = useState(false);
   const [schedulingReturn, setSchedulingReturn] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [refunded, setRefunded] = useState(refundedAmount);
   const [returnScheduled, setReturnScheduled] = useState(!!returnShipmentId);
   const [cancelled, setCancelled] = useState(status === "cancelled");
@@ -97,6 +100,22 @@ export function RefundActions({
     }
   }
 
+  async function syncFromRazorpay() {
+    setSyncing(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/sync-payment`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not sync from Razorpay");
+      setRefunded(data.refundedRupees);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not sync from Razorpay");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className="flex flex-col items-start gap-1">
       {canCancel && (
@@ -126,6 +145,15 @@ export function RefundActions({
           className="text-micro text-secondary-text underline disabled:opacity-50"
         >
           {schedulingReturn ? "..." : "Schedule Return Pickup"}
+        </button>
+      )}
+      {hasRazorpayPayment && (
+        <button
+          onClick={syncFromRazorpay}
+          disabled={syncing}
+          className="text-micro text-secondary-text underline disabled:opacity-50"
+        >
+          {syncing ? "Syncing..." : "Sync from Razorpay"}
         </button>
       )}
       {error && <p className="max-w-[160px] text-micro text-paint-orange">{error}</p>}

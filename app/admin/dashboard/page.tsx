@@ -81,9 +81,6 @@ export default async function AdminDashboardPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-6 pt-28 pb-24 md:px-12">
-      <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
-        Internal — not linked in navigation
-      </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Admin Dashboard</h1>
 
       <section className="mt-12">
@@ -159,12 +156,8 @@ export default async function AdminDashboardPage() {
                       courierName={o.courier_name}
                     />
                   </td>
-                  <td className="py-3">
-                    <OrderStatusCell
-                      orderId={o.id}
-                      field="refundStatus"
-                      value={o.refund_status ?? "none"}
-                    />
+                  <td className="py-3 text-caption text-secondary-text">
+                    {(o.refund_status ?? "none").replace(/_/g, " ")}
                   </td>
                   <td className="py-3">
                     <RefundActions

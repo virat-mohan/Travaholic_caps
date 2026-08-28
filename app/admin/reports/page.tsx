@@ -86,9 +86,6 @@ export default function ReportsPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1100px] px-6 pt-28 pb-24 md:px-12">
-      <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
-        Internal — not linked in navigation
-      </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Growth Reports</h1>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
         Funnel and ROAS, weekly. Page views/add-to-cart/checkout counts are first-party (not

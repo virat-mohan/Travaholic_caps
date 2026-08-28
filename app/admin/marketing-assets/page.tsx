@@ -71,9 +71,6 @@ export default function MarketingAssetsPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1100px] px-6 pt-28 pb-24 md:px-12">
-      <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
-        Internal — not linked in navigation
-      </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Marketing Assets</h1>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
         Real photography for ad creatives — product shots, lifestyle, logos, people wearing the

@@ -6,12 +6,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Missing body" }, { status: 400 });
 
-  // shipment_status is intentionally not editable here — it's set only by
-  // the Shiprocket webhook and the "Refresh Tracking" action, so the
-  // dashboard always reflects what Shiprocket actually reports.
+  // shipment_status and refund_status are intentionally not editable here —
+  // shipment_status is set only by the Shiprocket webhook and "Refresh
+  // Tracking"; refund_status is set only by an actual refund/cancel firing
+  // or the courier-status webhook confirming money moved. Letting an admin
+  // hand-edit either would let the label lie about what actually happened.
   const patch: Record<string, string> = {};
   if (body.status) patch.status = body.status;
-  if (body.refundStatus) patch.refund_status = body.refundStatus;
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });

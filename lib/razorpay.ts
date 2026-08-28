@@ -67,6 +67,36 @@ export async function refundRazorpayPayment(paymentId: string, amountInRupees?: 
   return { refundId: data.id as string, status: data.status as string, amountRupees: (data.amount as number) / 100 };
 }
 
+/**
+ * Reads a payment's actual current state from Razorpay — used by the
+ * dashboard's "Refresh from Razorpay" action to reconcile refund_status
+ * against what really happened, rather than trusting only our own
+ * after-the-fact assumptions from firing a refund/cancel call.
+ */
+export async function getRazorpayPaymentStatus(paymentId: string) {
+  const creds = await getRazorpayCredentials();
+  if (!creds) throw new Error("Razorpay is not configured yet — add keys in /admin/settings");
+
+  const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${creds.keyId}:${creds.keySecret}`).toString("base64")}`,
+    },
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(`Razorpay payment lookup failed: ${res.status} ${JSON.stringify(data)}`);
+  }
+
+  const refundedRupees = (data.amount_refunded as number) / 100;
+  // Razorpay's own refund_status is "full" | "partial" | null — mapped onto
+  // our existing refund_status vocabulary rather than introducing a third.
+  const refundStatus =
+    data.refund_status === "full" ? "refunded" : data.refund_status === "partial" ? "approved" : "none";
+
+  return { paymentStatus: data.status as string, refundedRupees, refundStatus };
+}
+
 export async function verifyRazorpaySignature(
   razorpayOrderId: string,
   razorpayPaymentId: string,

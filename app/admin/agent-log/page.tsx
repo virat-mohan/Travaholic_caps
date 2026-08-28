@@ -73,9 +73,6 @@ export default function AgentLogPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1000px] px-6 pt-28 pb-24 md:px-12">
-      <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
-        Internal — not linked in navigation
-      </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Ad Agent</h1>
       <p className="mt-2 max-w-xl text-body-s text-secondary-text">
         Reviews every launched campaign a human has already turned ACTIVE. It can pause a campaign

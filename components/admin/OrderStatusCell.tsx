@@ -4,7 +4,6 @@ import { useState } from "react";
 
 const OPTIONS: Record<string, string[]> = {
   status: ["pending_whatsapp_confirmation", "confirmed", "cancelled"],
-  refundStatus: ["none", "requested", "approved", "refunded", "denied"],
 };
 
 export function OrderStatusCell({
@@ -13,7 +12,7 @@ export function OrderStatusCell({
   value,
 }: {
   orderId: string;
-  field: "status" | "refundStatus";
+  field: "status";
   value: string;
 }) {
   const [current, setCurrent] = useState(value);

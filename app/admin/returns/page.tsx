@@ -26,9 +26,6 @@ export default async function AdminReturnsPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-6 pt-28 pb-24 md:px-12">
-      <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
-        Internal — not linked in navigation
-      </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Return Requests</h1>
 
       <div className="mt-8 overflow-x-auto">

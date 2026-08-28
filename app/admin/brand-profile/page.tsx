@@ -56,9 +56,6 @@ export default function BrandProfilePage() {
 
   return (
     <main className="mx-auto w-full max-w-[700px] px-6 pt-28 pb-24 md:px-12">
-      <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
-        Internal — not linked in navigation
-      </p>
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Brand Profile</h1>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
         The single source of truth every marketing/content generator reads from — journal drafts,
