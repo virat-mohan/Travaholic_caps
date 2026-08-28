@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { downloadCsv } from "@/lib/csv-export";
 
 type Expense = {
   id: string;
@@ -68,9 +69,27 @@ export default function AdminExpensesPage() {
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
+  function exportCsv() {
+    downloadCsv("travaholic-expenses.csv", [
+      ["Date", "Category", "Paid By", "Description", "Amount"],
+      ...expenses.map((e) => [formatDate(e.expense_date), e.category, e.paid_by, e.description ?? "", e.amount]),
+      ["", "", "", "Total", total],
+    ]);
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1000px] px-6 pt-28 pb-24 md:px-12">
-      <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Expenses</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Expenses</h1>
+        {expenses.length > 0 && (
+          <button
+            onClick={exportCsv}
+            className="border border-divider px-4 py-2 text-caption uppercase tracking-[0.05em] text-ink hover:border-ink"
+          >
+            Export CSV
+          </button>
+        )}
+      </div>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
         Manual expense log — salaries, packaging, rent, ad spend, anything else. Feeds the P&amp;L
         view directly.

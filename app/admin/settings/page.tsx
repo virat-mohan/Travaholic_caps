@@ -11,6 +11,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
     fields: [
       { key: "RAZORPAY_KEY_ID", label: "Razorpay Key ID", hint: "Test or live Key ID from Razorpay → Settings → API Keys." },
       { key: "RAZORPAY_KEY_SECRET", label: "Razorpay Key Secret", hint: "Paired secret for the Key ID above." },
+      { key: "RAZORPAY_WEBHOOK_SECRET", label: "Razorpay Webhook Secret", hint: "Make up any random string, then paste the same value into Razorpay Dashboard → Settings → Webhooks when you add https://travaholic.in/api/webhooks/razorpay as a webhook (subscribe to payment.captured, refund.processed, refund.failed). This is the real safety net if a customer's payment succeeds but their browser never makes it back to confirm the order." },
     ],
   },
   {

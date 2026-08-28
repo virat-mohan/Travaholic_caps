@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { downloadCsv } from "@/lib/csv-export";
 
 type Report = {
   id: string;
@@ -102,9 +103,52 @@ export default function ReportsPage() {
     }
   }
 
+  function exportCsv() {
+    downloadCsv("travaholic-growth-reports.csv", [
+      [
+        "Week Start",
+        "Week End",
+        "Ad Spend",
+        "Clicks",
+        "Impressions",
+        "Page Views",
+        "Add To Carts",
+        "Checkouts Started",
+        "Orders",
+        "Revenue",
+        "Abandoned Carts",
+        "ROAS",
+      ],
+      ...reports.map((r) => [
+        r.week_start,
+        r.week_end,
+        r.ad_spend,
+        r.clicks,
+        r.impressions,
+        r.page_views,
+        r.add_to_carts,
+        r.checkouts_started,
+        r.orders_count,
+        r.revenue,
+        r.abandoned_carts,
+        r.roas ?? "",
+      ]),
+    ]);
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1100px] px-6 pt-28 pb-24 md:px-12">
-      <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Growth Reports</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Growth Reports</h1>
+        {reports.length > 0 && (
+          <button
+            onClick={exportCsv}
+            className="border border-divider px-4 py-2 text-caption uppercase tracking-[0.05em] text-ink hover:border-ink"
+          >
+            Export CSV
+          </button>
+        )}
+      </div>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
         Funnel and ROAS, weekly. Page views/add-to-cart/checkout counts are first-party (not
         dependent on Meta&apos;s pixel); ad spend and clicks come from Meta once configured.

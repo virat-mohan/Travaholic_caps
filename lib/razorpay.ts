@@ -97,6 +97,17 @@ export async function getRazorpayPaymentStatus(paymentId: string) {
   return { paymentStatus: data.status as string, refundedRupees, refundStatus };
 }
 
+/**
+ * Verifies a Razorpay webhook's signature against the raw request body —
+ * this is a different secret and a different signing scheme (HMAC over the
+ * whole body) than verifyRazorpaySignature's checkout-flow one (HMAC over
+ * "order_id|payment_id"), so it's deliberately a separate function.
+ */
+export function verifyRazorpayWebhookSignature(rawBody: string, signature: string, webhookSecret: string) {
+  const expected = crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
+  return expected === signature;
+}
+
 export async function verifyRazorpaySignature(
   razorpayOrderId: string,
   razorpayPaymentId: string,

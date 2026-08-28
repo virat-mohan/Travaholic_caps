@@ -41,6 +41,7 @@ export const SETTINGS_KEYS = [
   "WAREHOUSE_EMAIL",
   "WHATSAPP_SMS_ENABLED",
   "COGS_PER_CAP_RUPEES",
+  "RAZORPAY_WEBHOOK_SECRET",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

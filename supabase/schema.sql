@@ -757,3 +757,19 @@ create index if not exists expenses_date_idx on expenses (expense_date desc);
 -- ============================================================
 alter table ad_briefs add column if not exists auto_generated boolean not null default false;
 alter table ad_briefs add column if not exists sales_signal text; -- selling_fast | cooling_off
+
+-- ============================================================
+-- Snapshot of a checkout's full payload, keyed by the Razorpay order it
+-- started paying for — the Razorpay webhook's only way to actually create
+-- the order if the customer's browser never makes it back to call /verify
+-- (crashed tab, closed app, dropped connection right after paying). Rows
+-- pile up harmlessly for successful checkouts too (the webhook just finds
+-- the order already exists and no-ops) — cheap enough not to bother
+-- cleaning up.
+-- ============================================================
+create table if not exists pending_orders (
+  id uuid primary key default gen_random_uuid(),
+  razorpay_order_id text not null unique,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);

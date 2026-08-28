@@ -331,6 +331,22 @@ export default function CheckoutPage() {
     setPaying(true);
     try {
       const cartItems = items.map((i) => ({ slug: i.slug, quantity: i.quantity }));
+      // Built once, sent to both create-order (as a recoverable snapshot —
+      // see pending_orders) and verify (the actual source of truth) so the
+      // two can never drift apart.
+      const orderPayload = {
+        customer: form,
+        items: cartItems,
+        isGift,
+        giftNote: isGift ? giftNote : null,
+        sessionKey: getSessionKey(),
+        redeemMilesRupees: loyaltyDiscount,
+        newsletterOptIn,
+        paymentType,
+        attributedAdBriefId: getAttribution(),
+        referralCode: referralCodeInput.trim().toUpperCase() || null,
+        couponCode: couponCodeInput.trim().toUpperCase() || null,
+      };
       const createRes = await fetch("/api/checkout/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -342,6 +358,7 @@ export default function CheckoutPage() {
           phone: form.phone,
           referralCode: referralCodeInput.trim().toUpperCase() || null,
           couponCode: couponCodeInput.trim().toUpperCase() || null,
+          order: orderPayload,
         }),
       });
       const createData = await createRes.json();
@@ -366,19 +383,7 @@ export default function CheckoutPage() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 ...response,
-                order: {
-                  customer: form,
-                  items: cartItems,
-                  isGift,
-                  giftNote: isGift ? giftNote : null,
-                  sessionKey: getSessionKey(),
-                  redeemMilesRupees: loyaltyDiscount,
-                  newsletterOptIn,
-                  paymentType,
-                  attributedAdBriefId: getAttribution(),
-                  referralCode: referralCodeInput.trim().toUpperCase() || null,
-          couponCode: couponCodeInput.trim().toUpperCase() || null,
-                },
+                order: orderPayload,
               }),
             });
             const verifyData = await verifyRes.json();

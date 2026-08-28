@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createRazorpayOrder } from "@/lib/razorpay";
 import { computeTrustedOrderTotal, getCodAdvanceRupees } from "@/lib/order-pricing";
+import { getSupabaseServerClient } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -31,6 +32,23 @@ export async function POST(request: Request) {
       chargeAmount,
       `travaholic_${Date.now()}`
     );
+
+    // Snapshot the full checkout payload (customer, items, discounts) keyed
+    // by the Razorpay order — the Razorpay webhook's only way to actually
+    // create the order if the customer's browser never makes it back to
+    // /verify (crashed tab, closed app, dropped connection right after
+    // paying). Best-effort: this must never block starting the payment.
+    if (body.order) {
+      try {
+        const supabase = getSupabaseServerClient();
+        await supabase.from("pending_orders").insert({
+          razorpay_order_id: razorpayOrderId,
+          payload: body.order,
+        });
+      } catch (err) {
+        console.error("Failed to snapshot pending order", err);
+      }
+    }
 
     return NextResponse.json({
       razorpayOrderId,
