@@ -75,7 +75,7 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
   );
 }
 
-const ORDER_NOTIFICATION_RECIPIENTS = ["viratmohan@gmail.com", "travaholiccaps@gmail.com"];
+export const ORDER_NOTIFICATION_RECIPIENTS = ["viratmohan@gmail.com", "travaholiccaps@gmail.com"];
 
 /** Internal heads-up the moment an order is confirmed — same invoice, sent to the team instead of the customer. */
 export async function sendOrderNotificationEmail(order: InvoiceOrder, items: InvoiceItem[]) {
@@ -85,6 +85,21 @@ export async function sendOrderNotificationEmail(order: InvoiceOrder, items: Inv
     ORDER_NOTIFICATION_RECIPIENTS.map((to) =>
       sendEmail(to, `New order confirmed — #${orderNumber}`, invoiceHtml)
     )
+  );
+}
+
+/** Fires once when a Chapter's stock crosses at/under the low-stock threshold — see lib/inventory.ts for the guard against repeat alerts. */
+export async function sendLowStockAlertEmail(chapterName: string, stockRemaining: number, threshold: number) {
+  const html = `
+    <div style="max-width:480px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
+      <p style="font-size:15px;">
+        <strong>${chapterName}</strong> is down to <strong>${stockRemaining}</strong> unit${stockRemaining === 1 ? "" : "s"} on hand
+        (threshold: ${threshold}). Time to reorder if you haven't already.
+      </p>
+    </div>
+  `;
+  await Promise.all(
+    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, `Low stock — ${chapterName} (${stockRemaining} left)`, html))
   );
 }
 

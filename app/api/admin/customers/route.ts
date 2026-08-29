@@ -16,6 +16,10 @@ export async function GET() {
       supabase
         .from("orders")
         .select("id, customer_name, customer_phone, customer_email, total, created_at")
+        // A cancelled order was refunded in full and restocked — it never
+        // happened as far as spend/order-count/Miles are concerned, same
+        // convention as the P&L page.
+        .neq("status", "cancelled")
         .order("created_at", { ascending: false }),
       supabase.from("imported_customer_records").select("*"),
     ]);

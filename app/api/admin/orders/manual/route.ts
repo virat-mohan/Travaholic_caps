@@ -8,6 +8,7 @@ import { findOrCreateCustomerForGuest } from "@/lib/auth";
 import { earnMilesForOrder } from "@/lib/loyalty";
 import { sendInvoiceEmail, sendOrderNotificationEmail } from "@/lib/email";
 import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-notify";
+import { checkAndAlertLowStock } from "@/lib/inventory";
 
 type ManualOrderItem = { slug: string; quantity: number };
 
@@ -140,10 +141,9 @@ export async function POST(request: Request) {
         .eq("chapter_slug", item.slug)
         .maybeSingle();
       if (inv) {
-        await supabase
-          .from("inventory")
-          .update({ stock_on_hand: Math.max(0, inv.stock_on_hand - item.quantity) })
-          .eq("chapter_slug", item.slug);
+        const newStock = Math.max(0, inv.stock_on_hand - item.quantity);
+        await supabase.from("inventory").update({ stock_on_hand: newStock }).eq("chapter_slug", item.slug);
+        await checkAndAlertLowStock(item.slug, newStock);
       }
     }
 

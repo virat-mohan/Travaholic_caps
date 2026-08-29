@@ -5,6 +5,7 @@ import { sendNdrWhatsApp, sendRtoInitiatedWhatsApp, sendRtoRefundedWhatsApp } fr
 import { sendReviewRequestEmail, sendRtoInitiatedEmail, sendRtoRefundedEmail, sendReturnRefundedEmail } from "@/lib/email";
 import { refundRazorpayPayment } from "@/lib/razorpay";
 import { computeReturnRefundRupees, isValidReturnReason } from "@/lib/returns";
+import { checkAndAlertLowStock } from "@/lib/inventory";
 
 // Broad keyword match rather than an exact status list — Shiprocket's status
 // strings vary by courier partner, and catching a superset (with occasional
@@ -130,10 +131,9 @@ export async function POST(request: Request) {
                 .eq("chapter_slug", item.chapter_slug)
                 .maybeSingle();
               if (inv) {
-                await supabase
-                  .from("inventory")
-                  .update({ stock_on_hand: inv.stock_on_hand + item.quantity })
-                  .eq("chapter_slug", item.chapter_slug);
+                const newStock = inv.stock_on_hand + item.quantity;
+                await supabase.from("inventory").update({ stock_on_hand: newStock }).eq("chapter_slug", item.chapter_slug);
+                await checkAndAlertLowStock(item.chapter_slug, newStock);
               }
             }
 
@@ -274,10 +274,9 @@ export async function POST(request: Request) {
           .eq("chapter_slug", item.chapter_slug)
           .maybeSingle();
         if (inv) {
-          await supabase
-            .from("inventory")
-            .update({ stock_on_hand: inv.stock_on_hand + item.quantity })
-            .eq("chapter_slug", item.chapter_slug);
+          const newStock = inv.stock_on_hand + item.quantity;
+          await supabase.from("inventory").update({ stock_on_hand: newStock }).eq("chapter_slug", item.chapter_slug);
+          await checkAndAlertLowStock(item.chapter_slug, newStock);
         }
       }
       await logOrderEvent(existing.id, "rto_restocked", (items ?? []).map((i) => `${i.chapter_slug} x${i.quantity}`).join(", "));

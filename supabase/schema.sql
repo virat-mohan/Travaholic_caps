@@ -773,3 +773,10 @@ create table if not exists pending_orders (
   payload jsonb not null,
   created_at timestamptz not null default now()
 );
+
+-- ============================================================
+-- Low-stock alert guard — one email per dip below the threshold, not one
+-- per order. Reset back to false once restock brings it back above the
+-- threshold, so the next dip alerts again.
+-- ============================================================
+alter table inventory add column if not exists low_stock_alerted boolean not null default false;

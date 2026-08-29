@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendRestockEmail } from "@/lib/email";
 import { chapters } from "@/lib/chapters";
+import { checkAndAlertLowStock } from "@/lib/inventory";
 
 export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
@@ -27,6 +28,8 @@ export async function PATCH(request: Request) {
       .from("inventory")
       .upsert({ chapter_slug: body.chapterSlug, stock_on_hand: stockOnHand, updated_at: new Date().toISOString() });
     if (error) throw error;
+
+    await checkAndAlertLowStock(body.chapterSlug, stockOnHand);
 
     // Restock notifications — best-effort, a failed send must never fail
     // the inventory update itself.

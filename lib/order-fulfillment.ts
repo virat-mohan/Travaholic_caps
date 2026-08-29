@@ -9,6 +9,7 @@ import { recordGuestCheckoutLead } from "@/lib/leads";
 import { rewardReferrer } from "@/lib/referrals";
 import { redeemCoupon } from "@/lib/coupons";
 import { findOrCreateCustomerForGuest } from "@/lib/auth";
+import { checkAndAlertLowStock } from "@/lib/inventory";
 
 export type OrderPayload = {
   customer: {
@@ -136,10 +137,9 @@ export async function finalizeOrder(
       .eq("chapter_slug", item.slug)
       .maybeSingle();
     if (inv) {
-      await supabase
-        .from("inventory")
-        .update({ stock_on_hand: Math.max(0, inv.stock_on_hand - item.quantity) })
-        .eq("chapter_slug", item.slug);
+      const newStock = Math.max(0, inv.stock_on_hand - item.quantity);
+      await supabase.from("inventory").update({ stock_on_hand: newStock }).eq("chapter_slug", item.slug);
+      await checkAndAlertLowStock(item.slug, newStock);
     }
   }
 

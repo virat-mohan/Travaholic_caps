@@ -9,6 +9,7 @@ import { recordGuestCheckoutLead } from "@/lib/leads";
 import { getShippingRate } from "@/lib/shiprocket";
 import { resolveReferralDiscount, rewardReferrer } from "@/lib/referrals";
 import { resolveCouponDiscount, redeemCoupon } from "@/lib/coupons";
+import { checkAndAlertLowStock } from "@/lib/inventory";
 
 type OrderPayload = {
   customer: {
@@ -162,10 +163,9 @@ export async function POST(request: Request) {
         .eq("chapter_slug", item.slug)
         .maybeSingle();
       if (inv) {
-        await supabase
-          .from("inventory")
-          .update({ stock_on_hand: Math.max(0, inv.stock_on_hand - item.quantity) })
-          .eq("chapter_slug", item.slug);
+        const newStock = Math.max(0, inv.stock_on_hand - item.quantity);
+        await supabase.from("inventory").update({ stock_on_hand: newStock }).eq("chapter_slug", item.slug);
+        await checkAndAlertLowStock(item.slug, newStock);
       }
     }
 
