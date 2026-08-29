@@ -32,6 +32,8 @@ export default function ReportsPage() {
   const [winbackResult, setWinbackResult] = useState<string | null>(null);
   const [salesSignalRunning, setSalesSignalRunning] = useState(false);
   const [salesSignalResult, setSalesSignalResult] = useState<string | null>(null);
+  const [digestRunning, setDigestRunning] = useState(false);
+  const [digestResult, setDigestResult] = useState<string | null>(null);
 
   function load() {
     fetch("/api/admin/reports")
@@ -100,6 +102,22 @@ export default function ReportsPage() {
       );
     } finally {
       setSalesSignalRunning(false);
+    }
+  }
+
+  async function runOpsDigest() {
+    setDigestRunning(true);
+    setDigestResult(null);
+    try {
+      const res = await fetch("/api/cron/ops-digest");
+      const data = await res.json();
+      setDigestResult(
+        res.ok
+          ? `Sent — ${data.newOrders} order(s), ₹${data.revenue?.toLocaleString("en-IN")}, ${data.lowStockCount} low-stock item(s).`
+          : "Digest failed."
+      );
+    } finally {
+      setDigestRunning(false);
     }
   }
 
@@ -192,6 +210,17 @@ export default function ReportsPage() {
           {salesSignalRunning ? "Running..." : "Run Sales-Signal Brief Sweep Now"}
         </button>
         {salesSignalResult && <p className="text-caption text-secondary-text">{salesSignalResult}</p>}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <button
+          onClick={runOpsDigest}
+          disabled={digestRunning}
+          className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
+        >
+          {digestRunning ? "Sending..." : "Send Ops Digest Now"}
+        </button>
+        {digestResult && <p className="text-caption text-secondary-text">{digestResult}</p>}
       </div>
 
       <div className="mt-10 overflow-x-auto">
