@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { chapters } from "@/lib/chapters";
 
@@ -80,6 +80,13 @@ export default function AdBriefsPage() {
   const [savingCopy, setSavingCopy] = useState(false);
   const [captionTexts, setCaptionTexts] = useState<Record<string, string>>({});
   const [captioning, setCaptioning] = useState<Record<string, boolean>>({});
+  const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  function scrollCarousel(briefId: string, direction: 1 | -1) {
+    const el = carouselRefs.current[briefId];
+    if (!el) return;
+    el.scrollBy({ left: direction * 296, behavior: "smooth" });
+  }
 
   function loadBriefs() {
     fetch("/api/admin/ad-briefs")
@@ -679,7 +686,12 @@ export default function AdBriefsPage() {
                 <div>
                   {brief.is_carousel ? (
                     <div className="w-[280px]">
-                      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
+                      <div className="relative">
+                        <div
+                          ref={(el) => {
+                            carouselRefs.current[brief.id] = el;
+                          }}
+                          className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
                         {Array.from(
                           { length: Math.max(brief.image_prompts?.length ?? 0, brief.image_urls?.length ?? 0) },
                           (_, i) => i
@@ -754,6 +766,23 @@ export default function AdBriefsPage() {
                             </div>
                           );
                         })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => scrollCarousel(brief.id, -1)}
+                          aria-label="Previous card"
+                          className="absolute left-1.5 top-[160px] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-ink/70 text-cream hover:bg-ink"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollCarousel(brief.id, 1)}
+                          aria-label="Next card"
+                          className="absolute right-1.5 top-[160px] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-ink/70 text-cream hover:bg-ink"
+                        >
+                          ›
+                        </button>
                       </div>
                       <p className="mt-1 text-micro text-secondary-text/70">← Scroll to see all cards →</p>
                     </div>
