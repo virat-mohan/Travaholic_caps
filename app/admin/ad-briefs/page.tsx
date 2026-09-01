@@ -75,6 +75,11 @@ export default function AdBriefsPage() {
   const [attaching, setAttaching] = useState<Record<string, boolean>>({});
   const [launching, setLaunching] = useState<Record<string, boolean>>({});
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [editingCopyFor, setEditingCopyFor] = useState<string | null>(null);
+  const [copyDraft, setCopyDraft] = useState({ headline: "", primaryText: "", cta: "", targetAudience: "", hashtags: "" });
+  const [savingCopy, setSavingCopy] = useState(false);
+  const [captionTexts, setCaptionTexts] = useState<Record<string, string>>({});
+  const [captioning, setCaptioning] = useState<Record<string, boolean>>({});
 
   function loadBriefs() {
     fetch("/api/admin/ad-briefs")
@@ -242,6 +247,95 @@ export default function AdBriefsPage() {
       setError(err instanceof Error ? err.message : "Could not edit image");
     } finally {
       setEditing((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  async function addTextOverlay(brief: Brief, slotIndex?: number) {
+    const key = slotIndex != null ? `${brief.id}:${slotIndex}` : brief.id;
+    const text = captionTexts[key];
+    if (!text) return;
+    setError(null);
+    setCaptioning((prev) => ({ ...prev, [key]: true }));
+    try {
+      const res = await fetch("/api/admin/ad-briefs/add-text-overlay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brief.id, text, slotIndex }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not add text to image");
+      setBriefs((prev) =>
+        prev.map((b) => {
+          if (b.id !== brief.id) return b;
+          if (slotIndex == null) return { ...b, image_url: data.imageUrl, image_source: "with_text_overlay" };
+          const next = Array.isArray(b.image_urls) ? [...b.image_urls] : [];
+          while (next.length < slotIndex + 1) next.push(null);
+          next[slotIndex] = data.imageUrl;
+          return { ...b, image_urls: next, image_source: "with_text_overlay" };
+        })
+      );
+      setCaptionTexts((prev) => ({ ...prev, [key]: "" }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add text to image");
+    } finally {
+      setCaptioning((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  function startEditCopy(brief: Brief) {
+    setEditingCopyFor(brief.id);
+    setCopyDraft({
+      headline: brief.headline,
+      primaryText: brief.primary_text,
+      cta: brief.cta,
+      targetAudience: brief.target_audience,
+      hashtags: (brief.hashtags ?? []).join(", "),
+    });
+  }
+
+  async function saveCopy(brief: Brief) {
+    setError(null);
+    setSavingCopy(true);
+    try {
+      const hashtags = copyDraft.hashtags
+        .split(",")
+        .map((h) => h.trim().replace(/^#/, ""))
+        .filter(Boolean);
+      const res = await fetch("/api/admin/ad-briefs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: brief.id,
+          headline: copyDraft.headline,
+          primaryText: copyDraft.primaryText,
+          cta: copyDraft.cta,
+          targetAudience: copyDraft.targetAudience,
+          hashtags,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Could not save changes");
+      }
+      setBriefs((prev) =>
+        prev.map((b) =>
+          b.id === brief.id
+            ? {
+                ...b,
+                headline: copyDraft.headline,
+                primary_text: copyDraft.primaryText,
+                cta: copyDraft.cta,
+                target_audience: copyDraft.targetAudience,
+                hashtags,
+              }
+            : b
+        )
+      );
+      setEditingCopyFor(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save changes");
+    } finally {
+      setSavingCopy(false);
     }
   }
 
@@ -637,6 +731,26 @@ export default function AdBriefsPage() {
                                   </button>
                                 </div>
                               )}
+                              {url && (
+                                <div className="mt-1.5 flex gap-1.5">
+                                  <input
+                                    type="text"
+                                    placeholder="Add text to image"
+                                    value={captionTexts[`${brief.id}:${i}`] ?? ""}
+                                    onChange={(e) =>
+                                      setCaptionTexts((prev) => ({ ...prev, [`${brief.id}:${i}`]: e.target.value }))
+                                    }
+                                    className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                                  />
+                                  <button
+                                    onClick={() => addTextOverlay(brief, i)}
+                                    disabled={!captionTexts[`${brief.id}:${i}`] || captioning[`${brief.id}:${i}`]}
+                                    className="shrink-0 border border-divider px-2 py-1.5 text-micro uppercase text-ink hover:border-ink disabled:opacity-40"
+                                  >
+                                    {captioning[`${brief.id}:${i}`] ? "..." : "Add Text"}
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -707,6 +821,24 @@ export default function AdBriefsPage() {
                             </button>
                           </div>
                         )}
+                        {brief.image_url && (
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              placeholder="Add text to image — e.g. &quot;NEW DROP&quot;"
+                              value={captionTexts[brief.id] ?? ""}
+                              onChange={(e) => setCaptionTexts((prev) => ({ ...prev, [brief.id]: e.target.value }))}
+                              className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                            />
+                            <button
+                              onClick={() => addTextOverlay(brief)}
+                              disabled={!captionTexts[brief.id] || captioning[brief.id]}
+                              className="shrink-0 border border-divider px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                            >
+                              {captioning[brief.id] ? "Adding..." : "Add Text"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                       {pickerForId === brief.id && (
                         <div className="mt-2 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto border border-divider p-2">
@@ -767,16 +899,84 @@ export default function AdBriefsPage() {
                       Auto-drafted — {brief.sales_signal === "selling_fast" ? "Selling Fast" : "Cooling Off"}
                     </span>
                   )}
-                  <h2 className="font-display text-heading-s uppercase text-ink">{brief.headline}</h2>
-                  <p className="mt-2 text-body-s text-ink">{brief.primary_text}</p>
-                  <p className="mt-3 text-caption text-secondary-text">CTA: {brief.cta}</p>
-                  <p className="mt-1 text-caption text-secondary-text">
-                    Audience: {brief.target_audience}
-                  </p>
-                  {brief.hashtags && brief.hashtags.length > 0 && (
-                    <p className="mt-2 text-caption text-secondary-text">
-                      {brief.hashtags.map((h) => `#${h}`).join(" ")}
-                    </p>
+                  {editingCopyFor === brief.id ? (
+                    <div className="space-y-2">
+                      <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">Headline</label>
+                      <input
+                        type="text"
+                        value={copyDraft.headline}
+                        onChange={(e) => setCopyDraft((prev) => ({ ...prev, headline: e.target.value }))}
+                        className="w-full border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+                      />
+                      <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">Primary Text</label>
+                      <textarea
+                        rows={3}
+                        value={copyDraft.primaryText}
+                        onChange={(e) => setCopyDraft((prev) => ({ ...prev, primaryText: e.target.value }))}
+                        className="w-full border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+                      />
+                      <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">CTA</label>
+                      <input
+                        type="text"
+                        value={copyDraft.cta}
+                        onChange={(e) => setCopyDraft((prev) => ({ ...prev, cta: e.target.value }))}
+                        className="w-full border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+                      />
+                      <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">Audience</label>
+                      <input
+                        type="text"
+                        value={copyDraft.targetAudience}
+                        onChange={(e) => setCopyDraft((prev) => ({ ...prev, targetAudience: e.target.value }))}
+                        className="w-full border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+                      />
+                      <label className="block text-micro uppercase tracking-[0.05em] text-secondary-text">
+                        Hashtags (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={copyDraft.hashtags}
+                        onChange={(e) => setCopyDraft((prev) => ({ ...prev, hashtags: e.target.value }))}
+                        className="w-full border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
+                      />
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => saveCopy(brief)}
+                          disabled={savingCopy}
+                          className="border border-ink bg-ink px-3 py-1.5 text-micro uppercase tracking-[0.05em] text-cream disabled:opacity-40"
+                        >
+                          {savingCopy ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          onClick={() => setEditingCopyFor(null)}
+                          disabled={savingCopy}
+                          className="border border-divider px-3 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between gap-3">
+                        <h2 className="font-display text-heading-s uppercase text-ink">{brief.headline}</h2>
+                        <button
+                          onClick={() => startEditCopy(brief)}
+                          className="shrink-0 text-micro uppercase tracking-[0.05em] text-secondary-text underline hover:text-ink"
+                        >
+                          Edit Copy
+                        </button>
+                      </div>
+                      <p className="mt-2 text-body-s text-ink">{brief.primary_text}</p>
+                      <p className="mt-3 text-caption text-secondary-text">CTA: {brief.cta}</p>
+                      <p className="mt-1 text-caption text-secondary-text">
+                        Audience: {brief.target_audience}
+                      </p>
+                      {brief.hashtags && brief.hashtags.length > 0 && (
+                        <p className="mt-2 text-caption text-secondary-text">
+                          {brief.hashtags.map((h) => `#${h}`).join(" ")}
+                        </p>
+                      )}
+                    </>
                   )}
 
                   <div className="mt-4">
