@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { trackShiprocketShipment } from "@/lib/shiprocket";
+import { applyShipmentStatusUpdate } from "@/lib/shiprocket-status";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,20 +18,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const tracking = await trackShiprocketShipment(order.shiprocket_shipment_id);
-    // Store Shiprocket's own status string verbatim (same convention the
-    // webhook uses) rather than squeezing it into a fixed enum — so this
-    // manual refresh and the live webhook always agree on what's displayed.
     const shipmentStatus = tracking.status ? tracking.status.toLowerCase() : "processing";
 
-    const { error } = await supabase
-      .from("orders")
-      .update({
-        shipment_status: shipmentStatus,
-        shiprocket_awb_code: tracking.awbCode,
-        courier_name: tracking.courierName,
-      })
-      .eq("id", id);
-    if (error) throw error;
+    // Same transition-guarded logic the webhook and the polling cron use —
+    // a manual refresh must never skip the RTO/NDR/delivered side-effects
+    // just because a human clicked the button instead of Shiprocket calling in.
+    if (tracking.status) {
+      await applyShipmentStatusUpdate({
+        orderId: id,
+        status: tracking.status,
+        awbCode: tracking.awbCode,
+        courierName: tracking.courierName,
+      });
+    }
 
     return NextResponse.json({ ok: true, ...tracking, shipmentStatus });
   } catch (err) {
