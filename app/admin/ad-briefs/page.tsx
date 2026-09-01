@@ -74,6 +74,7 @@ export default function AdBriefsPage() {
   const [imageGenerating, setImageGenerating] = useState<Record<string, boolean>>({});
   const [attaching, setAttaching] = useState<Record<string, boolean>>({});
   const [launching, setLaunching] = useState<Record<string, boolean>>({});
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   function loadBriefs() {
     fetch("/api/admin/ad-briefs")
@@ -83,6 +84,13 @@ export default function AdBriefsPage() {
   }
 
   useEffect(loadBriefs, []);
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightboxUrl(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   useEffect(() => {
     fetch("/api/admin/marketing-assets")
       .then((res) => res.json())
@@ -586,9 +594,13 @@ export default function AdBriefsPage() {
                         return (
                           <div key={i}>
                             {url ? (
-                              <div className="relative aspect-square overflow-hidden bg-surface-alt">
+                              <button
+                                type="button"
+                                onClick={() => setLightboxUrl(url)}
+                                className="relative block aspect-square w-full cursor-zoom-in overflow-hidden bg-surface-alt"
+                              >
                                 <Image src={url} alt={`${brief.headline} — card ${i + 1}`} fill sizes="140px" className="object-cover" />
-                              </div>
+                              </button>
                             ) : (
                               <div className="flex aspect-square items-center justify-center bg-surface-alt text-micro text-secondary-text">
                                 {imageGenerating[slotKey] ? "Generating..." : `Card ${i + 1}`}
@@ -628,9 +640,13 @@ export default function AdBriefsPage() {
                   ) : (
                     <>
                       {brief.image_url ? (
-                        <div className="relative aspect-square overflow-hidden bg-surface-alt">
+                        <button
+                          type="button"
+                          onClick={() => setLightboxUrl(brief.image_url)}
+                          className="relative block aspect-square w-full cursor-zoom-in overflow-hidden bg-surface-alt"
+                        >
                           <Image src={brief.image_url} alt={brief.headline} fill sizes="280px" className="object-cover" />
-                        </div>
+                        </button>
                       ) : (
                         <div className="flex aspect-square items-center justify-center bg-surface-alt text-micro text-secondary-text">
                           No image yet
@@ -938,6 +954,26 @@ export default function AdBriefsPage() {
           ))
         )}
       </div>
+
+      {lightboxUrl && (
+        <div
+          onClick={() => setLightboxUrl(null)}
+          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/90 p-6"
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxUrl(null)}
+            className="absolute right-6 top-6 border border-cream/40 px-3 py-1.5 text-caption uppercase tracking-[0.05em] text-cream hover:border-cream"
+          >
+            Close ✕
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+      )}
     </main>
   );
 }
