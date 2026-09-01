@@ -227,6 +227,19 @@ export const chapters: Chapter[] = [
     slug: "city-slicker",
     name: "City Slicker",
     series: "Urban Nomad",
+    folder: "City Slicker Black",
+    images: ["IMG_7229.jpg", "IMG_7230.jpg", "IMG_7231.jpg", "IMG_7232.jpg", "IMG_7233.jpg"],
+    primary: "IMG_7229.jpg",
+    sideImage: "IMG_7229.jpg",
+    story:
+      "Not every trip needs a mountain. Some of the best ones are just a new skyline and a coffee you haven't tried yet. City Slicker is for the traveller who's just as at home lost in a new city as lost on a trail.",
+    price: 1399,
+    verifiedOnSite: true,
+  },
+  {
+    slug: "city-slicker-black",
+    name: "City Slicker Black",
+    series: "Urban Nomad",
     folder: "City Slicker Black Grey",
     images: [
       "_MG_0139 final.jpg",
@@ -237,19 +250,6 @@ export const chapters: Chapter[] = [
     ],
     primary: "_MG_0144 final.jpg",
     sideImage: "_MG_0144 final.jpg",
-    story:
-      "Not every trip needs a mountain. Some of the best ones are just a new skyline and a coffee you haven't tried yet. City Slicker is for the traveller who's just as at home lost in a new city as lost on a trail.",
-    price: 1399,
-    verifiedOnSite: true,
-  },
-  {
-    slug: "city-slicker-black",
-    name: "City Slicker Black",
-    series: "Urban Nomad",
-    folder: "City Slicker Black",
-    images: ["IMG_7229.jpg", "IMG_7230.jpg", "IMG_7231.jpg", "IMG_7232.jpg", "IMG_7233.jpg"],
-    primary: "IMG_7229.jpg",
-    sideImage: "IMG_7229.jpg",
     story:
       "Same city, later at night. Black, because that's what the skyline turns into once the sun's fully down and the lights take over the sketch instead.",
     price: 1399,

@@ -17,7 +17,7 @@
   --color-tan-gold: #e6c68f;
   --color-divider: rgba(16, 24, 32, 0.15);
   --color-surface: #ffffff;
-  --color-surface-alt: #dee3dc;
+  --color-surface-alt: #f0ebe0;
   --color-overlay: rgba(0, 0, 0, 0.45);
   --color-secondary-text: #4a4a42;
 
@@ -137,14 +137,13 @@ body {
 */
 .chapter-card-bg {
   position: relative;
-  border: 1px solid rgba(16, 24, 32, 0.08);
 }
 .chapter-card-bg::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.05;
+  opacity: 0.14;
   mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
