@@ -46,6 +46,8 @@ export const SETTINGS_KEYS = [
   "LOW_STOCK_THRESHOLD_UNITS",
   "VIP_MIN_SPEND_RUPEES",
   "VIP_MIN_ORDERS",
+  "MSG91_WHATSAPP_INTEGRATED_NUMBER",
+  "MSG91_INBOUND_WEBHOOK_TOKEN",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

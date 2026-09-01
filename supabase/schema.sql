@@ -254,6 +254,36 @@ create index if not exists tracking_events_session_idx on tracking_events (sessi
 alter table tracking_events add column if not exists ad_brief_id uuid;
 alter table tracking_events add column if not exists utm_source text;
 
+-- ============================================================
+-- Two-way WhatsApp inbox — lets /admin/whatsapp view and reply to customer
+-- conversations without touching a phone. One conversation per phone
+-- number; messages in both directions log here (separate from
+-- whatsapp_messages, which is the one-way template-send log for
+-- transactional nudges like abandoned-cart/OTP/RTO).
+-- ============================================================
+create table if not exists whatsapp_conversations (
+  id uuid primary key default gen_random_uuid(),
+  customer_phone text not null unique,
+  customer_name text,
+  last_message_at timestamptz not null default now(),
+  last_message_preview text,
+  unread_count int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists whatsapp_conversation_messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references whatsapp_conversations (id),
+  direction text not null, -- inbound | outbound
+  body text,
+  media_url text,
+  provider_message_id text,
+  status text, -- outbound: sent | delivered | read | failed. inbound: received
+  created_at timestamptz not null default now()
+);
+create index if not exists whatsapp_conversation_messages_conv_idx
+  on whatsapp_conversation_messages (conversation_id, created_at);
+
 -- One row per WhatsApp send (order confirmation OR abandoned-cart retarget),
 -- so /admin/reports can show open rate (delivered/read, via the MSG91
 -- webhook) and conversion rate (converted, flipped by the order routes

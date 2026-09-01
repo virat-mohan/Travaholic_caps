@@ -46,6 +46,7 @@ const NAV_SECTIONS = [
     label: "Customers",
     links: [
       { href: "/admin/customers", label: "Customers & Miles" },
+      { href: "/admin/whatsapp", label: "WhatsApp Inbox" },
       { href: "/admin/leads", label: "Leads" },
     ],
   },

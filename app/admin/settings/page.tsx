@@ -52,6 +52,8 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "MSG91_WINBACK_TEMPLATE_ID", label: "MSG91 Win-Back Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, Miles balance. Optional — win-back always goes by email regardless." },
       { key: "MSG91_RTO_INITIATED_TEMPLATE_ID", label: "MSG91 RTO Initiated Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Two variables in order: customer name, order number. Sent when a shipment starts heading back to you, before the refund. Optional — an email always goes out regardless." },
       { key: "MSG91_RTO_REFUNDED_TEMPLATE_ID", label: "MSG91 RTO Refunded Flow Slug", hint: "Same as above — the Flow's URL slug, not an ID. Three variables in order: customer name, order number, refund amount. Sent once the item is back and the refund has gone through. Optional — an email always goes out regardless." },
+      { key: "MSG91_WHATSAPP_INTEGRATED_NUMBER", label: "MSG91 WhatsApp Integrated Number", hint: "The WhatsApp-enabled number shown as \"Active\" under MSG91 → WhatsApp. Required for /admin/whatsapp to send free-text replies (separate from the template Flows above)." },
+      { key: "MSG91_INBOUND_WEBHOOK_TOKEN", label: "MSG91 Inbound Webhook Token", hint: "A password you make up and also paste into MSG91 → WhatsApp → Settings → Webhook, so only MSG91 can post incoming messages to /api/webhooks/msg91-whatsapp-inbound. Leave blank to accept unauthenticated (not recommended once live)." },
     ],
   },
   {
