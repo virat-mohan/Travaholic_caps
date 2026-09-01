@@ -24,7 +24,7 @@ export function CollectionItem({
   return (
     <div className="flex flex-col">
       <Link href={`/chapter/${chapter.slug}`} className="group block">
-        <div className="relative aspect-square overflow-hidden rounded-lg bg-surface-alt">
+        <div className="chapter-card-bg relative aspect-square overflow-hidden rounded-lg bg-surface-alt">
           <Image
             src={image}
             alt={chapter.name}

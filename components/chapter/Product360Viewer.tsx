@@ -21,7 +21,7 @@ export function Product360Viewer({
 
   return (
     <div>
-      <div className="relative aspect-square overflow-hidden bg-surface-alt">
+      <div className="chapter-card-bg relative aspect-square overflow-hidden bg-surface-alt">
         {images.map((img, i) => (
           <Image
             key={img}

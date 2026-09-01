@@ -25,7 +25,7 @@ export function ChapterCard({
       transition={{ duration: 0.6, ease: ease.premium, delay: (index % 4) * 0.08 }}
     >
       <Link href={`/chapter/${chapter.slug}`} className="group block">
-        <div className="relative aspect-square overflow-hidden rounded-lg bg-surface-alt">
+        <div className="chapter-card-bg relative aspect-square overflow-hidden rounded-lg bg-surface-alt">
           {/* Deliberately sideImage, not chapter.primary — the hero image an
               admin picks for the chapter page shouldn't change what shows up
               here; every product's card should use the same side-angle shot. */}
