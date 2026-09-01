@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
 export async function PATCH(request: Request) {
@@ -27,6 +28,16 @@ export async function PATCH(request: Request) {
     });
 
     if (error) throw error;
+
+    // "/" and every chapter/series page are statically prerendered (no
+    // per-request data fetch), so without this an edit here would sit
+    // invisible in the DB until the next code deploy happened to rebuild
+    // them — revalidatePath forces Next to regenerate them on next visit.
+    revalidatePath("/");
+    revalidatePath(`/chapter/${body.chapterSlug}`);
+    revalidatePath("/series");
+    revalidatePath("/series/[slug]", "page");
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Failed to save chapter edit", err);

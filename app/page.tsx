@@ -13,7 +13,16 @@ const pillars = [
 
 export default async function Home() {
   const chapters = await getAllChapters();
-  const collection = [...chapters].reverse();
+  // Newest-first, but grouped by series (e.g. every "Blue Horizon" cap
+  // together) instead of interleaved — a stable group-by keeps each
+  // series' own newest-first order intact within its block.
+  const bySeries = new Map<string, typeof chapters>();
+  for (const chapter of [...chapters].reverse()) {
+    const group = bySeries.get(chapter.series) ?? [];
+    group.push(chapter);
+    bySeries.set(chapter.series, group);
+  }
+  const collection = [...bySeries.values()].flat();
   const inventory = await getInventoryMap();
 
   return (
