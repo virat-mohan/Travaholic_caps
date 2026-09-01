@@ -80,6 +80,7 @@ export default function AdBriefsPage() {
   const [savingCopy, setSavingCopy] = useState(false);
   const [captionTexts, setCaptionTexts] = useState<Record<string, string>>({});
   const [captioning, setCaptioning] = useState<Record<string, boolean>>({});
+  const [autoOverlay, setAutoOverlay] = useState<Record<string, boolean>>({});
   const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   function scrollCarousel(briefId: string, direction: 1 | -1) {
@@ -149,6 +150,12 @@ export default function AdBriefsPage() {
       setBriefs((prev) =>
         prev.map((b) => (b.id === brief.id ? { ...b, image_url: data.imageUrl, image_source: "generated" } : b))
       );
+      // "Add text overlay" toggle means the caption gets baked in as part of
+      // generating, not as a manual second step — the manual "Add Text"
+      // button still exists below for changing it afterward.
+      if (autoOverlay[brief.id] && captionTexts[brief.id]) {
+        await addTextOverlay(brief);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate image");
     } finally {
@@ -177,6 +184,9 @@ export default function AdBriefsPage() {
           return { ...b, image_urls: next, image_source: "generated" };
         })
       );
+      if (autoOverlay[key] && captionTexts[key]) {
+        await addTextOverlay(brief, slotIndex);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate image");
     } finally {
@@ -281,7 +291,9 @@ export default function AdBriefsPage() {
           return { ...b, image_urls: next, image_source: "with_text_overlay" };
         })
       );
-      setCaptionTexts((prev) => ({ ...prev, [key]: "" }));
+      // Deliberately NOT cleared — the field doubles as "what's currently on
+      // the image," so it stays editable for a change rather than emptying
+      // out, and a toggled-on auto-overlay can reapply it on every regenerate.
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add text to image");
     } finally {
@@ -743,26 +755,33 @@ export default function AdBriefsPage() {
                                   </button>
                                 </div>
                               )}
-                              {url && (
-                                <div className="mt-1.5 flex gap-1.5">
-                                  <input
-                                    type="text"
-                                    placeholder="Add text to image"
-                                    value={captionTexts[`${brief.id}:${i}`] ?? ""}
-                                    onChange={(e) =>
-                                      setCaptionTexts((prev) => ({ ...prev, [`${brief.id}:${i}`]: e.target.value }))
-                                    }
-                                    className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
-                                  />
+                              <div className="mt-1.5 flex gap-1.5">
+                                <input
+                                  type="text"
+                                  placeholder="Text on image"
+                                  value={captionTexts[slotKey] ?? ""}
+                                  onChange={(e) => setCaptionTexts((prev) => ({ ...prev, [slotKey]: e.target.value }))}
+                                  className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                                />
+                                {url && (
                                   <button
                                     onClick={() => addTextOverlay(brief, i)}
-                                    disabled={!captionTexts[`${brief.id}:${i}`] || captioning[`${brief.id}:${i}`]}
+                                    disabled={!captionTexts[slotKey] || captioning[slotKey]}
                                     className="shrink-0 border border-divider px-2 py-1.5 text-micro uppercase text-ink hover:border-ink disabled:opacity-40"
                                   >
-                                    {captioning[`${brief.id}:${i}`] ? "..." : "Add Text"}
+                                    {captioning[slotKey] ? "..." : "Apply"}
                                   </button>
-                                </div>
-                              )}
+                                )}
+                              </div>
+                              <label className="mt-1 flex items-center gap-1.5">
+                                <input
+                                  type="checkbox"
+                                  checked={autoOverlay[slotKey] ?? false}
+                                  onChange={(e) => setAutoOverlay((prev) => ({ ...prev, [slotKey]: e.target.checked }))}
+                                  className="h-3 w-3 accent-ink"
+                                />
+                                <span className="text-micro text-secondary-text">Auto-add on generate</span>
+                              </label>
                             </div>
                           );
                         })}
@@ -850,24 +869,33 @@ export default function AdBriefsPage() {
                             </button>
                           </div>
                         )}
-                        {brief.image_url && (
-                          <div className="flex gap-1.5">
-                            <input
-                              type="text"
-                              placeholder="Add text to image — e.g. &quot;NEW DROP&quot;"
-                              value={captionTexts[brief.id] ?? ""}
-                              onChange={(e) => setCaptionTexts((prev) => ({ ...prev, [brief.id]: e.target.value }))}
-                              className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
-                            />
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="Text on image — e.g. &quot;NEW DROP&quot;"
+                            value={captionTexts[brief.id] ?? ""}
+                            onChange={(e) => setCaptionTexts((prev) => ({ ...prev, [brief.id]: e.target.value }))}
+                            className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                          />
+                          {brief.image_url && (
                             <button
                               onClick={() => addTextOverlay(brief)}
                               disabled={!captionTexts[brief.id] || captioning[brief.id]}
                               className="shrink-0 border border-divider px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
                             >
-                              {captioning[brief.id] ? "Adding..." : "Add Text"}
+                              {captioning[brief.id] ? "Adding..." : "Apply"}
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                        <label className="flex items-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            checked={autoOverlay[brief.id] ?? false}
+                            onChange={(e) => setAutoOverlay((prev) => ({ ...prev, [brief.id]: e.target.checked }))}
+                            className="h-3 w-3 accent-ink"
+                          />
+                          <span className="text-micro text-secondary-text">Auto-add text when generating</span>
+                        </label>
                       </div>
                       {pickerForId === brief.id && (
                         <div className="mt-2 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto border border-divider p-2">
