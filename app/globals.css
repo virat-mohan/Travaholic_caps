@@ -129,10 +129,6 @@ body {
   color: var(--color-foreground);
 }
 
-html.splash-pending body > *:not(script) {
-  visibility: hidden;
-}
-
 @keyframes pin-bounce {
   0%, 100% { transform: scale(1.4) translateY(-2px); }
   50% { transform: scale(1.4) translateY(-8px); }

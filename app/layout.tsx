@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Archivo_Black, Manrope } from "next/font/google";
 import { Navbar } from "@/components/navigation/Navbar";
 import { ScrollToTop } from "@/components/navigation/ScrollToTop";
-import { SplashIntro } from "@/components/hero/SplashIntro";
 import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
 import { WhatsAppFloatButton } from "@/components/contact/WhatsAppFloatButton";
 import { CartProvider } from "@/lib/cart";
@@ -88,16 +87,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
-        <script
-          // Prevents a flash of the homepage before the splash overlay mounts.
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(window.location.pathname==="/"&&!sessionStorage.getItem("travaholic-splash-shown")){document.documentElement.classList.add("splash-pending");}}catch(e){}})();`,
-          }}
-        />
         <MetaPixelTracker pixelId={pixelId} />
         <CartProvider>
           <ScrollToTop />
-          <SplashIntro />
           <Navbar />
           {children}
           <WhatsAppFloatButton />
