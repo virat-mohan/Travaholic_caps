@@ -7,6 +7,7 @@ import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
 import { WhatsAppFloatButton } from "@/components/contact/WhatsAppFloatButton";
 import { CartProvider } from "@/lib/cart";
 import { getSetting } from "@/lib/settings";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -101,6 +102,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
           <WhatsAppFloatButton />
         </CartProvider>
+        <Analytics />
       </body>
     </html>
   );
