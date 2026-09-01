@@ -584,58 +584,64 @@ export default function AdBriefsPage() {
               <div className="mt-4 grid gap-6 md:grid-cols-[280px_1fr]">
                 <div>
                   {brief.is_carousel ? (
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {Array.from(
-                        { length: Math.max(brief.image_prompts?.length ?? 0, brief.image_urls?.length ?? 0) },
-                        (_, i) => i
-                      ).map((i) => {
-                        const url = brief.image_urls?.[i];
-                        const slotKey = `${brief.id}:${i}`;
-                        return (
-                          <div key={i}>
-                            {url ? (
-                              <button
-                                type="button"
-                                onClick={() => setLightboxUrl(url)}
-                                className="relative block aspect-square w-full cursor-zoom-in overflow-hidden bg-surface-alt"
-                              >
-                                <Image src={url} alt={`${brief.headline} — card ${i + 1}`} fill sizes="140px" className="object-cover" />
-                              </button>
-                            ) : (
-                              <div className="flex aspect-square items-center justify-center bg-surface-alt text-micro text-secondary-text">
-                                {imageGenerating[slotKey] ? "Generating..." : `Card ${i + 1}`}
-                              </div>
-                            )}
-                            <button
-                              onClick={() => generateSlotImage(brief, i)}
-                              disabled={!brief.image_prompts?.[i] || imageGenerating[slotKey]}
-                              className="mt-1 block w-full border border-ink px-1 py-1 text-micro uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream disabled:opacity-40"
-                            >
-                              {imageGenerating[slotKey] ? "Generating..." : url ? "Regenerate" : "Generate"}
-                            </button>
-                            {url && (
-                              <div className="mt-1 flex gap-1">
-                                <input
-                                  type="text"
-                                  placeholder="Edit instruction"
-                                  value={editInstructions[`${brief.id}:${i}`] ?? ""}
-                                  onChange={(e) =>
-                                    setEditInstructions((prev) => ({ ...prev, [`${brief.id}:${i}`]: e.target.value }))
-                                  }
-                                  className="w-full min-w-0 border border-divider bg-surface px-1 py-1 text-micro text-ink"
-                                />
+                    <div className="w-[280px]">
+                      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
+                        {Array.from(
+                          { length: Math.max(brief.image_prompts?.length ?? 0, brief.image_urls?.length ?? 0) },
+                          (_, i) => i
+                        ).map((i) => {
+                          const url = brief.image_urls?.[i];
+                          const slotKey = `${brief.id}:${i}`;
+                          return (
+                            <div key={i} className="w-[280px] shrink-0 snap-center">
+                              <p className="mb-1 text-micro uppercase tracking-[0.05em] text-secondary-text">
+                                Card {i + 1} of {Math.max(brief.image_prompts?.length ?? 0, brief.image_urls?.length ?? 0)}
+                              </p>
+                              {url ? (
                                 <button
-                                  onClick={() => editImage(brief, i)}
-                                  disabled={!editInstructions[`${brief.id}:${i}`] || editing[`${brief.id}:${i}`]}
-                                  className="shrink-0 border border-divider px-1.5 py-1 text-micro uppercase text-ink hover:border-ink disabled:opacity-40"
+                                  type="button"
+                                  onClick={() => setLightboxUrl(url)}
+                                  className="relative block aspect-square w-full cursor-zoom-in overflow-hidden bg-surface-alt"
                                 >
-                                  {editing[`${brief.id}:${i}`] ? "..." : "Edit"}
+                                  <Image src={url} alt={`${brief.headline} — card ${i + 1}`} fill sizes="280px" className="object-cover" />
                                 </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                              ) : (
+                                <div className="flex aspect-square items-center justify-center bg-surface-alt text-micro text-secondary-text">
+                                  {imageGenerating[slotKey] ? "Generating..." : `Card ${i + 1}`}
+                                </div>
+                              )}
+                              <button
+                                onClick={() => generateSlotImage(brief, i)}
+                                disabled={!brief.image_prompts?.[i] || imageGenerating[slotKey]}
+                                className="mt-1.5 block w-full border border-ink px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream disabled:opacity-40"
+                              >
+                                {imageGenerating[slotKey] ? "Generating..." : url ? "Regenerate" : "Generate"}
+                              </button>
+                              {url && (
+                                <div className="mt-1.5 flex gap-1.5">
+                                  <input
+                                    type="text"
+                                    placeholder="Edit instruction"
+                                    value={editInstructions[`${brief.id}:${i}`] ?? ""}
+                                    onChange={(e) =>
+                                      setEditInstructions((prev) => ({ ...prev, [`${brief.id}:${i}`]: e.target.value }))
+                                    }
+                                    className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                                  />
+                                  <button
+                                    onClick={() => editImage(brief, i)}
+                                    disabled={!editInstructions[`${brief.id}:${i}`] || editing[`${brief.id}:${i}`]}
+                                    className="shrink-0 border border-divider px-2 py-1.5 text-micro uppercase text-ink hover:border-ink disabled:opacity-40"
+                                  >
+                                    {editing[`${brief.id}:${i}`] ? "..." : "Confirm"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-1 text-micro text-secondary-text/70">← Scroll to see all cards →</p>
                     </div>
                   ) : (
                     <>
@@ -697,7 +703,7 @@ export default function AdBriefsPage() {
                               disabled={!editInstructions[brief.id] || editing[brief.id]}
                               className="shrink-0 border border-divider px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
                             >
-                              {editing[brief.id] ? "Editing..." : "Apply Edit"}
+                              {editing[brief.id] ? "Regenerating..." : "Confirm"}
                             </button>
                           </div>
                         )}
