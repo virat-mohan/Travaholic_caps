@@ -21,26 +21,43 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  if (!body?.isGeneric && !body?.chapterSlug) {
-    return NextResponse.json({ error: "Missing chapterSlug (or set isGeneric for a brand-wide post)" }, { status: 400 });
+  const chapterSlugs: string[] | undefined =
+    Array.isArray(body?.chapterSlugs) && body.chapterSlugs.length > 0 ? body.chapterSlugs : undefined;
+  if (!body?.isGeneric && !body?.chapterSlug && !chapterSlugs) {
+    return NextResponse.json(
+      { error: "Missing chapterSlug/chapterSlugs (or set isGeneric for a brand-wide post)" },
+      { status: 400 }
+    );
+  }
+  if (chapterSlugs && !body?.isCarousel) {
+    return NextResponse.json({ error: "Multiple chapters only makes sense for a carousel" }, { status: 400 });
   }
 
   try {
     const isGeneric = !!body.isGeneric;
-    const chapter = isGeneric ? null : chapters.find((c) => c.slug === body.chapterSlug);
-    const chapterName = isGeneric ? null : (chapter?.name ?? body.chapterSlug);
-
-    const sales = isGeneric
-      ? undefined
-      : (await getTopSellingChapters(30)).find((s) => s.chapterSlug === body.chapterSlug);
     const isCarousel = !!body.isCarousel;
-    const brief = await generateAdBrief(chapterName, sales, body.customInstructions || undefined, isCarousel);
+    const allSales = chapterSlugs || !isGeneric ? await getTopSellingChapters(30) : undefined;
+
+    let brief;
+    if (chapterSlugs) {
+      const multiChapters = chapterSlugs.map((slug) => ({
+        name: chapters.find((c) => c.slug === slug)?.name ?? slug,
+        sales: allSales?.find((s) => s.chapterSlug === slug),
+      }));
+      brief = await generateAdBrief(null, undefined, body.customInstructions || undefined, true, multiChapters);
+    } else {
+      const chapter = isGeneric ? null : chapters.find((c) => c.slug === body.chapterSlug);
+      const chapterName = isGeneric ? null : (chapter?.name ?? body.chapterSlug);
+      const sales = isGeneric ? undefined : allSales?.find((s) => s.chapterSlug === body.chapterSlug);
+      brief = await generateAdBrief(chapterName, sales, body.customInstructions || undefined, isCarousel);
+    }
 
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("ad_briefs")
       .insert({
-        chapter_slug: isGeneric ? null : body.chapterSlug,
+        chapter_slug: chapterSlugs || isGeneric ? null : body.chapterSlug,
+        chapter_slugs: chapterSlugs ?? null,
         headline: brief.headline,
         primary_text: brief.primaryText,
         cta: brief.cta,

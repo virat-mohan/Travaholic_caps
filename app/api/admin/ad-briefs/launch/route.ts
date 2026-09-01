@@ -1,68 +1,20 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServerClient } from "@/lib/supabase";
-import { createPausedMetaCampaign, createPausedMetaCarouselCampaign } from "@/lib/meta-ads";
-import { getBrandProfile } from "@/lib/brand";
+import { launchBriefCampaign } from "@/lib/ad-brief-publish";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body?.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   try {
-    const supabase = getSupabaseServerClient();
-    const { data: brief } = await supabase.from("ad_briefs").select("*").eq("id", body.id).maybeSingle();
-    if (!brief) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
-
-    const carouselImages: string[] = brief.is_carousel
-      ? (brief.image_urls ?? []).filter((url: string | null): url is string => !!url)
-      : [];
-    if (brief.is_carousel && carouselImages.length < 4) {
-      return NextResponse.json({ error: "Generate or attach all 4 carousel images before launching" }, { status: 400 });
-    }
-    if (!brief.is_carousel && !brief.image_url) {
-      return NextResponse.json({ error: "Generate or attach an image before launching" }, { status: 400 });
-    }
-
-    const brand = await getBrandProfile();
-    const baseUrl = brief.chapter_slug ? `${brand.siteUrl}/chapter/${brief.chapter_slug}` : brand.siteUrl;
-    // `ab` (ad brief id) is what makes attribution real rather than a
-    // blended account-wide estimate — every click from this specific ad
-    // carries it, the client persists it through the session, and it lands
-    // on the order it eventually produces. See lib/client-tracking.ts and
-    // the attribution capture on order creation.
-    const landingUrl = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}ab=${brief.id}`;
-
-    const { campaignId, adSetId, adId } = brief.is_carousel
-      ? await createPausedMetaCarouselCampaign({
-          headline: brief.headline,
-          primaryText: brief.primary_text,
-          cta: brief.cta,
-          imageUrls: carouselImages,
-          landingUrl,
-          dailyBudgetRupees: body.dailyBudgetRupees ?? 500,
-          hashtags: brief.hashtags ?? undefined,
-        })
-      : await createPausedMetaCampaign({
-          headline: brief.headline,
-          primaryText: brief.primary_text,
-          cta: brief.cta,
-          imageUrl: brief.image_url,
-          landingUrl,
-          dailyBudgetRupees: body.dailyBudgetRupees ?? 500,
-          hashtags: brief.hashtags ?? undefined,
-        });
-
-    const { error } = await supabase
-      .from("ad_briefs")
-      .update({
-        status: "launched",
-        meta_campaign_id: campaignId,
-        meta_adset_id: adSetId,
-        meta_ad_id: adId,
-      })
-      .eq("id", body.id);
-    if (error) throw error;
-
-    return NextResponse.json({ campaignId, adSetId, adId });
+    const result = await launchBriefCampaign(body.id, {
+      dailyBudgetRupees: body.dailyBudgetRupees ?? 500,
+      cta: body.cta || undefined,
+      targeting:
+        body.ageMin || body.ageMax || body.gender
+          ? { ageMin: body.ageMin, ageMax: body.ageMax, gender: body.gender }
+          : undefined,
+    });
+    return NextResponse.json(result);
   } catch (err) {
     console.error("Failed to launch Meta campaign", err);
     return NextResponse.json(

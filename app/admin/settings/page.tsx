@@ -24,7 +24,8 @@ const GROUPS: { label: string; fields: Field[] }[] = [
     label: "AI",
     fields: [
       { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key", hint: "Powers Claude-generated Journal drafts and ad briefs." },
-      { key: "IMAGE_GEN_API_KEY", label: "Image Gen API Key (Gemini)", hint: "Google AI Studio API key — powers ad creative image and reel (Veo) generation." },
+      { key: "IMAGE_GEN_API_KEY", label: "Image Gen API Key (Gemini)", hint: "Google AI Studio API key — powers ad creative image and reel (Veo) generation. Tried first if set." },
+      { key: "OPENAI_API_KEY", label: "OpenAI API Key (fallback)", hint: "Used for ad creative image generation (gpt-image-1) if the Gemini key above is missing or its call fails." },
     ],
   },
   {

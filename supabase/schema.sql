@@ -235,6 +235,16 @@ create table if not exists tracking_events (
 );
 create index if not exists tracking_events_created_at_idx on tracking_events (created_at);
 
+-- ============================================================
+-- First-party website analytics (/admin/analytics) — built on the same
+-- tracking_events log rather than a separate pipeline, so funnel numbers
+-- and traffic numbers can never drift apart. path/referrer are only
+-- populated going forward; older rows read as "(unknown)" in the UI.
+-- ============================================================
+alter table tracking_events add column if not exists path text;
+alter table tracking_events add column if not exists referrer_host text; -- null = direct/internal navigation
+create index if not exists tracking_events_session_idx on tracking_events (session_key, created_at);
+
 -- One row per WhatsApp send (order confirmation OR abandoned-cart retarget),
 -- so /admin/reports can show open rate (delivered/read, via the MSG91
 -- webhook) and conversion rate (converted, flipped by the order routes
@@ -780,3 +790,26 @@ create table if not exists pending_orders (
 -- threshold, so the next dip alerts again.
 -- ============================================================
 alter table inventory add column if not exists low_stock_alerted boolean not null default false;
+
+-- ============================================================
+-- Content calendar: queueing a brief to auto-post/auto-launch at a future
+-- time, plus editable ad-launch attributes (targeting, CTA) that used to be
+-- hardcoded in lib/meta-ads.ts. The cron in app/api/cron/publish-queue
+-- sweeps queue_status = 'queued' rows past their scheduled_for time.
+-- ============================================================
+alter table ad_briefs add column if not exists scheduled_for timestamptz;
+alter table ad_briefs add column if not exists scheduled_action text; -- post | launch
+alter table ad_briefs add column if not exists queue_status text not null default 'none'; -- none | queued | published | failed
+alter table ad_briefs add column if not exists queue_error text;
+alter table ad_briefs add column if not exists launched_at timestamptz;
+alter table ad_briefs add column if not exists ad_cta_override text;
+alter table ad_briefs add column if not exists ad_age_min int not null default 18;
+alter table ad_briefs add column if not exists ad_age_max int not null default 65;
+alter table ad_briefs add column if not exists ad_gender text not null default 'all'; -- all | male | female
+alter table ad_briefs add column if not exists ad_daily_budget_rupees int not null default 500;
+
+-- A multi-chapter carousel (one card per selected Chapter, instead of 4
+-- angles on a single product) has no single chapter_slug — this array
+-- carries the ordered list instead, one entry per carousel card.
+alter table ad_briefs add column if not exists chapter_slugs text[];
+create index if not exists ad_briefs_queue_idx on ad_briefs (queue_status, scheduled_for);

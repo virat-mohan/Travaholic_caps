@@ -24,7 +24,8 @@ export async function POST(request: Request) {
         ? new URL(referenceImageUrl, request.url).toString()
         : referenceImageUrl;
 
-    const videoPrompt = `Short vertical (9:16) lifestyle video, 8 seconds: ${body.imagePrompt}. Natural handheld camera motion, no on-screen text.`;
+    const editLine = body.editInstruction ? ` Additional direction for this version: ${body.editInstruction}.` : "";
+    const videoPrompt = `Short vertical (9:16) lifestyle video, 8 seconds: ${body.imagePrompt}. Natural handheld camera motion, no on-screen text.${editLine}`;
     const operationName = await startVideoGeneration(videoPrompt, absoluteReference);
 
     const { error } = await supabase

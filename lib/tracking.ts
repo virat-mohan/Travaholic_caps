@@ -15,7 +15,7 @@ export type TrackingEventName =
  */
 export async function logTrackingEvent(
   eventName: TrackingEventName,
-  data: { sessionKey?: string; chapterSlug?: string; value?: number }
+  data: { sessionKey?: string; chapterSlug?: string; value?: number; path?: string; referrerHost?: string }
 ) {
   try {
     const supabase = getSupabaseServerClient();
@@ -24,6 +24,8 @@ export async function logTrackingEvent(
       session_key: data.sessionKey ?? null,
       chapter_slug: data.chapterSlug ?? null,
       value: data.value ?? null,
+      path: data.path ?? null,
+      referrer_host: data.referrerHost ?? null,
     });
   } catch (err) {
     console.error("Failed to log tracking event", eventName, err);

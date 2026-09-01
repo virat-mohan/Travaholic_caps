@@ -21,15 +21,20 @@ function extractJson(text: string) {
   const raw = fenced ? fenced[1] : text;
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("Claude response did not contain JSON");
+  if (start === -1 || end === -1) {
+    throw new Error(`Claude response did not contain JSON: ${text.slice(0, 300) || "(empty response)"}`);
+  }
   return raw.slice(start, end + 1);
 }
+
+export type MultiChapterEntry = { name: string; sales?: ChapterSales };
 
 export async function generateAdBrief(
   chapterName: string | null,
   sales?: ChapterSales,
   customInstructions?: string,
-  isCarousel?: boolean
+  isCarousel?: boolean,
+  multiChapters?: MultiChapterEntry[]
 ): Promise<AdBrief> {
   const apiKey = await getSetting("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set — add it in /admin/settings first");
@@ -44,12 +49,29 @@ export async function generateAdBrief(
     ? `\nThe admin has given this specific direction for this brief — follow it, even if it overrides the default strategy above: "${customInstructions}"`
     : "";
 
+  // A multi-chapter carousel showcases several distinct products, one per
+  // card, in the exact order given — the copy should read as a collection
+  // roundup rather than pitch a single product.
+  const multiChapterLine =
+    multiChapters && multiChapters.length > 0
+      ? `This is a carousel showcasing ${multiChapters.length} different products from the collection, in this exact order:\n${multiChapters
+          .map(
+            (c, i) =>
+              `${i + 1}. "${c.name}"${c.sales ? ` — sold ${c.sales.unitsSold} units, ₹${c.sales.revenue.toLocaleString("en-IN")} revenue in the last 30 days` : " — no recent sales data yet"}`
+          )
+          .join(
+            "\n"
+          )}\nWrite the headline/body as a collection roundup, not a pitch for any single one of them.`
+      : "";
+
   // No chapter name means this is a generic brand post — not tied to one
   // product, and the link it eventually points to (set at launch time) is
   // the homepage/collection, not a single product page.
-  const productLine = chapterName
-    ? `Product being promoted: "${chapterName}".\n${salesLine}`
-    : `This is a generic brand awareness post — not about one specific product. Write about ${brand.brandName} as a whole (the collection, the "${brand.tagline}" idea, what makes the brand worth following), not any single Chapter/product by name.`;
+  const productLine = multiChapterLine
+    ? multiChapterLine
+    : chapterName
+      ? `Product being promoted: "${chapterName}".\n${salesLine}`
+      : `This is a generic brand awareness post — not about one specific product. Write about ${brand.brandName} as a whole (the collection, the "${brand.tagline}" idea, what makes the brand worth following), not any single Chapter/product by name.`;
 
   const prompt = `You are writing a Meta (Instagram/Facebook) ad brief for ${brand.brandName} ("${brand.tagline}"), a D2C brand selling a ${brand.productNoun}.
 
@@ -65,7 +87,9 @@ Return ONLY a JSON object, no commentary, in this exact shape:
   "targetAudience": "one line describing who this ad should target (interests/demographics), for setting up Meta ad targeting",
   ${
     isCarousel
-      ? `"imagePrompts": "an array of EXACTLY 4 detailed visual scene descriptions for an image generator, one per carousel card — each a distinct angle/setting/moment (not 4 near-identical shots), together telling a small visual story or showing the product from different real-world contexts. Describe setting, lighting, mood and how the product should be worn/used in each. Do not describe any on-image text, headline or logo — clean lifestyle photos with no text baked in."`
+      ? multiChapters && multiChapters.length > 0
+        ? `"imagePrompts": "an array of EXACTLY ${multiChapters.length} detailed visual scene descriptions for an image generator, in the SAME ORDER as the products listed above — card ${1} must be "${multiChapters[0]?.name}", and so on. Each should describe setting, lighting, mood and how that specific product should be worn/used. Do not describe any on-image text, headline or logo — clean lifestyle photos with no text baked in."`
+        : `"imagePrompts": "an array of detailed visual scene descriptions for an image generator, one per carousel card — YOU decide how many cards this ad actually needs (Meta allows 2 to 10; most ads work best with 3-6), each a distinct angle/setting/moment (never near-identical shots), together telling a small visual story or showing the product from different real-world contexts. Do not pad to a round number — stop once the story is told. Describe setting, lighting, mood and how the product should be worn/used in each. Do not describe any on-image text, headline or logo — clean lifestyle photos with no text baked in."`
       : `"imagePrompt": "a detailed visual scene description for an image generator — describe the setting, lighting, mood and how the product should be worn/used. Do not describe any on-image text, headline or logo — the image should be a clean lifestyle photo with no text baked in.",
   "creativeStyle": "one of: ai_photo, real_photo_text_overlay — YOU decide which creative approach actually fits this specific ad, don't default to one. Pick real_photo_text_overlay for promotional/urgent/announcement-driven angles (a strong sales number to lean into, a new drop, a limited-time or scarcity angle, a direct-response feel) — real product photography with bold on-image text reads as more authentic and converts better for that kind of push. Pick ai_photo for aspirational/editorial/brand-story angles where a clean, text-free lifestyle photo feels more premium and sits more naturally in an Instagram feed.",
   "overlayText": "ONLY meaningful when creativeStyle is real_photo_text_overlay: a short, bold line of on-image text, under 6 words (e.g. 'NEW DROP' or 'SELLING FAST' or 'BACK IN STOCK') to render directly on top of the photo. Leave as an empty string when creativeStyle is ai_photo."`
@@ -82,7 +106,7 @@ Return ONLY a JSON object, no commentary, in this exact shape:
     },
     body: JSON.stringify({
       model: "claude-sonnet-5",
-      max_tokens: 1000,
+      max_tokens: 4096,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -102,7 +126,7 @@ Return ONLY a JSON object, no commentary, in this exact shape:
     cta: parsed.cta,
     targetAudience: parsed.targetAudience,
     imagePrompt: parsed.imagePrompt ?? "",
-    imagePrompts: Array.isArray(parsed.imagePrompts) ? parsed.imagePrompts.slice(0, 4) : undefined,
+    imagePrompts: Array.isArray(parsed.imagePrompts) ? parsed.imagePrompts.slice(0, 10) : undefined,
     creativeStyle: parsed.creativeStyle === "real_photo_text_overlay" ? "real_photo_text_overlay" : "ai_photo",
     overlayText: typeof parsed.overlayText === "string" ? parsed.overlayText : undefined,
     hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags : [],

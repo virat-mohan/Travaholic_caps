@@ -104,9 +104,29 @@ export function trackEvent(
     }
   }
 
+  // Referrer only matters as an entry signal — capture it on the PageView
+  // that started the session, not on every later interaction — and only
+  // when it's actually an external site (a same-origin referrer just means
+  // in-app navigation, not a traffic source).
+  let referrerHost: string | undefined;
+  if (eventName === "PageView" && document.referrer) {
+    try {
+      const ref = new URL(document.referrer);
+      if (ref.hostname !== window.location.hostname) referrerHost = ref.hostname;
+    } catch {
+      // malformed referrer — ignore
+    }
+  }
+
   fetch("/api/tracking/event", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventName, sessionKey: getSessionKey(), ...params }),
+    body: JSON.stringify({
+      eventName,
+      sessionKey: getSessionKey(),
+      path: window.location.pathname,
+      referrerHost,
+      ...params,
+    }),
   }).catch(() => {});
 }

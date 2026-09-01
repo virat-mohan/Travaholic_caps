@@ -13,11 +13,18 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServerClient();
     const { data: brief } = await supabase
       .from("ad_briefs")
-      .select("chapter_slug, image_urls")
+      .select("chapter_slug, chapter_slugs, image_urls")
       .eq("id", body.id)
       .maybeSingle();
 
-    const chapter = chapters.find((c) => c.slug === brief?.chapter_slug);
+    // A multi-chapter carousel has a different product per card — use that
+    // card's own chapter as the reference photo instead of the brief's
+    // (nonexistent) single chapter_slug.
+    const slugForSlot =
+      typeof body.slotIndex === "number" && brief?.chapter_slugs
+        ? brief.chapter_slugs[body.slotIndex]
+        : brief?.chapter_slug;
+    const chapter = chapters.find((c) => c.slug === slugForSlot);
     const referenceImageUrl = chapter ? chapterImageSrc(chapter.folder, chapter.primary) : undefined;
     const absoluteReference =
       referenceImageUrl && referenceImageUrl.startsWith("/")

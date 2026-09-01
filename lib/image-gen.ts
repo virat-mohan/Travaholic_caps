@@ -14,13 +14,50 @@ export async function generateAdImage(options: {
   referenceImageUrl?: string;
   storagePathPrefix: string;
 }): Promise<string> {
-  const apiKey = await getSetting("IMAGE_GEN_API_KEY");
-  if (!apiKey) {
-    throw new Error("IMAGE_GEN_API_KEY is not set — add a Gemini API key in /admin/settings");
+  const geminiKey = await getSetting("IMAGE_GEN_API_KEY");
+  const openaiKey = await getSetting("OPENAI_API_KEY");
+
+  let base64Png: string;
+  if (geminiKey) {
+    try {
+      base64Png = await generateWithGemini(geminiKey, options.prompt, options.referenceImageUrl);
+    } catch (err) {
+      if (!openaiKey) throw err;
+      base64Png = await generateWithOpenAI(openaiKey, options.prompt);
+    }
+  } else if (openaiKey) {
+    base64Png = await generateWithOpenAI(openaiKey, options.prompt);
+  } else {
+    throw new Error(
+      "Neither IMAGE_GEN_API_KEY (Gemini) nor OPENAI_API_KEY is set — add one in /admin/settings"
+    );
   }
 
-  const base64Png = await generateWithGemini(apiKey, options.prompt, options.referenceImageUrl);
   return uploadGeneratedImage(base64Png, options.storagePathPrefix);
+}
+
+async function generateWithOpenAI(apiKey: string, prompt: string) {
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-image-1",
+      prompt,
+      size: "1024x1024",
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`OpenAI image generation failed: ${res.status} ${await res.text()}`);
+  }
+
+  const data = await res.json();
+  const b64 = data.data?.[0]?.b64_json as string | undefined;
+  if (!b64) throw new Error("OpenAI response did not contain an image");
+  return b64;
 }
 
 async function generateWithGemini(apiKey: string, prompt: string, referenceImageUrl?: string) {

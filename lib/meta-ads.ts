@@ -39,6 +39,25 @@ async function graphGet(path: string, accessToken: string, params: Record<string
  * function does can ever spend money on its own; a human has to open Meta
  * Ads Manager and flip the campaign to ACTIVE before it runs.
  */
+export type AdTargeting = {
+  ageMin?: number;
+  ageMax?: number;
+  gender?: "all" | "male" | "female";
+};
+
+function buildTargeting(targeting?: AdTargeting) {
+  return {
+    geo_locations: { countries: ["IN"] },
+    age_min: targeting?.ageMin ?? 18,
+    age_max: targeting?.ageMax ?? 65,
+    ...(targeting?.gender === "male"
+      ? { genders: [1] }
+      : targeting?.gender === "female"
+        ? { genders: [2] }
+        : {}),
+  };
+}
+
 export async function createPausedMetaCampaign(brief: {
   headline: string;
   primaryText: string;
@@ -47,6 +66,7 @@ export async function createPausedMetaCampaign(brief: {
   landingUrl: string;
   dailyBudgetRupees: number;
   hashtags?: string[];
+  targeting?: AdTargeting;
 }) {
   const creds = await getMetaCredentials();
   if (!creds) {
@@ -70,7 +90,7 @@ export async function createPausedMetaCampaign(brief: {
     daily_budget: Math.round(brief.dailyBudgetRupees * 100),
     billing_event: "IMPRESSIONS",
     optimization_goal: "LINK_CLICKS",
-    targeting: { geo_locations: { countries: ["IN"] } },
+    targeting: buildTargeting(brief.targeting),
     status: "PAUSED",
   });
 
@@ -128,6 +148,7 @@ export async function createPausedMetaCarouselCampaign(brief: {
   landingUrl: string;
   dailyBudgetRupees: number;
   hashtags?: string[];
+  targeting?: AdTargeting;
 }) {
   const creds = await getMetaCredentials();
   if (!creds) {
@@ -154,7 +175,7 @@ export async function createPausedMetaCarouselCampaign(brief: {
     daily_budget: Math.round(brief.dailyBudgetRupees * 100),
     billing_event: "IMPRESSIONS",
     optimization_goal: "LINK_CLICKS",
-    targeting: { geo_locations: { countries: ["IN"] } },
+    targeting: buildTargeting(brief.targeting),
     status: "PAUSED",
   });
 

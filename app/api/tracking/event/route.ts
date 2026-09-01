@@ -19,6 +19,8 @@ export async function POST(request: Request) {
     sessionKey: body.sessionKey,
     chapterSlug: body.chapterSlug,
     value: body.value,
+    path: typeof body.path === "string" ? body.path.slice(0, 500) : undefined,
+    referrerHost: typeof body.referrerHost === "string" ? body.referrerHost.slice(0, 200) : undefined,
   });
 
   return NextResponse.json({ ok: true });
