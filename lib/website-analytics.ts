@@ -8,8 +8,35 @@ type RawEvent = {
   value: number | null;
   path: string | null;
   referrer_host: string | null;
+  ad_brief_id: string | null;
+  utm_source: string | null;
   created_at: string;
 };
+
+const SOCIAL_HOST_RE = /instagram\.com|facebook\.com|fb\.com/i;
+const WHATSAPP_HOST_RE = /wa\.me|whatsapp\.com/i;
+const SEARCH_HOST_RE = /google\.|bing\.|duckduckgo\.|yahoo\./i;
+
+/**
+ * Classifies a session's traffic source from its first PageView. `ab`
+ * (a launched-campaign landing param, see app/api/admin/ad-briefs/launch)
+ * is the strongest signal — it's ours, not a guess — so it wins over
+ * referrer/utm even if both are present. utm_source covers channels whose
+ * referrer gets stripped in-app (WhatsApp in particular).
+ */
+function classifyTrafficSource(ev: Pick<RawEvent, "ad_brief_id" | "utm_source" | "referrer_host">): string {
+  if (ev.ad_brief_id) return "Paid Ad (Meta)";
+  const utm = ev.utm_source?.toLowerCase();
+  if (utm === "whatsapp") return "WhatsApp";
+  if (utm && ["meta", "facebook", "instagram", "fb", "ig"].includes(utm)) return "Meta (Organic/Social)";
+  if (utm) return `Other (utm: ${ev.utm_source})`;
+  const host = ev.referrer_host;
+  if (!host) return "Direct";
+  if (WHATSAPP_HOST_RE.test(host)) return "WhatsApp";
+  if (SOCIAL_HOST_RE.test(host)) return "Meta (Organic/Social)";
+  if (SEARCH_HOST_RE.test(host)) return "Organic Search";
+  return "Other Referral";
+}
 
 export type WebsiteAnalytics = {
   sessions: number;
@@ -33,6 +60,7 @@ export type WebsiteAnalytics = {
   topViewedChapters: { name: string; views: number }[];
   topAddedChapters: { name: string; adds: number }[];
   topReferrers: { host: string; sessions: number }[];
+  trafficSources: { source: string; sessions: number }[];
   dailyTrend: { date: string; sessions: number; addToCarts: number; purchases: number }[];
 };
 
@@ -59,7 +87,7 @@ export async function computeWebsiteAnalytics(sinceIso: string, untilIso: string
   const [{ data: eventsData }, { data: priorSessionRows }, { data: orders }] = await Promise.all([
     supabase
       .from("tracking_events")
-      .select("event_name, session_key, chapter_slug, value, path, referrer_host, created_at")
+      .select("event_name, session_key, chapter_slug, value, path, referrer_host, ad_brief_id, utm_source, created_at")
       .gte("created_at", sinceIso)
       .lt("created_at", untilIso)
       .order("created_at", { ascending: true }),
@@ -103,6 +131,15 @@ export async function computeWebsiteAnalytics(sinceIso: string, untilIso: string
     if (names.has("InitiateCheckout")) initiatedCheckoutSessions++;
     if (names.has("Purchase")) purchasedSessions++;
     if (names.has("AddToCart") && !names.has("Purchase")) abandonedCartSessions++;
+  }
+
+  const sourceCounts = new Map<string, number>();
+  for (const sessionEvents of bySession.values()) {
+    // Events are already ordered ascending, so the first PageView in this
+    // session's slice is genuinely its entry point.
+    const firstPageView = sessionEvents.find((e) => e.event_name === "PageView");
+    const source = classifyTrafficSource(firstPageView ?? { ad_brief_id: null, utm_source: null, referrer_host: null });
+    sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
   }
 
   const pageCounts = new Map<string, number>();
@@ -174,6 +211,9 @@ export async function computeWebsiteAnalytics(sinceIso: string, untilIso: string
       .map(([host, set]) => ({ host, sessions: set.size }))
       .sort((a, b) => b.sessions - a.sessions)
       .slice(0, 8),
+    trafficSources: [...sourceCounts.entries()]
+      .map(([source, count]) => ({ source, sessions: count }))
+      .sort((a, b) => b.sessions - a.sessions),
     dailyTrend: [...dailyMap.entries()]
       .map(([date, b]) => ({ date, sessions: b.sessions.size, addToCarts: b.addToCarts, purchases: b.purchases }))
       .sort((a, b) => a.date.localeCompare(b.date)),

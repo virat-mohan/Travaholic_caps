@@ -32,6 +32,36 @@ export function captureAttribution() {
   );
 }
 
+const UTM_SOURCE_STORAGE = "travaholic-utm-source";
+const UTM_SOURCE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Captures a manually-tagged `?utm_source=` (e.g. a WhatsApp broadcast link
+ * tagged `utm_source=whatsapp`) — needed because WhatsApp's in-app browser
+ * usually strips document.referrer entirely, so referrer alone can't tell a
+ * WhatsApp click apart from direct traffic.
+ */
+export function captureUtmSource() {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  const source = params.get("utm_source");
+  if (!source) return;
+  localStorage.setItem(UTM_SOURCE_STORAGE, JSON.stringify({ source, capturedAt: Date.now() }));
+}
+
+function getUtmSource(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(UTM_SOURCE_STORAGE);
+    if (!raw) return null;
+    const { source, capturedAt } = JSON.parse(raw);
+    if (Date.now() - capturedAt > UTM_SOURCE_TTL_MS) return null;
+    return source ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const REFERRAL_STORAGE = "travaholic-referral";
 const REFERRAL_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -109,13 +139,19 @@ export function trackEvent(
   // when it's actually an external site (a same-origin referrer just means
   // in-app navigation, not a traffic source).
   let referrerHost: string | undefined;
-  if (eventName === "PageView" && document.referrer) {
-    try {
-      const ref = new URL(document.referrer);
-      if (ref.hostname !== window.location.hostname) referrerHost = ref.hostname;
-    } catch {
-      // malformed referrer — ignore
+  let adBriefId: string | undefined;
+  let utmSource: string | undefined;
+  if (eventName === "PageView") {
+    if (document.referrer) {
+      try {
+        const ref = new URL(document.referrer);
+        if (ref.hostname !== window.location.hostname) referrerHost = ref.hostname;
+      } catch {
+        // malformed referrer — ignore
+      }
     }
+    adBriefId = getAttribution() ?? undefined;
+    utmSource = getUtmSource() ?? undefined;
   }
 
   fetch("/api/tracking/event", {
@@ -126,6 +162,8 @@ export function trackEvent(
       sessionKey: getSessionKey(),
       path: window.location.pathname,
       referrerHost,
+      adBriefId,
+      utmSource,
       ...params,
     }),
   }).catch(() => {});

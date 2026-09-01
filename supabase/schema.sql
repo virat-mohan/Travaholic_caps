@@ -245,6 +245,15 @@ alter table tracking_events add column if not exists path text;
 alter table tracking_events add column if not exists referrer_host text; -- null = direct/internal navigation
 create index if not exists tracking_events_session_idx on tracking_events (session_key, created_at);
 
+-- Traffic-source classification: `ab` is the ad-brief id our own launched
+-- Meta campaigns stamp on their landing URL (see app/api/admin/ad-briefs/launch),
+-- so any session carrying one is unambiguously a paid click, not a guess
+-- from referrer alone. utm_source is an optional manual tag (e.g. WhatsApp
+-- broadcast links, which usually carry no referrer at all once opened) for
+-- traffic sources the referrer can't identify on its own.
+alter table tracking_events add column if not exists ad_brief_id uuid;
+alter table tracking_events add column if not exists utm_source text;
+
 -- One row per WhatsApp send (order confirmation OR abandoned-cart retarget),
 -- so /admin/reports can show open rate (delivered/read, via the MSG91
 -- webhook) and conversion rate (converted, flipped by the order routes

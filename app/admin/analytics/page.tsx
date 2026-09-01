@@ -24,6 +24,7 @@ type Analytics = {
   topViewedChapters: { name: string; views: number }[];
   topAddedChapters: { name: string; adds: number }[];
   topReferrers: { host: string; sessions: number }[];
+  trafficSources: { source: string; sessions: number }[];
   dailyTrend: { date: string; sessions: number; addToCarts: number; purchases: number }[];
 };
 
@@ -163,6 +164,21 @@ export default function WebsiteAnalyticsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="mt-10 border-t border-divider pt-6">
+            <h2 className="font-display text-heading-s uppercase text-ink">Traffic Sources</h2>
+            <p className="mt-1 max-w-2xl text-micro text-secondary-text/70">
+              Paid Ad = a session that arrived via a launched campaign&apos;s own link (unambiguous).
+              WhatsApp only detects tagged links (?utm_source=whatsapp) or the rare case a referrer
+              survives — most WhatsApp opens strip it and will show as Direct instead.
+            </p>
+            <div className="mt-4 space-y-2">
+              {data.trafficSources.map((s) => (
+                <FunnelBar key={s.source} label={s.source} count={s.sessions} of={data.sessions} />
+              ))}
+              {data.trafficSources.length === 0 && <p className="text-caption text-secondary-text">No data yet.</p>}
             </div>
           </div>
 
