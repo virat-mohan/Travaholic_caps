@@ -53,6 +53,12 @@ export async function getAllChapters(): Promise<Chapter[]> {
     return {
       ...c,
       primary: o.primary_image ?? c.primary,
+      // sideImage is what the homepage card and the product page's own
+      // og:image/thumbnail actually render (see CollectionItem and
+      // chapter/[slug]/page.tsx) — without also overriding it here, setting
+      // a new hero image only changed the product page's main gallery shot
+      // and silently left the homepage showing the old one.
+      sideImage: o.primary_image ?? c.sideImage,
       price: o.price ?? c.price,
       story: o.story ?? c.story,
     };
