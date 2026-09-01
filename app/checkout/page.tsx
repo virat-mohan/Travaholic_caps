@@ -588,7 +588,7 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={() => setIdentityStep("guest")}
-                  className="w-full text-center text-caption text-secondary-text underline"
+                  className="w-full text-center text-body-s font-bold text-ink underline"
                 >
                   Continue As Guest
                 </button>

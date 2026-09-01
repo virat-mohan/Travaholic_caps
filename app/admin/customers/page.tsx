@@ -13,6 +13,8 @@ type Customer = {
   lastOrderAt: string;
   miles: number;
   importedRecords: number;
+  isVip: boolean;
+  isAtRisk: boolean;
 };
 
 function formatDate(iso: string) {
@@ -31,6 +33,8 @@ export default function CustomersPage() {
   const [minOrders, setMinOrders] = useState("");
   const [sinceDate, setSinceDate] = useState("");
   const [untilDate, setUntilDate] = useState("");
+  const [vipOnly, setVipOnly] = useState(false);
+  const [atRiskOnly, setAtRiskOnly] = useState(false);
 
   function load() {
     fetch("/api/admin/customers")
@@ -64,15 +68,19 @@ export default function CustomersPage() {
       if (minOrders && c.orderCount < Number(minOrders)) return false;
       if (sinceDate && (!c.lastOrderAt || c.lastOrderAt.slice(0, 10) < sinceDate)) return false;
       if (untilDate && (!c.lastOrderAt || c.lastOrderAt.slice(0, 10) > untilDate)) return false;
+      if (vipOnly && !c.isVip) return false;
+      if (atRiskOnly && !c.isAtRisk) return false;
       return true;
     });
-  }, [customers, minSpend, minOrders, sinceDate, untilDate]);
+  }, [customers, minSpend, minOrders, sinceDate, untilDate, vipOnly, atRiskOnly]);
 
   function clearFilters() {
     setMinSpend("");
     setMinOrders("");
     setSinceDate("");
     setUntilDate("");
+    setVipOnly(false);
+    setAtRiskOnly(false);
   }
 
   return (
@@ -168,7 +176,15 @@ export default function CustomersPage() {
             className="mt-1 border border-divider bg-surface px-2 py-1.5 text-body-s text-ink"
           />
         </div>
-        {(minSpend || minOrders || sinceDate || untilDate) && (
+        <label className="flex items-center gap-2 pb-1.5">
+          <input type="checkbox" checked={vipOnly} onChange={(e) => setVipOnly(e.target.checked)} className="h-4 w-4 accent-ink" />
+          <span className="text-micro uppercase tracking-[0.05em] text-secondary-text">VIP only</span>
+        </label>
+        <label className="flex items-center gap-2 pb-1.5">
+          <input type="checkbox" checked={atRiskOnly} onChange={(e) => setAtRiskOnly(e.target.checked)} className="h-4 w-4 accent-ink" />
+          <span className="text-micro uppercase tracking-[0.05em] text-secondary-text">At risk only</span>
+        </label>
+        {(minSpend || minOrders || sinceDate || untilDate || vipOnly || atRiskOnly) && (
           <button onClick={clearFilters} className="text-caption text-secondary-text underline">
             Clear Filters
           </button>
@@ -183,6 +199,7 @@ export default function CustomersPage() {
           <thead>
             <tr className="border-b border-divider text-caption uppercase tracking-[0.05em] text-secondary-text">
               <th className="py-2 pr-4">Name</th>
+              <th className="py-2 pr-4">Segment</th>
               <th className="py-2 pr-4">Phone</th>
               <th className="py-2 pr-4">Email</th>
               <th className="py-2 pr-4">Orders</th>
@@ -196,13 +213,13 @@ export default function CustomersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-body-s text-secondary-text">
+                <td colSpan={10} className="py-8 text-center text-body-s text-secondary-text">
                   Loading...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-body-s text-secondary-text">
+                <td colSpan={10} className="py-8 text-center text-body-s text-secondary-text">
                   {customers.length === 0 ? "No customers yet." : "No customers match these filters."}
                 </td>
               </tr>
@@ -210,6 +227,20 @@ export default function CustomersPage() {
               filtered.map((c) => (
                 <tr key={c.phone} className="border-b border-divider">
                   <td className="py-3 font-sans text-body-s text-ink">{c.name || "—"}</td>
+                  <td className="py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {c.isVip && (
+                        <span className="border border-tan-gold px-1.5 py-0.5 text-micro uppercase tracking-[0.03em] text-tan-gold">
+                          VIP
+                        </span>
+                      )}
+                      {c.isAtRisk && (
+                        <span className="border border-paint-orange px-1.5 py-0.5 text-micro uppercase tracking-[0.03em] text-paint-orange">
+                          At Risk
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-3 text-caption text-secondary-text">{c.phone}</td>
                   <td className="py-3 text-caption text-secondary-text">{c.email || "—"}</td>
                   <td className="py-3 text-body-s text-ink">{c.orderCount}</td>

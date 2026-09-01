@@ -43,6 +43,8 @@ export const SETTINGS_KEYS = [
   "COGS_PER_CAP_RUPEES",
   "RAZORPAY_WEBHOOK_SECRET",
   "LOW_STOCK_THRESHOLD_UNITS",
+  "VIP_MIN_SPEND_RUPEES",
+  "VIP_MIN_ORDERS",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

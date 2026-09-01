@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { OrderStatusCell } from "@/components/admin/OrderStatusCell";
 import { ShipmentCell } from "@/components/admin/ShipmentCell";
 import { RefundActions } from "@/components/admin/RefundActions";
+import { OpsDigestCard } from "@/components/admin/OpsDigestCard";
 
 // This page reads live, frequently-changing order data and needs Supabase
 // env vars — never prerender it at build time.
@@ -72,6 +73,8 @@ export default async function AdminOrdersPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-6 pt-28 pb-24 md:px-12">
+      <OpsDigestCard />
+
       <div className="flex items-center justify-between">
         <h1 className="mt-2 font-display text-heading-l uppercase text-ink">
           Orders ({orders?.length ?? 0})

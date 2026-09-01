@@ -71,6 +71,8 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "REFERRAL_DISCOUNT_RUPEES", label: "Referral Discount (₹)", hint: "Flat discount a new customer gets on their first order when they check out with someone's referral code. Defaults to ₹200 if unset." },
       { key: "REFERRAL_REWARD_MILES", label: "Referral Reward (Miles)", hint: "Miles credited to the referrer once the referred order is placed. Defaults to 500 (= ₹200 at the current redemption rate) if unset." },
       { key: "WINBACK_AFTER_DAYS", label: "Win-Back Nudge After (Days)", hint: "How many days since a customer's last order before they get a \"we miss you\" nudge — repeats on the same interval if they still haven't ordered again. Defaults to 60 if unset." },
+      { key: "VIP_MIN_SPEND_RUPEES", label: "VIP Threshold — Total Spent (₹)", hint: "A customer is flagged VIP on /admin/customers once their lifetime spend crosses this. Defaults to ₹5,000 if unset." },
+      { key: "VIP_MIN_ORDERS", label: "VIP Threshold — Order Count", hint: "A customer is also flagged VIP once they've placed this many orders, regardless of spend. Defaults to 3 if unset." },
     ],
   },
   {

@@ -9,8 +9,17 @@ function normalizePhone(raw: string | null | undefined) {
 export async function GET() {
   try {
     const supabase = getSupabaseServerClient();
-    const milesPerCapSetting = await getSetting("MILES_PER_CAP");
+    const [milesPerCapSetting, vipSpendSetting, vipOrdersSetting, winbackDaysSetting] = await Promise.all([
+      getSetting("MILES_PER_CAP"),
+      getSetting("VIP_MIN_SPEND_RUPEES"),
+      getSetting("VIP_MIN_ORDERS"),
+      getSetting("WINBACK_AFTER_DAYS"),
+    ]);
     const milesPerCap = milesPerCapSetting ? Number(milesPerCapSetting) : 250;
+    const vipMinSpend = vipSpendSetting ? Number(vipSpendSetting) : 5000;
+    const vipMinOrders = vipOrdersSetting ? Number(vipOrdersSetting) : 3;
+    const atRiskAfterDays = winbackDaysSetting ? Number(winbackDaysSetting) : 60;
+    const atRiskCutoff = Date.now() - atRiskAfterDays * 24 * 60 * 60 * 1000;
 
     const [{ data: orders, error }, { data: imported }] = await Promise.all([
       supabase
@@ -117,7 +126,13 @@ export async function GET() {
     }
 
     const customers = [...byPhone.values()]
-      .map((c) => ({ ...c, miles: c.capsBought * milesPerCap }))
+      .map((c) => {
+        const isVip = c.totalSpent >= vipMinSpend || c.orderCount >= vipMinOrders;
+        // A customer with no real order yet (imported-only record) has no
+        // lastOrderAt to judge — never flag them at-risk off an empty date.
+        const isAtRisk = !!c.lastOrderAt && new Date(c.lastOrderAt).getTime() < atRiskCutoff;
+        return { ...c, miles: c.capsBought * milesPerCap, isVip, isAtRisk };
+      })
       .sort((a, b) => b.totalSpent - a.totalSpent);
 
     return NextResponse.json({ customers, milesPerCap });
