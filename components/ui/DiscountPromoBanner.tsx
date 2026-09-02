@@ -14,8 +14,11 @@ export function DiscountPromoBanner({ className = "" }: { className?: string }) 
   if (!rule) return null;
 
   return (
-    <p className={`text-caption uppercase tracking-[0.05em] text-tan-gold ${className}`}>
-      {describeDiscountRule(rule)} — Applied Automatically At Checkout
-    </p>
+    <div className={`inline-block border border-tan-gold bg-tan-gold/10 px-4 py-2 ${className}`}>
+      <p className="font-sans text-body-s font-bold uppercase tracking-[0.05em] text-tan-gold">
+        {describeDiscountRule(rule)}
+        <span className="font-normal normal-case text-secondary-text"> — applied automatically at checkout</span>
+      </p>
+    </div>
   );
 }

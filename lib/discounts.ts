@@ -8,15 +8,20 @@ export type DiscountRule = {
 /**
  * A short, shopper-facing line for the active rule — used everywhere the
  * offer needs to be announced (homepage, product pages, cart) before the
- * per-cart discount math in calculateDiscount ever runs. Special-cases the
- * 100%-off case into the more familiar "get 1 free" phrasing rather than
- * the technically-equivalent-but-clunkier "cheapest at 100% off".
+ * per-cart discount math in calculateDiscount ever runs. When the rule is
+ * a 100%-off, it's purely "Buy N, Get 1 Free" — no percent-off language
+ * mixed in, since that reads as a second, contradictory offer rather than
+ * a plainer description of the same one.
+ *
+ * buyQuantity is the calculation engine's GROUP size, not the paid count —
+ * "buy 3, get the 4th free" is buyQuantity 4 (a group of 4 units; the
+ * cheapest of the 4 is the free one) with discountPercent 100. Set up that
+ * exact rule in /admin/discounts as buy=4, cheapest-at=100% off.
  */
 export function describeDiscountRule(rule: DiscountRule): string {
-  const freeCount = 1;
-  const paidCount = rule.buyQuantity - freeCount;
+  const paidCount = rule.buyQuantity - 1;
   if (rule.discountPercent >= 100 && paidCount >= 1) {
-    return `Buy ${paidCount}, Get ${freeCount} Free`;
+    return `Buy ${paidCount}, Get 1 Free`;
   }
   return `Buy ${rule.buyQuantity}, Cheapest At ${rule.discountPercent}% Off`;
 }

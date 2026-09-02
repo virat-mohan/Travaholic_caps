@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
-import { calculateDiscount } from "@/lib/discounts";
+import { calculateDiscount, describeDiscountRule } from "@/lib/discounts";
 import { parseCartDeepLink } from "@/lib/cart-deep-link";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
@@ -138,7 +138,7 @@ export default function CartPage() {
 
             {discount > 0 && discountRule && (
               <div className="mt-2 flex items-center justify-between">
-                <p className="font-sans text-body-s text-tan-gold">{discountRule.name}</p>
+                <p className="font-sans text-body-s text-tan-gold">{describeDiscountRule(discountRule)}</p>
                 <p className="font-sans text-body-s text-tan-gold">
                   −₹{discount.toLocaleString("en-IN")}
                 </p>
