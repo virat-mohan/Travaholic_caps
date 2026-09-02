@@ -199,6 +199,31 @@ export default function CheckoutPage() {
     return () => clearTimeout(timeout);
   }, [form.pincode, unitCount]);
 
+  // Auto-fills city/state from the pincode so the shopper only has to type
+  // one thing instead of three — India Post's public lookup, no API key
+  // needed. Never overwrites a city/state the shopper already typed
+  // themselves (e.g. after switching back from a different pincode).
+  useEffect(() => {
+    if (!/^\d{6}$/.test(form.pincode)) return;
+    let cancelled = false;
+    fetch(`https://api.postalpincode.in/pincode/${form.pincode}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        const office = data?.[0]?.PostOffice?.[0];
+        if (!office) return;
+        setForm((prev) => ({
+          ...prev,
+          city: prev.city || office.District,
+          state: prev.state || office.State,
+        }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [form.pincode]);
+
   useEffect(() => {
     fetch("/api/checkout/config")
       .then((res) => res.json())
@@ -582,6 +607,7 @@ export default function CheckoutPage() {
                     </label>
                     <input
                       type="email"
+                      autoComplete="email"
                       value={identifyEmail}
                       onChange={(e) => setIdentifyEmail(e.target.value)}
                       placeholder="you@email.com"
@@ -739,6 +765,7 @@ export default function CheckoutPage() {
                 </label>
                 <input
                   required
+                  autoComplete="name"
                   value={form.name}
                   onChange={update("name")}
                   className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
@@ -752,6 +779,7 @@ export default function CheckoutPage() {
                 <input
                   required
                   type="tel"
+                  autoComplete="tel"
                   value={form.phone}
                   onChange={update("phone")}
                   className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
@@ -765,10 +793,27 @@ export default function CheckoutPage() {
                 <input
                   required
                   type="email"
+                  autoComplete="email"
                   value={form.email}
                   onChange={update("email")}
                   className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
+              </div>
+
+              <div>
+                <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                  Pincode
+                </label>
+                <input
+                  required
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  maxLength={6}
+                  value={form.pincode}
+                  onChange={update("pincode")}
+                  className="mt-1.5 w-full max-w-[200px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+                />
+                <p className="mt-1.5 text-caption text-secondary-text">We&apos;ll fill in your city and state automatically.</p>
               </div>
 
               <div>
@@ -778,6 +823,7 @@ export default function CheckoutPage() {
                 <textarea
                   required
                   rows={3}
+                  autoComplete="address-line1"
                   placeholder="House/flat, street, area"
                   value={form.address}
                   onChange={update("address")}
@@ -792,6 +838,7 @@ export default function CheckoutPage() {
                   </label>
                   <input
                     required
+                    autoComplete="address-level2"
                     value={form.city}
                     onChange={update("city")}
                     className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
@@ -803,23 +850,12 @@ export default function CheckoutPage() {
                   </label>
                   <input
                     required
+                    autoComplete="address-level1"
                     value={form.state}
                     onChange={update("state")}
                     className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                  Pincode
-                </label>
-                <input
-                  required
-                  value={form.pincode}
-                  onChange={update("pincode")}
-                  className="mt-1.5 w-full max-w-[200px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
-                />
               </div>
 
               <div className="border-t border-divider pt-6">
