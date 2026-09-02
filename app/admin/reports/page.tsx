@@ -34,6 +34,14 @@ export default function ReportsPage() {
   const [salesSignalResult, setSalesSignalResult] = useState<string | null>(null);
   const [digestRunning, setDigestRunning] = useState(false);
   const [digestResult, setDigestResult] = useState<string | null>(null);
+  const [reportFrom, setReportFrom] = useState("");
+  const [reportTo, setReportTo] = useState("");
+
+  const filteredReports = reports.filter((r) => {
+    if (reportFrom && r.week_end < reportFrom) return false;
+    if (reportTo && r.week_start > reportTo) return false;
+    return true;
+  });
 
   function load() {
     fetch("/api/admin/reports")
@@ -137,7 +145,7 @@ export default function ReportsPage() {
         "Abandoned Carts",
         "ROAS",
       ],
-      ...reports.map((r) => [
+      ...filteredReports.map((r) => [
         r.week_start,
         r.week_end,
         r.ad_spend,
@@ -223,7 +231,42 @@ export default function ReportsPage() {
         {digestResult && <p className="text-caption text-secondary-text">{digestResult}</p>}
       </div>
 
-      <div className="mt-10 overflow-x-auto">
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="font-display text-heading-s uppercase text-ink">Meta Ads</h2>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-caption text-secondary-text">
+            From
+            <input
+              type="date"
+              value={reportFrom}
+              onChange={(e) => setReportFrom(e.target.value)}
+              className="border border-divider bg-surface px-2 py-1 text-body-s text-ink"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-caption text-secondary-text">
+            To
+            <input
+              type="date"
+              value={reportTo}
+              onChange={(e) => setReportTo(e.target.value)}
+              className="border border-divider bg-surface px-2 py-1 text-body-s text-ink"
+            />
+          </label>
+          {(reportFrom || reportTo) && (
+            <button
+              onClick={() => {
+                setReportFrom("");
+                setReportTo("");
+              }}
+              className="text-micro text-secondary-text underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[900px] text-left">
           <thead>
             <tr className="border-b border-divider text-caption uppercase tracking-[0.05em] text-secondary-text">
@@ -246,14 +289,14 @@ export default function ReportsPage() {
                   Loading...
                 </td>
               </tr>
-            ) : reports.length === 0 ? (
+            ) : filteredReports.length === 0 ? (
               <tr>
                 <td colSpan={10} className="py-8 text-center text-body-s text-secondary-text">
-                  No reports yet — generate this week&apos;s.
+                  {reports.length === 0 ? "No reports yet — generate this week's." : "No reports in this date range."}
                 </td>
               </tr>
             ) : (
-              reports.map((r) => (
+              filteredReports.map((r) => (
                 <tr key={r.id} className="border-b border-divider">
                   <td className="py-3 text-caption text-secondary-text">
                     {r.week_start} → {r.week_end}

@@ -14,6 +14,7 @@ import { ViewContentTracker } from "@/components/tracking/ViewContentTracker";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { DiscountPromoBanner } from "@/components/ui/DiscountPromoBanner";
 import { RestockNotifyForm } from "@/components/chapter/RestockNotifyForm";
 import { getApprovedReviews, getReviewSummary } from "@/lib/reviews";
 import { seriesOrder } from "@/lib/series";
@@ -168,6 +169,8 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
                 {stockLabel === "out-of-stock" ? "Sold Out" : "Selling Fast"}
               </p>
             )}
+
+            <DiscountPromoBanner className="mt-4" />
 
             <div className="mt-10 flex flex-wrap gap-4">
               <AddToCartButton

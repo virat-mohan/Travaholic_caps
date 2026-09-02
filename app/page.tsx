@@ -1,6 +1,7 @@
 import { CollectionItem } from "@/components/collection/CollectionItem";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
+import { DiscountPromoBanner } from "@/components/ui/DiscountPromoBanner";
 import { getAllChapters } from "@/lib/chapters-dynamic";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 
@@ -32,9 +33,10 @@ export default async function Home() {
           <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
             Shop
           </p>
-          <h1 className="mb-8 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
+          <h1 className="mb-3 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
             The Collection.
           </h1>
+          <DiscountPromoBanner className="mb-8" />
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
             {collection.map((chapter) => (
               <CollectionItem

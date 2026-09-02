@@ -13,6 +13,15 @@ type Action = {
   ad_briefs: { headline: string } | null;
 };
 
+type Recommendation = { area: "ads" | "organic" | "whatsapp" | "traffic"; summary: string; detail: string };
+
+const AREA_LABEL: Record<Recommendation["area"], string> = {
+  ads: "Ads",
+  organic: "Organic / Instagram",
+  whatsapp: "WhatsApp",
+  traffic: "Site Traffic",
+};
+
 export default function AgentLogPage() {
   const [enabled, setEnabled] = useState(false);
   const [maxBudget, setMaxBudget] = useState(1000);
@@ -20,6 +29,8 @@ export default function AgentLogPage() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recsLoading, setRecsLoading] = useState(false);
 
   function load() {
     Promise.all([
@@ -35,6 +46,17 @@ export default function AgentLogPage() {
   }
 
   useEffect(load, []);
+
+  function loadRecommendations() {
+    setRecsLoading(true);
+    fetch("/api/admin/growth-recommendations")
+      .then((res) => res.json())
+      .then((data) => setRecommendations(data.recommendations ?? []))
+      .finally(() => setRecsLoading(false));
+  }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(loadRecommendations, []);
 
   async function toggleEnabled() {
     const next = !enabled;
@@ -109,7 +131,43 @@ export default function AgentLogPage() {
         {runResult && <p className="text-caption text-secondary-text">{runResult}</p>}
       </div>
 
-      <div className="mt-10">
+      <div className="mt-10 border-t border-divider pt-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="font-display text-heading-s uppercase text-ink">Recommendations</h2>
+          <button
+            onClick={loadRecommendations}
+            disabled={recsLoading}
+            className="border border-divider px-4 py-1.5 text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
+          >
+            {recsLoading ? "Checking..." : "Refresh"}
+          </button>
+        </div>
+        <p className="mt-2 max-w-xl text-body-s text-secondary-text">
+          A read across site traffic, ad spend, WhatsApp performance, and organic Instagram
+          engagement — advisory only, nothing here takes any action on its own.
+        </p>
+        {recsLoading ? (
+          <p className="mt-4 text-body-s text-secondary-text">Checking every channel...</p>
+        ) : recommendations.length === 0 ? (
+          <p className="mt-4 text-body-s text-secondary-text">
+            No standout signal right now — check back once there&apos;s more traffic/spend data.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {recommendations.map((r, i) => (
+              <div key={i} className="border-t border-divider pt-3">
+                <span className="text-micro uppercase tracking-[0.05em] text-tan-gold">
+                  {AREA_LABEL[r.area]}
+                </span>
+                <p className="mt-1 font-sans text-body-s font-bold text-ink">{r.summary}</p>
+                <p className="mt-1 text-caption text-secondary-text">{r.detail}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-10 border-t border-divider pt-6">
         <h2 className="font-display text-heading-s uppercase text-ink">Action Log</h2>
         {loading ? (
           <p className="mt-4 text-body-s text-secondary-text">Loading...</p>

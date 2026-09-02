@@ -69,6 +69,78 @@ export async function postToInstagramCarouselFeed(imageUrls: string[], caption: 
   return { postId: published.id as string };
 }
 
+export type InstagramPostPerformance = {
+  id: string;
+  caption: string | null;
+  permalink: string | null;
+  mediaType: string;
+  timestamp: string;
+  reach: number | null;
+  interactions: number | null;
+  engagementRate: number | null; // interactions / reach
+};
+
+/**
+ * Recent organic feed posts with their engagement, for surfacing "this one
+ * did well — worth boosting" recommendations. Metric names for Instagram
+ * media insights have shifted across Graph API versions (older accounts
+ * report "engagement", the current field is "total_interactions") — this
+ * requests both and takes whichever comes back, so it degrades gracefully
+ * instead of erroring outright if one metric name gets rejected. Skips any
+ * post insights fetch that fails rather than aborting the whole list.
+ */
+export async function getRecentPostPerformance(limit = 12): Promise<InstagramPostPerformance[]> {
+  const { accessToken, igUserId } = await getInstagramAuth();
+
+  const mediaRes = await fetch(
+    `https://graph.facebook.com/${GRAPH_VERSION}/${igUserId}/media?` +
+      new URLSearchParams({
+        fields: "id,caption,media_type,permalink,timestamp",
+        limit: String(limit),
+        access_token: accessToken,
+      })
+  );
+  const mediaData = await mediaRes.json();
+  if (!mediaRes.ok) throw new Error(`Instagram Graph API error: ${JSON.stringify(mediaData)}`);
+
+  const posts: InstagramPostPerformance[] = [];
+  for (const item of mediaData.data ?? []) {
+    let reach: number | null = null;
+    let interactions: number | null = null;
+    try {
+      const insightsRes = await fetch(
+        `https://graph.facebook.com/${GRAPH_VERSION}/${item.id}/insights?` +
+          new URLSearchParams({ metric: "reach,total_interactions,engagement", access_token: accessToken })
+      );
+      const insightsData = await insightsRes.json();
+      if (insightsRes.ok) {
+        for (const metric of insightsData.data ?? []) {
+          const value = metric.values?.[0]?.value ?? metric.total_value?.value;
+          if (metric.name === "reach") reach = value ?? null;
+          if (metric.name === "total_interactions" || metric.name === "engagement") {
+            interactions = value ?? interactions;
+          }
+        }
+      }
+    } catch {
+      // Best-effort — a post we can't get insights for still shows up, just without numbers.
+    }
+
+    posts.push({
+      id: item.id,
+      caption: item.caption ?? null,
+      permalink: item.permalink ?? null,
+      mediaType: item.media_type,
+      timestamp: item.timestamp,
+      reach,
+      interactions,
+      engagementRate: reach && interactions ? interactions / reach : null,
+    });
+  }
+
+  return posts;
+}
+
 /**
  * Posts a photo to the connected Instagram Business account's Story feed.
  * Requires the Instagram account to be a Business/Creator account connected
