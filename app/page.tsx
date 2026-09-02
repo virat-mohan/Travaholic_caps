@@ -30,7 +30,17 @@ export default async function Home() {
     group.push(chapter);
     bySeries.set(chapter.series, group);
   }
-  const collection = [...bySeries.values()].flat();
+  const grouped = [...bySeries.values()].flat();
+
+  // Explicit top-row pick — the automatic series grouping put City Slicker
+  // right next to Travaholic Black, reading as "3 black caps up top" since
+  // both City Slicker chapters lean dark. Pull these four to the front in
+  // this exact order; everything else keeps following the grouped order.
+  const featuredSlugs = ["travaholic-orange", "travaholic-black", "travaholic-snow", "sunshine"];
+  const featured = featuredSlugs
+    .map((slug) => grouped.find((c) => c.slug === slug))
+    .filter((c): c is (typeof grouped)[number] => !!c);
+  const collection = [...featured, ...grouped.filter((c) => !featuredSlugs.includes(c.slug))];
   const inventory = await getInventoryMap();
 
   // Trending Now — whichever chapters got the most product-page views over

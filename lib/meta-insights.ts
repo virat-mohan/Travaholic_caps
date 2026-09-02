@@ -41,6 +41,37 @@ export async function getAccountInsights(since: string, until: string): Promise<
   }
 }
 
+export type DailyAdInsights = { date: string; spend: number; clicks: number; impressions: number };
+
+/** Same account-level spend/clicks/impressions as getAccountInsights, but one row per day (time_increment=1) — for a day-wise breakdown instead of a single summed total. */
+export async function getAccountInsightsDaily(since: string, until: string): Promise<DailyAdInsights[]> {
+  const auth = await getMetaAuth();
+  if (!auth) return [];
+
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/${auth.account}/insights?` +
+        new URLSearchParams({
+          fields: "spend,clicks,impressions",
+          time_range: JSON.stringify({ since, until }),
+          time_increment: "1",
+          access_token: auth.accessToken,
+        })
+    );
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return (data.data ?? []).map((row: { date_start: string; spend?: string; clicks?: string; impressions?: string }) => ({
+      date: row.date_start,
+      spend: Math.round(Number(row.spend ?? 0)),
+      clicks: Number(row.clicks ?? 0),
+      impressions: Number(row.impressions ?? 0),
+    }));
+  } catch (err) {
+    console.error("Failed to fetch Meta daily account insights", err);
+    return [];
+  }
+}
+
 /** Campaign-level insights for a single ad_brief's launched campaign — used by the ad agent. */
 export async function getCampaignInsights(campaignId: string, days: number): Promise<AdInsights> {
   const auth = await getMetaAuth();

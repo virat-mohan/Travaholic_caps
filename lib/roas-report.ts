@@ -1,5 +1,77 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { getAccountInsights } from "@/lib/meta-insights";
+import { getAccountInsights, getAccountInsightsDaily } from "@/lib/meta-insights";
+
+export type DailyAdRow = {
+  date: string;
+  adSpend: number;
+  clicks: number;
+  impressions: number;
+  revenue: number;
+  orders: number;
+  roas: number | null;
+};
+
+/**
+ * Day-by-day ad spend/revenue for the Growth Reports page, plus a totals
+ * row. The totals ROAS is total revenue / total spend across the whole
+ * range — never an average of each day's individual ROAS, which would
+ * over-weight low-spend days and give a misleading blended number.
+ */
+export async function computeDailyAdReport(sinceIso: string, untilIso: string) {
+  const supabase = getSupabaseServerClient();
+  const sinceDate = sinceIso.slice(0, 10);
+  // Meta's time_range `until` is inclusive of that day — back it off by a
+  // day from our exclusive-upper-bound convention so it lines up with the
+  // orders query below instead of pulling in one extra day of ad spend.
+  const untilDate = new Date(new Date(untilIso).getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const [dailyInsights, { data: orders }] = await Promise.all([
+    getAccountInsightsDaily(sinceDate, untilDate),
+    supabase.from("orders").select("total, created_at").gte("created_at", sinceIso).lt("created_at", untilIso).neq("status", "cancelled"),
+  ]);
+
+  const revenueByDay = new Map<string, { revenue: number; orders: number }>();
+  for (const o of orders ?? []) {
+    const day = o.created_at.slice(0, 10);
+    const row = revenueByDay.get(day) ?? { revenue: 0, orders: 0 };
+    row.revenue += o.total ?? 0;
+    row.orders += 1;
+    revenueByDay.set(day, row);
+  }
+
+  const allDates = new Set([...dailyInsights.map((d) => d.date), ...revenueByDay.keys()]);
+  const days: DailyAdRow[] = [...allDates]
+    .sort()
+    .map((date) => {
+      const insight = dailyInsights.find((d) => d.date === date);
+      const rev = revenueByDay.get(date);
+      const adSpend = insight?.spend ?? 0;
+      const revenue = rev?.revenue ?? 0;
+      return {
+        date,
+        adSpend,
+        clicks: insight?.clicks ?? 0,
+        impressions: insight?.impressions ?? 0,
+        revenue,
+        orders: rev?.orders ?? 0,
+        roas: adSpend > 0 ? Number((revenue / adSpend).toFixed(2)) : null,
+      };
+    });
+
+  const totalAdSpend = days.reduce((sum, d) => sum + d.adSpend, 0);
+  const totalRevenue = days.reduce((sum, d) => sum + d.revenue, 0);
+  const totals: DailyAdRow = {
+    date: "Total",
+    adSpend: totalAdSpend,
+    clicks: days.reduce((sum, d) => sum + d.clicks, 0),
+    impressions: days.reduce((sum, d) => sum + d.impressions, 0),
+    revenue: totalRevenue,
+    orders: days.reduce((sum, d) => sum + d.orders, 0),
+    roas: totalAdSpend > 0 ? Number((totalRevenue / totalAdSpend).toFixed(2)) : null,
+  };
+
+  return { days, totals };
+}
 
 /**
  * Revenue truly attributable to one launched campaign — orders whose

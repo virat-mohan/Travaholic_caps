@@ -139,27 +139,25 @@ export default function CheckoutPage() {
     return () => clearTimeout(timeout);
   }, [normalizedReferralCode, form.phone]);
 
-  // Live coupon-code validation, same debounced-preview pattern as referral codes.
-  useEffect(() => {
+  // Explicit "Apply" action rather than live-as-you-type (unlike the
+  // referral code above) — checked once, on click, not on every keystroke.
+  function applyCoupon() {
     const code = normalizedCouponCode;
-    const timeout = setTimeout(() => {
-      if (!code) {
-        setCouponPreview(null);
-        return;
-      }
-      setCouponChecking(true);
-      fetch("/api/checkout/coupon-preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ couponCode: code, subtotal }),
-      })
-        .then((res) => res.json())
-        .then((data) => setCouponPreview({ checked: code, valid: !!data.valid, discountRupees: data.discountRupees ?? 0 }))
-        .catch(() => setCouponPreview({ checked: code, valid: false, discountRupees: 0 }))
-        .finally(() => setCouponChecking(false));
-    }, 500);
-    return () => clearTimeout(timeout);
-  }, [normalizedCouponCode, subtotal]);
+    if (!code) {
+      setCouponPreview(null);
+      return;
+    }
+    setCouponChecking(true);
+    fetch("/api/checkout/coupon-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ couponCode: code, subtotal }),
+    })
+      .then((res) => res.json())
+      .then((data) => setCouponPreview({ checked: code, valid: !!data.valid, discountRupees: data.discountRupees ?? 0 }))
+      .catch(() => setCouponPreview({ checked: code, valid: false, discountRupees: 0 }))
+      .finally(() => setCouponChecking(false));
+  }
 
   // Live pass-through shipping quote from Shiprocket, by pincode — a
   // display-only preview; the actual charge is recomputed server-side from
@@ -733,31 +731,6 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            <div className="mt-4">
-              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                Coupon Code (Optional)
-              </label>
-              <input
-                value={couponCodeInput}
-                onChange={(e) => setCouponCodeInput(e.target.value)}
-                placeholder="Have a coupon? Enter it here"
-                className="mt-1.5 w-full max-w-[280px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
-              />
-              {normalizedCouponCode && (
-                <p className="mt-2 text-caption">
-                  {couponChecking ? (
-                    <span className="text-secondary-text">Checking code...</span>
-                  ) : couponPreview?.checked === normalizedCouponCode && couponPreview.valid ? (
-                    <span className="text-tan-gold">
-                      Code applied — ₹{couponDiscount.toLocaleString("en-IN")} off
-                    </span>
-                  ) : couponPreview?.checked === normalizedCouponCode ? (
-                    <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
-                  ) : null}
-                </p>
-              )}
-            </div>
-
             <form onSubmit={handleSubmit} className="mt-10 space-y-4">
               <div>
                 <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
@@ -910,6 +883,32 @@ export default function CheckoutPage() {
                       : `Pay ₹${total.toLocaleString("en-IN")}`
                     : "Place Order via WhatsApp"}
               </button>
+
+              <div className="flex items-center gap-1.5 pt-1">
+                <input
+                  value={couponCodeInput}
+                  onChange={(e) => setCouponCodeInput(e.target.value)}
+                  placeholder="Coupon code"
+                  className="min-w-0 flex-1 border border-divider bg-surface px-2 py-1 font-sans text-micro uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
+                />
+                <button
+                  type="button"
+                  onClick={applyCoupon}
+                  disabled={!normalizedCouponCode || couponChecking}
+                  className="shrink-0 border border-divider px-2 py-1 font-sans text-micro uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                >
+                  {couponChecking ? "..." : "Apply"}
+                </button>
+              </div>
+              {normalizedCouponCode && couponPreview?.checked === normalizedCouponCode && (
+                <p className="text-micro">
+                  {couponPreview.valid ? (
+                    <span className="text-tan-gold">Code applied — ₹{couponDiscount.toLocaleString("en-IN")} off</span>
+                  ) : (
+                    <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
+                  )}
+                </p>
+              )}
             </form>
           </>
         )}

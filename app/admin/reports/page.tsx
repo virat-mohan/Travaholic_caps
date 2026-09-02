@@ -21,6 +21,16 @@ type Report = {
 
 type WhatsAppStats = { sent: number; delivered: number; read: number; converted: number };
 
+type DailyRow = {
+  date: string;
+  adSpend: number;
+  clicks: number;
+  impressions: number;
+  revenue: number;
+  orders: number;
+  roas: number | null;
+};
+
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [whatsapp, setWhatsapp] = useState<Record<string, WhatsAppStats>>({});
@@ -36,12 +46,32 @@ export default function ReportsPage() {
   const [digestResult, setDigestResult] = useState<string | null>(null);
   const [reportFrom, setReportFrom] = useState("");
   const [reportTo, setReportTo] = useState("");
+  const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<DailyRow | null>(null);
+  const [dailyLoading, setDailyLoading] = useState(false);
 
   const filteredReports = reports.filter((r) => {
     if (reportFrom && r.week_end < reportFrom) return false;
     if (reportTo && r.week_start > reportTo) return false;
     return true;
   });
+
+  function loadDaily() {
+    setDailyLoading(true);
+    const params = new URLSearchParams();
+    if (reportFrom) params.set("from", reportFrom);
+    if (reportTo) params.set("to", reportTo);
+    fetch(`/api/admin/reports/daily?${params}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setDailyRows(data.days ?? []);
+        setDailyTotals(data.totals ?? null);
+      })
+      .finally(() => setDailyLoading(false));
+  }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(loadDaily, [reportFrom, reportTo]);
 
   function load() {
     fetch("/api/admin/reports")
@@ -317,6 +347,71 @@ export default function ReportsPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-16">
+        <h2 className="font-display text-heading-s uppercase text-ink">Meta Ads — Day By Day</h2>
+        <p className="mt-2 max-w-lg text-body-s text-secondary-text">
+          Uses the same From/To range as the table above (defaults to the last 7 days). Total ROAS
+          is total revenue ÷ total spend across the range — not an average of each day&apos;s ROAS,
+          which would over-weight low-spend days.
+        </p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[700px] text-left">
+            <thead>
+              <tr className="border-b border-divider text-caption uppercase tracking-[0.05em] text-secondary-text">
+                <th className="py-2 pr-4">Date</th>
+                <th className="py-2 pr-4">Spend</th>
+                <th className="py-2 pr-4">Clicks</th>
+                <th className="py-2 pr-4">Orders</th>
+                <th className="py-2 pr-4">Revenue</th>
+                <th className="py-2 pr-4">ROAS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-body-s text-secondary-text">
+                    Loading...
+                  </td>
+                </tr>
+              ) : dailyRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-body-s text-secondary-text">
+                    No ad spend or revenue in this range.
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {dailyRows.map((d) => (
+                    <tr key={d.date} className="border-b border-divider">
+                      <td className="py-3 text-caption text-secondary-text">{d.date}</td>
+                      <td className="py-3 text-body-s text-ink">₹{d.adSpend.toLocaleString("en-IN")}</td>
+                      <td className="py-3 text-body-s text-ink">{d.clicks}</td>
+                      <td className="py-3 text-body-s text-ink">{d.orders}</td>
+                      <td className="py-3 text-body-s text-ink">₹{d.revenue.toLocaleString("en-IN")}</td>
+                      <td className="py-3 font-display text-body-s text-tan-gold">
+                        {d.roas != null ? `${d.roas}x` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                  {dailyTotals && (
+                    <tr className="border-t-2 border-ink font-bold">
+                      <td className="py-3 text-body-s text-ink">{dailyTotals.date}</td>
+                      <td className="py-3 text-body-s text-ink">₹{dailyTotals.adSpend.toLocaleString("en-IN")}</td>
+                      <td className="py-3 text-body-s text-ink">{dailyTotals.clicks}</td>
+                      <td className="py-3 text-body-s text-ink">{dailyTotals.orders}</td>
+                      <td className="py-3 text-body-s text-ink">₹{dailyTotals.revenue.toLocaleString("en-IN")}</td>
+                      <td className="py-3 font-display text-body-s text-tan-gold">
+                        {dailyTotals.roas != null ? `${dailyTotals.roas}x` : "—"}
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="mt-16">

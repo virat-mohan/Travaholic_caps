@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getSetting } from "@/lib/settings";
-import { sendAbandonedCartWhatsApp } from "@/lib/whatsapp-notify";
-import { sendAbandonedCartEmail } from "@/lib/email";
+import { retargetOneSession } from "@/lib/abandoned-cart";
 
 const STALE_AFTER_MINUTES = 45;
 
@@ -41,30 +40,8 @@ export async function GET(request: Request) {
     let retargeted = 0;
     for (const session of staleSessions ?? []) {
       if (session.retargeted_at) continue;
-
-      const [whatsappSent, emailSent] = await Promise.all([
-        session.customer_phone
-          ? sendAbandonedCartWhatsApp({
-              id: session.id,
-              customer_name: session.customer_name,
-              customer_phone: session.customer_phone,
-              items: session.items ?? [],
-            })
-          : false,
-        sendAbandonedCartEmail({
-          customer_name: session.customer_name,
-          customer_email: session.customer_email,
-          items: session.items ?? [],
-        }),
-      ]);
-
-      if (whatsappSent || emailSent) {
-        await supabase
-          .from("cart_sessions")
-          .update({ retargeted_at: new Date().toISOString() })
-          .eq("id", session.id);
-        retargeted++;
-      }
+      const { whatsappSent, emailSent } = await retargetOneSession(session);
+      if (whatsappSent || emailSent) retargeted++;
     }
 
     return NextResponse.json({ abandoned: staleSessions?.length ?? 0, retargeted });

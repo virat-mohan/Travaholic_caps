@@ -21,7 +21,7 @@ export type DiscountRule = {
 export function describeDiscountRule(rule: DiscountRule): string {
   const paidCount = rule.buyQuantity - 1;
   if (rule.discountPercent >= 100 && paidCount >= 1) {
-    return `Buy ${paidCount}, Get 1 Free`;
+    return `Buy ${paidCount} Get 1 Free`;
   }
   return `Buy ${rule.buyQuantity}, Cheapest At ${rule.discountPercent}% Off`;
 }

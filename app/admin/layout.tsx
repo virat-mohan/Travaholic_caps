@@ -24,6 +24,7 @@ const NAV_SECTIONS = [
       { href: "/admin/marketing-assets", label: "Marketing Assets" },
       { href: "/admin/brand-profile", label: "Brand Profile" },
       { href: "/admin/reports", label: "Growth Reports" },
+      { href: "/admin/abandoned-carts", label: "Abandoned Carts" },
       { href: "/admin/agent-log", label: "Ad Agent" },
     ],
   },
