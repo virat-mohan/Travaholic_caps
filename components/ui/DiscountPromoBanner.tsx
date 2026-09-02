@@ -14,10 +14,12 @@ export function DiscountPromoBanner({ className = "" }: { className?: string }) 
   if (!rule) return null;
 
   return (
-    <div className={`inline-block border border-tan-gold bg-tan-gold px-4 py-2 ${className}`}>
-      <p className="font-sans text-body-s font-bold uppercase tracking-[0.05em] text-ink">
+    <div
+      className={`inline-flex max-w-full items-center justify-center whitespace-nowrap rounded-full border border-tan-gold bg-tan-gold px-5 py-2 shadow-[0_4px_14px_rgba(0,0,0,0.15)] ${className}`}
+    >
+      <p className="overflow-hidden text-ellipsis font-sans text-micro font-bold uppercase tracking-[0.06em] text-ink md:text-caption">
         {describeDiscountRule(rule)}
-        <span className="font-normal normal-case"> — applied automatically at checkout</span>
+        <span className="ml-1.5 font-normal normal-case text-ink/70"> — applied automatically at checkout</span>
       </p>
     </div>
   );

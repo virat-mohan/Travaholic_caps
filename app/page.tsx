@@ -65,6 +65,10 @@ export default async function Home() {
   return (
     <>
       <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
+        <div className="flex justify-center pt-6 md:pt-8">
+          <DiscountPromoBanner />
+        </div>
+
         {trending.length > 0 && (
           <section className="border-b border-divider pb-16 pt-8 md:pt-12">
             <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
@@ -92,7 +96,6 @@ export default async function Home() {
           <h1 className="mb-3 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
             The Collection.
           </h1>
-          <DiscountPromoBanner className="mb-8" />
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
             {collection.map((chapter) => (
               <CollectionItem

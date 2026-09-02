@@ -862,3 +862,9 @@ create index if not exists ad_briefs_queue_idx on ad_briefs (queue_status, sched
 -- primary contact channel and email is optional, so this can no longer be
 -- not-null.
 alter table orders alter column customer_email drop not null;
+
+-- Real per-message failure reason from MSG91's delivery-status webhook (e.g.
+-- "404 Invalid Flow") — MSG91's initial API response only ever says
+-- "queued successfully" regardless of whether the Flow/template is actually
+-- valid, so this is the only place a genuine failure reason ever surfaces.
+alter table whatsapp_messages add column if not exists error_detail text;
