@@ -227,7 +227,7 @@ export async function sendReviewRequestEmail(
 ) {
   const brand = await getBrandProfile();
   const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email.png`;
-  const reviewUrl = `${brand.siteUrl.replace(/\/$/, "")}/review/${orderId}`;
+  const reviewUrl = "https://g.page/r/CbvWdBDo1oxlEBM/review";
   const returnUrl = `${brand.siteUrl.replace(/\/$/, "")}/return/${orderId}`;
   const itemsLine = chapterNames.join(", ");
 
