@@ -2,7 +2,7 @@ import { chapters as staticChapters } from "@/lib/chapters";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import type { Chapter } from "@/types/chapter";
 
-type Override = { primary_image: string | null; price: number | null; story: string | null };
+type Override = { primary_image: string | null; price: number | null; story: string | null; images: string[] | null };
 
 /**
  * Static 16 + anything added from /admin/add-chapter, with per-field edits
@@ -18,7 +18,7 @@ export async function getAllChapters(): Promise<Chapter[]> {
 
     const [{ data: dynamicRows }, { data: overrideRows }] = await Promise.all([
       supabase.from("dynamic_chapters").select("*"),
-      supabase.from("chapter_hero_overrides").select("chapter_slug, primary_image, price, story"),
+      supabase.from("chapter_hero_overrides").select("chapter_slug, primary_image, price, story, images"),
     ]);
 
     dynamicChapters = (dynamicRows ?? []).map((row) => ({
@@ -39,7 +39,7 @@ export async function getAllChapters(): Promise<Chapter[]> {
     overrides = Object.fromEntries(
       (overrideRows ?? []).map((r) => [
         r.chapter_slug,
-        { primary_image: r.primary_image, price: r.price, story: r.story },
+        { primary_image: r.primary_image, price: r.price, story: r.story, images: r.images },
       ])
     );
   } catch (err) {
@@ -61,6 +61,7 @@ export async function getAllChapters(): Promise<Chapter[]> {
       sideImage: o.primary_image ?? c.sideImage,
       price: o.price ?? c.price,
       story: o.story ?? c.story,
+      images: o.images && o.images.length > 0 ? o.images : c.images,
     };
   });
 }

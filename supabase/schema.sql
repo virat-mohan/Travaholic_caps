@@ -271,6 +271,11 @@ create table if not exists whatsapp_conversations (
   created_at timestamptz not null default now()
 );
 
+-- Lets /admin/edit-chapter reorder a chapter's gallery images (the order
+-- Product360Viewer cycles through on the chapter page) without touching
+-- code. Null/empty means "use the static default order from lib/chapters.ts".
+alter table chapter_hero_overrides add column if not exists images text[];
+
 create table if not exists whatsapp_conversation_messages (
   id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references whatsapp_conversations (id),

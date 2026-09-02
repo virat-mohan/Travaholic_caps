@@ -16,6 +16,8 @@ export default function EditChapterPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [orderSaved, setOrderSaved] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/all-chapters")
@@ -28,8 +30,10 @@ export default function EditChapterPage() {
 
   useEffect(() => {
     if (!slug) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setSaved(false);
+    setOrderSaved(false);
     fetch(`/api/admin/chapter-images?slug=${encodeURIComponent(slug)}`)
       .then((res) => res.json())
       .then((data) => {
@@ -48,6 +52,32 @@ export default function EditChapterPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chapterSlug: slug, primaryImage: value }),
     });
+  }
+
+  function moveImage(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= images.length) return;
+    setOrderSaved(false);
+    setImages((prev) => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  async function saveOrder() {
+    setSavingOrder(true);
+    setOrderSaved(false);
+    try {
+      await fetch("/api/admin/hero-override", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chapterSlug: slug, images: images.map((img) => img.value) }),
+      });
+      setOrderSaved(true);
+    } finally {
+      setSavingOrder(false);
+    }
   }
 
   async function saveDetails(e: React.FormEvent) {
@@ -124,7 +154,7 @@ export default function EditChapterPage() {
 
           <div className="mt-12">
             <p className="font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-              Hero Image — the first photo shown on cards, the homepage, and this Chapter's page
+              Hero Image — the first photo shown on cards, the homepage, and this Chapter&apos;s page
             </p>
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
               {images.map((img) => {
@@ -150,6 +180,51 @@ export default function EditChapterPage() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="mt-12">
+            <div className="flex items-center justify-between gap-4">
+              <p className="font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                Gallery Order — the order photos cycle through on this Chapter&apos;s page
+              </p>
+              <button
+                onClick={saveOrder}
+                disabled={savingOrder}
+                className="shrink-0 border border-ink px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
+              >
+                {orderSaved ? "Saved ✓" : savingOrder ? "Saving..." : "Save Order"}
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+              {images.map((img, i) => (
+                <div key={img.value}>
+                  <div className="relative aspect-square overflow-hidden bg-surface-alt">
+                    <Image src={img.display} alt="" fill sizes="200px" className="object-cover object-bottom" />
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-micro text-secondary-text">#{i + 1}</span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => moveImage(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Move earlier"
+                        className="border border-divider px-1.5 text-caption text-ink hover:border-ink disabled:opacity-30"
+                      >
+                        ←
+                      </button>
+                      <button
+                        onClick={() => moveImage(i, 1)}
+                        disabled={i === images.length - 1}
+                        aria-label="Move later"
+                        className="border border-divider px-1.5 text-caption text-ink hover:border-ink disabled:opacity-30"
+                      >
+                        →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </>
