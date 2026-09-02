@@ -1,6 +1,6 @@
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { sendMsg91Flow } from "@/lib/msg91";
+import { sendMsg91WhatsAppFlow } from "@/lib/msg91";
 import { generateAndUploadOrderCard } from "@/lib/order-card";
 
 type OrderForWhatsApp = { id: string; customer_name: string; customer_phone: string; total: number };
@@ -39,7 +39,7 @@ async function sendTemplate(
   logAgainst: { cartSessionId?: string; orderId?: string },
   mediaUrl?: string
 ) {
-  const result = await sendMsg91Flow(msg91TemplateId, phone, variables, mediaUrl);
+  const result = await sendMsg91WhatsAppFlow(msg91TemplateId, phone, variables, mediaUrl);
   if (result.sent) {
     await logSend(result.messageId, templateName, logAgainst);
     return true;
