@@ -4,6 +4,13 @@ import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { DiscountPromoBanner } from "@/components/ui/DiscountPromoBanner";
 import { getAllChapters } from "@/lib/chapters-dynamic";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
+import { computeWebsiteAnalytics } from "@/lib/website-analytics";
+
+// Without this, "/" is fully static — baked once at build/deploy time — so
+// the Trending strip below would never actually update day to day the way
+// it's meant to. An hour is fresh enough to track daily traffic shifts
+// without regenerating the page on every single request.
+export const revalidate = 3600;
 
 const pillars = [
   { title: "Premium Materials", copy: "Chosen for how they age, not just how they photograph." },
@@ -26,9 +33,48 @@ export default async function Home() {
   const collection = [...bySeries.values()].flat();
   const inventory = await getInventoryMap();
 
+  // Trending Now — whichever chapters got the most product-page views over
+  // the last 7 days, first-party (tracking_events), refreshed by the
+  // revalidate above rather than anything manual. A rolling week instead of
+  // a single day, since daily view counts are still low enough that one bad
+  // (or one lucky) day would swing this around too much to be useful.
+  let trending: typeof collection = [];
+  try {
+    const analytics = await computeWebsiteAnalytics(
+      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      new Date().toISOString()
+    );
+    trending = analytics.topViewedChapters
+      .map((v) => collection.find((c) => c.slug === v.slug))
+      .filter((c): c is (typeof collection)[number] => !!c)
+      .slice(0, 4);
+  } catch (err) {
+    console.error("Homepage: failed to compute trending chapters", err);
+  }
+
   return (
     <>
       <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
+        {trending.length > 0 && (
+          <section className="border-b border-divider pb-16 pt-8 md:pt-12">
+            <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
+              Trending Now
+            </p>
+            <h2 className="mb-8 font-display text-heading-l uppercase leading-[0.95] text-ink">
+              Most Viewed This Week.
+            </h2>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+              {trending.map((chapter) => (
+                <CollectionItem
+                  key={chapter.slug}
+                  chapter={chapter}
+                  stockLabel={stockLabelFor(inventory[chapter.slug])}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="pb-24 pt-8 md:pb-30 md:pt-12">
           <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
             Shop

@@ -57,7 +57,7 @@ export type WebsiteAnalytics = {
   averageOrderValue: number;
   revenuePerSession: number;
   topPages: { path: string; views: number }[];
-  topViewedChapters: { name: string; views: number }[];
+  topViewedChapters: { slug: string; name: string; views: number }[];
   topAddedChapters: { name: string; adds: number }[];
   topReferrers: { host: string; sessions: number }[];
   trafficSources: { source: string; sessions: number }[];
@@ -143,7 +143,7 @@ export async function computeWebsiteAnalytics(sinceIso: string, untilIso: string
   }
 
   const pageCounts = new Map<string, number>();
-  const viewedChapterCounts = new Map<string, number>();
+  const viewedChapterCounts = new Map<string, number>(); // keyed by chapter_slug
   const addedChapterCounts = new Map<string, number>();
   const referrerCounts = new Map<string, Set<string>>();
   const dailyMap = new Map<string, { sessions: Set<string>; addToCarts: number; purchases: number }>();
@@ -152,9 +152,8 @@ export async function computeWebsiteAnalytics(sinceIso: string, untilIso: string
     if (ev.event_name === "PageView" && ev.path) {
       pageCounts.set(ev.path, (pageCounts.get(ev.path) ?? 0) + 1);
     }
-    if (ev.event_name === "ViewContent") {
-      const name = chapterName(ev.chapter_slug);
-      viewedChapterCounts.set(name, (viewedChapterCounts.get(name) ?? 0) + 1);
+    if (ev.event_name === "ViewContent" && ev.chapter_slug) {
+      viewedChapterCounts.set(ev.chapter_slug, (viewedChapterCounts.get(ev.chapter_slug) ?? 0) + 1);
     }
     if (ev.event_name === "AddToCart") {
       const name = chapterName(ev.chapter_slug);
@@ -200,7 +199,7 @@ export async function computeWebsiteAnalytics(sinceIso: string, untilIso: string
       .sort((a, b) => b.views - a.views)
       .slice(0, 10),
     topViewedChapters: [...viewedChapterCounts.entries()]
-      .map(([name, views]) => ({ name, views }))
+      .map(([slug, views]) => ({ slug, name: chapterName(slug), views }))
       .sort((a, b) => b.views - a.views)
       .slice(0, 8),
     topAddedChapters: [...addedChapterCounts.entries()]
