@@ -557,44 +557,52 @@ export default function CheckoutPage() {
 
         {(identityStep === "identify" || identityStep === "otp") && (
           <>
-            <p className="mt-4 max-w-md text-body-s text-secondary-text">
-              Enter your email — if you&apos;ve ordered before, we&apos;ll pull in your address
-              and Travaholic Miles automatically.
-            </p>
             {orderSummary}
 
             {identityStep === "identify" ? (
-              <form onSubmit={sendIdentifyCode} className="mt-8 space-y-5">
-                <div>
-                  <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={identifyEmail}
-                    onChange={(e) => setIdentifyEmail(e.target.value)}
-                    placeholder="you@email.com"
-                    className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
-                  />
-                </div>
-                {identityError && <p className="text-body-s text-paint-orange">{identityError}</p>}
-                <button
-                  type="submit"
-                  disabled={identityLoading}
-                  className="w-full border border-ink bg-ink px-8 py-4 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
-                >
-                  {identityLoading ? "Sending..." : "Continue"}
-                </button>
+              <div className="mt-8 space-y-4">
                 <button
                   type="button"
                   onClick={() => setIdentityStep("guest")}
-                  className="w-full text-center text-body-s font-bold text-ink underline"
+                  className="w-full border border-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
                 >
                   Continue As Guest
                 </button>
-              </form>
+
+                <div className="flex items-center gap-3 text-caption text-secondary-text">
+                  <span className="h-px flex-1 bg-divider" />
+                  or
+                  <span className="h-px flex-1 bg-divider" />
+                </div>
+
+                <form onSubmit={sendIdentifyCode} className="space-y-4">
+                  <div>
+                    <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={identifyEmail}
+                      onChange={(e) => setIdentifyEmail(e.target.value)}
+                      placeholder="you@email.com"
+                      className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+                    />
+                    <p className="mt-1.5 text-caption text-secondary-text">
+                      Use this to redeem your Travaholic Miles and have your address filled in automatically.
+                    </p>
+                  </div>
+                  {identityError && <p className="text-body-s text-paint-orange">{identityError}</p>}
+                  <button
+                    type="submit"
+                    disabled={identityLoading}
+                    className="w-full border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
+                  >
+                    {identityLoading ? "Sending..." : "Continue"}
+                  </button>
+                </form>
+              </div>
             ) : (
-              <form onSubmit={verifyIdentifyCode} className="mt-8 space-y-5">
+              <form onSubmit={verifyIdentifyCode} className="mt-8 space-y-4">
                 <p className="text-body-s text-secondary-text">
                   Enter the 6-digit code sent to {identifyEmail.trim()}.
                 </p>
@@ -603,13 +611,13 @@ export default function CheckoutPage() {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
                   maxLength={6}
-                  className="w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-heading-s tracking-[0.3em] text-ink outline-none focus:border-ink"
+                  className="w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-heading-s tracking-[0.3em] text-ink outline-none focus:border-ink"
                 />
                 {identityError && <p className="text-body-s text-paint-orange">{identityError}</p>}
                 <button
                   type="submit"
                   disabled={identityLoading}
-                  className="w-full border border-ink bg-ink px-8 py-4 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
+                  className="w-full border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
                 >
                   {identityLoading ? "Verifying..." : "Verify & Continue"}
                 </button>
@@ -682,7 +690,7 @@ export default function CheckoutPage() {
                 value={referralCodeInput}
                 onChange={(e) => updateReferralCode(e.target.value)}
                 placeholder="Got a code from a friend? Enter it here"
-                className="mt-3 w-full max-w-[280px] border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
+                className="mt-1.5 w-full max-w-[280px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
               />
               {normalizedReferralCode && (
                 <p className="mt-2 text-caption">
@@ -707,7 +715,7 @@ export default function CheckoutPage() {
                 value={couponCodeInput}
                 onChange={(e) => setCouponCodeInput(e.target.value)}
                 placeholder="Have a coupon? Enter it here"
-                className="mt-3 w-full max-w-[280px] border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
+                className="mt-1.5 w-full max-w-[280px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
               />
               {normalizedCouponCode && (
                 <p className="mt-2 text-caption">
@@ -724,7 +732,7 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-10 space-y-6">
+            <form onSubmit={handleSubmit} className="mt-10 space-y-4">
               <div>
                 <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
                   Full Name
@@ -733,7 +741,7 @@ export default function CheckoutPage() {
                   required
                   value={form.name}
                   onChange={update("name")}
-                  className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -746,7 +754,7 @@ export default function CheckoutPage() {
                   type="tel"
                   value={form.phone}
                   onChange={update("phone")}
-                  className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -759,7 +767,7 @@ export default function CheckoutPage() {
                   type="email"
                   value={form.email}
                   onChange={update("email")}
-                  className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -773,7 +781,7 @@ export default function CheckoutPage() {
                   placeholder="House/flat, street, area"
                   value={form.address}
                   onChange={update("address")}
-                  className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                 />
               </div>
 
@@ -786,7 +794,7 @@ export default function CheckoutPage() {
                     required
                     value={form.city}
                     onChange={update("city")}
-                    className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                   />
                 </div>
                 <div>
@@ -797,7 +805,7 @@ export default function CheckoutPage() {
                     required
                     value={form.state}
                     onChange={update("state")}
-                    className="mt-3 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                   />
                 </div>
               </div>
@@ -810,7 +818,7 @@ export default function CheckoutPage() {
                   required
                   value={form.pincode}
                   onChange={update("pincode")}
-                  className="mt-3 w-full max-w-[200px] border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full max-w-[200px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -833,7 +841,7 @@ export default function CheckoutPage() {
                     placeholder="Add a personal note to include with the order..."
                     value={giftNote}
                     onChange={(e) => setGiftNote(e.target.value)}
-                    className="mt-4 w-full border border-ink/30 bg-surface px-5 py-3 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+                    className="mt-4 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                   />
                 )}
 
