@@ -31,6 +31,7 @@ export default function AgentLogPage() {
   const [runResult, setRunResult] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [recsLoading, setRecsLoading] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   function load() {
     Promise.all([
@@ -57,6 +58,14 @@ export default function AgentLogPage() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(loadRecommendations, []);
+
+  function copyPrompt(r: Recommendation, index: number) {
+    const prompt = `Act on this growth recommendation from /admin/agent-log:\n\n"${r.summary}"\n\n${r.detail}\n\nPlease take the appropriate action in the codebase/admin (e.g. adjust a campaign, generate an ad brief, update a setting) and tell me what you did.`;
+    navigator.clipboard.writeText(prompt).then(() => {
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex((cur) => (cur === index ? null : cur)), 2000);
+    });
+  }
 
   async function toggleEnabled() {
     const next = !enabled;
@@ -156,9 +165,17 @@ export default function AgentLogPage() {
           <div className="mt-4 space-y-3">
             {recommendations.map((r, i) => (
               <div key={i} className="border-t border-divider pt-3">
-                <span className="text-micro uppercase tracking-[0.05em] text-tan-gold">
-                  {AREA_LABEL[r.area]}
-                </span>
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-micro uppercase tracking-[0.05em] text-tan-gold">
+                    {AREA_LABEL[r.area]}
+                  </span>
+                  <button
+                    onClick={() => copyPrompt(r, i)}
+                    className="shrink-0 text-micro uppercase tracking-[0.05em] text-secondary-text underline hover:text-ink"
+                  >
+                    {copiedIndex === i ? "Copied ✓" : "Copy Prompt"}
+                  </button>
+                </div>
                 <p className="mt-1 font-sans text-body-s font-bold text-ink">{r.summary}</p>
                 <p className="mt-1 text-caption text-secondary-text">{r.detail}</p>
               </div>
