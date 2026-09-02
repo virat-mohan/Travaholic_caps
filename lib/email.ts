@@ -67,8 +67,9 @@ export async function sendEmail(
 }
 
 export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]) {
+  if (!order.customer_email) return false;
   const invoiceHtml = await renderInvoiceHtml(order, items);
-  await sendEmail(
+  return sendEmail(
     order.customer_email,
     `Your Travaholic Invoice — Order #${order.id.slice(0, 8).toUpperCase()}`,
     invoiceHtml

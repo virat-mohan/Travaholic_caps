@@ -6,7 +6,7 @@ type InvoiceOrder = {
   id: string;
   created_at: string;
   customer_name: string;
-  customer_email: string;
+  customer_email: string | null;
   delivery_address: string;
   delivery_city?: string | null;
   delivery_state?: string | null;

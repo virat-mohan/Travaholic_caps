@@ -93,7 +93,7 @@ export default function CheckoutPage() {
   // automatically instead of retyping everything. "Continue as guest" skips
   // straight to the manual form for anyone who'd rather not verify.
   const [identityStep, setIdentityStep] = useState<IdentityStep>("checking");
-  const [identifyEmail, setIdentifyEmail] = useState("");
+  const [identifyPhone, setIdentifyPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [identityLoading, setIdentityLoading] = useState(false);
   const [identityError, setIdentityError] = useState<string | null>(null);
@@ -303,8 +303,8 @@ export default function CheckoutPage() {
 
   async function sendIdentifyCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!identifyEmail.trim()) {
-      setIdentityError("Enter an email address.");
+    if (!identifyPhone.trim()) {
+      setIdentityError("Enter a phone number.");
       return;
     }
     setIdentityLoading(true);
@@ -313,7 +313,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: identifyEmail.trim() }),
+        body: JSON.stringify({ phone: identifyPhone.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not send code");
@@ -334,7 +334,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: identifyEmail.trim(),
+          phone: identifyPhone.trim(),
           code: otpCode,
         }),
       });
@@ -485,7 +485,7 @@ export default function CheckoutPage() {
       "",
       `Name: ${form.name}`,
       `Phone: ${form.phone}`,
-      `Email: ${form.email}`,
+      ...(form.email ? [`Email: ${form.email}`] : []),
       `Address: ${form.address}, ${form.city}, ${form.state} ${form.pincode}`,
       ...(isGift ? ["", "This is a gift.", `Gift note: ${giftNote || "(none)"}`] : []),
     ];
@@ -601,14 +601,14 @@ export default function CheckoutPage() {
                 <form onSubmit={sendIdentifyCode} className="space-y-4">
                   <div>
                     <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                      Email
+                      Phone
                     </label>
                     <input
-                      type="email"
-                      autoComplete="email"
-                      value={identifyEmail}
-                      onChange={(e) => setIdentifyEmail(e.target.value)}
-                      placeholder="you@email.com"
+                      type="tel"
+                      autoComplete="tel"
+                      value={identifyPhone}
+                      onChange={(e) => setIdentifyPhone(e.target.value)}
+                      placeholder="10-digit mobile number"
                       className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                     />
                     <p className="mt-1.5 text-caption text-secondary-text">
@@ -628,7 +628,7 @@ export default function CheckoutPage() {
             ) : (
               <form onSubmit={verifyIdentifyCode} className="mt-8 space-y-4">
                 <p className="text-body-s text-secondary-text">
-                  Enter the 6-digit code sent to {identifyEmail.trim()}.
+                  Enter the 6-digit code sent to {identifyPhone.trim()}.
                 </p>
                 <input
                   required
@@ -761,10 +761,9 @@ export default function CheckoutPage() {
 
               <div>
                 <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                  Email
+                  Email (Optional)
                 </label>
                 <input
-                  required
                   type="email"
                   autoComplete="email"
                   value={form.email}

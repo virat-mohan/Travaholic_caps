@@ -857,3 +857,8 @@ alter table ad_briefs add column if not exists ad_daily_budget_rupees int not nu
 -- carries the ordered list instead, one entry per carousel card.
 alter table ad_briefs add column if not exists chapter_slugs text[];
 create index if not exists ad_briefs_queue_idx on ad_briefs (queue_status, scheduled_for);
+
+-- Checkout no longer requires an email address — phone (WhatsApp) is the
+-- primary contact channel and email is optional, so this can no longer be
+-- not-null.
+alter table orders alter column customer_email drop not null;
