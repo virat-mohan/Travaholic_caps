@@ -47,10 +47,10 @@ export async function requestOtp(rawPhone: string | null, rawEmail: string | nul
   });
   if (error) throw error;
 
-  const [emailSent, whatsappSent] = await Promise.all([
-    email ? sendOtpEmail(email, code) : Promise.resolve(false),
-    phone ? sendOtpViaMsg91(phone, code) : Promise.resolve(false),
-  ]);
+  // WhatsApp-first: a phone number gets the code via WhatsApp only; email is
+  // the fallback channel, used only when there's no phone at all.
+  const whatsappSent = phone ? await sendOtpViaMsg91(phone, code) : false;
+  const emailSent = !whatsappSent && email ? await sendOtpEmail(email, code) : false;
   const sent = emailSent || whatsappSent;
   if (!sent) {
     // Nothing configured yet (or delivery failed) — surface the code so the

@@ -13,21 +13,25 @@ type CartSession = {
 
 /** Sends the abandoned-cart nudge (WhatsApp + email) for exactly one session, and stamps retargeted_at on success. Shared by the sweep cron and the manual per-session admin action. */
 export async function retargetOneSession(session: CartSession) {
-  const [whatsappSent, emailSent] = await Promise.all([
-    session.customer_phone
-      ? sendAbandonedCartWhatsApp({
-          id: session.id,
+  // WhatsApp-first: a phone number gets the nudge via WhatsApp only; email
+  // is the fallback channel, used only when there's no phone (or WhatsApp
+  // failed to send).
+  const whatsappSent = session.customer_phone
+    ? await sendAbandonedCartWhatsApp({
+        id: session.id,
+        customer_name: session.customer_name,
+        customer_phone: session.customer_phone,
+        items: session.items ?? [],
+      })
+    : false;
+  const emailSent =
+    !whatsappSent && session.customer_email
+      ? await sendAbandonedCartEmail({
           customer_name: session.customer_name,
-          customer_phone: session.customer_phone,
+          customer_email: session.customer_email,
           items: session.items ?? [],
         })
-      : Promise.resolve(false),
-    sendAbandonedCartEmail({
-      customer_name: session.customer_name,
-      customer_email: session.customer_email,
-      items: session.items ?? [],
-    }),
-  ]);
+      : false;
 
   if (whatsappSent || emailSent) {
     const supabase = getSupabaseServerClient();

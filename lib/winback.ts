@@ -49,9 +49,14 @@ export async function runWinbackSweep() {
     if (customer.last_winback_sent_at && new Date(customer.last_winback_sent_at) > cutoff) continue;
 
     const balance = await getMilesBalance(customer.id);
-    let delivered = false;
-    if (customer.email) delivered = (await sendWinbackEmail(customer.email, customer.name, balance)) || delivered;
-    if (customer.phone) delivered = (await sendWinbackWhatsApp(customer.phone, customer.name ?? "there", balance)) || delivered;
+    // WhatsApp-first: a phone number gets the nudge via WhatsApp only; email
+    // is the fallback, used only when there's no phone (or WhatsApp failed).
+    const whatsappDelivered = customer.phone
+      ? await sendWinbackWhatsApp(customer.phone, customer.name ?? "there", balance)
+      : false;
+    const delivered =
+      whatsappDelivered ||
+      (customer.email ? await sendWinbackEmail(customer.email, customer.name, balance) : false);
 
     if (delivered) {
       await supabase

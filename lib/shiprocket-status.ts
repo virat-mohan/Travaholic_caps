@@ -93,15 +93,17 @@ export async function applyShipmentStatusUpdate(input: {
   // hasn't physically come back. rto_notified_at is the transition guard
   // (mirrors review_requested_at's role for delivered).
   if (isRto && !isRtoDelivered && !wasRto && !existing.rto_notified_at) {
-    if (existing.customer_phone) {
-      await sendRtoInitiatedWhatsApp({
-        id: existing.id,
-        customer_name: existing.customer_name,
-        customer_phone: existing.customer_phone,
-        total: 0,
-      });
-    }
-    if (existing.customer_email) {
+    // WhatsApp-first: a phone number gets this via WhatsApp only; email is
+    // the fallback, used only when there's no phone (or WhatsApp failed).
+    const rtoInitiatedWhatsAppSent = existing.customer_phone
+      ? await sendRtoInitiatedWhatsApp({
+          id: existing.id,
+          customer_name: existing.customer_name,
+          customer_phone: existing.customer_phone,
+          total: 0,
+        })
+      : false;
+    if (!rtoInitiatedWhatsAppSent && existing.customer_email) {
       await sendRtoInitiatedEmail(existing.customer_email, existing.customer_name, existing.id);
     }
     await supabase.from("orders").update({ rto_notified_at: new Date().toISOString() }).eq("id", existing.id);
@@ -155,13 +157,15 @@ export async function applyShipmentStatusUpdate(input: {
     await supabase.from("orders").update({ rto_processed_at: new Date().toISOString() }).eq("id", existing.id);
 
     if (refundedRupees > 0) {
-      if (existing.customer_phone) {
-        await sendRtoRefundedWhatsApp(
-          { id: existing.id, customer_name: existing.customer_name, customer_phone: existing.customer_phone, total: 0 },
-          refundedRupees
-        );
-      }
-      if (existing.customer_email) {
+      // WhatsApp-first: a phone number gets this via WhatsApp only; email is
+      // the fallback, used only when there's no phone (or WhatsApp failed).
+      const rtoRefundedWhatsAppSent = existing.customer_phone
+        ? await sendRtoRefundedWhatsApp(
+            { id: existing.id, customer_name: existing.customer_name, customer_phone: existing.customer_phone, total: 0 },
+            refundedRupees
+          )
+        : false;
+      if (!rtoRefundedWhatsAppSent && existing.customer_email) {
         await sendRtoRefundedEmail(existing.customer_email, existing.customer_name, existing.id, refundedRupees);
       }
     }

@@ -24,18 +24,10 @@ export async function POST(request: Request) {
     const discountSetting = await getSetting("REFERRAL_DISCOUNT_RUPEES");
     const discountRupees = discountSetting ? Number(discountSetting) : 200;
 
-    let emailSent = false;
+    // WhatsApp-first: a friend's phone number gets the invite via WhatsApp
+    // only; email is the fallback, used only when there's no phone (or
+    // WhatsApp failed to send).
     let whatsappSent = false;
-
-    if (friendEmail) {
-      emailSent = await sendReferralInviteEmail(
-        friendEmail,
-        friendName,
-        customer.name,
-        referralCode,
-        discountRupees
-      );
-    }
     if (friendPhone) {
       const brand = await getBrandProfile();
       const referralUrl = `${brand.siteUrl.replace(/\/$/, "")}/?ref=${referralCode}`;
@@ -46,6 +38,10 @@ export async function POST(request: Request) {
         referralUrl
       );
     }
+    const emailSent =
+      !whatsappSent && friendEmail
+        ? await sendReferralInviteEmail(friendEmail, friendName, customer.name, referralCode, discountRupees)
+        : false;
 
     if (!emailSent && !whatsappSent) {
       return NextResponse.json(
