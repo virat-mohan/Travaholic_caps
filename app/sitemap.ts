@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { chapters } from "@/lib/chapters";
 import { seriesOrder } from "@/lib/series";
-import { journalArticles } from "@/lib/journal";
+import { getAllJournalArticles } from "@/lib/journal-dynamic";
 import { getBrandProfile } from "@/lib/brand";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -41,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  const journalArticles = await getAllJournalArticles();
   const journalPages = journalArticles.map((a) => ({
     url: `${base}/journal/${a.slug}`,
     lastModified: now,

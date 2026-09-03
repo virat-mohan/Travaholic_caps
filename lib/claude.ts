@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/settings";
+import { chapters } from "@/lib/chapters";
 
 export type GeneratedJournalDraft = {
   title: string;
@@ -6,6 +7,8 @@ export type GeneratedJournalDraft = {
   category: string;
   excerpt: string;
   body: string[];
+  relatedChapterSlugs: string[];
+  readingTime: number;
 };
 
 const CATEGORIES = [
@@ -38,11 +41,18 @@ export async function generateJournalDraft(topic: string): Promise<GeneratedJour
     throw new Error("ANTHROPIC_API_KEY is not set — add it in /admin/settings first");
   }
 
+  const chapterList = chapters.map((c) => `${c.slug}: "${c.name}" — ${c.story.slice(0, 100)}...`).join("\n");
+
   const prompt = `You are writing a Journal article for Travaholic, a premium Indian trucker-cap brand ("Stories You Can Wear"). The brand voice is warm, specific, editorial — travel stories that happen to feature a cap, never a hard sell. Every article ties back to a real place or moment.
 
 Topic: "${topic}"
 
 Pick the single best-fitting category from this list: ${CATEGORIES.join(", ")}.
+
+Here is the full product catalogue (slug: name — story):
+${chapterList}
+
+Pick 1-2 Chapters from that list whose story/vibe genuinely fits this topic (never force a fit) and weave a natural mention of them into the body — e.g. "reach for the Dunes Maroon" or "this is exactly the light Peaking was sketched from" — the way a magazine credits an outfit, not a product placement. Never mention more than 2.
 
 Return ONLY a JSON object, no commentary, in this exact shape:
 {
@@ -50,10 +60,11 @@ Return ONLY a JSON object, no commentary, in this exact shape:
   "subtitle": "string, one line, names the category feel",
   "category": "one of the categories above, verbatim",
   "excerpt": "string, one or two sentences, under 200 characters",
-  "body": ["paragraph 1", "paragraph 2", "> a pull-quote paragraph starting with '> '", "more paragraphs..."]
+  "body": ["paragraph 1", "paragraph 2", "> a pull-quote paragraph starting with '> '", "more paragraphs..."],
+  "relatedChapterSlugs": ["slug-of-chapter-mentioned", "at-most-one-more"]
 }
 
-Write 4-6 paragraphs in "body", including exactly one pull-quote paragraph starting with "> ". Keep the tone specific and sensory, never generic travel-blog filler.`;
+Write 4-6 paragraphs in "body", including exactly one pull-quote paragraph starting with "> ". Keep the tone specific and sensory, never generic travel-blog filler. relatedChapterSlugs must be real slugs from the catalogue above, in the order first mentioned, at most 2.`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -81,11 +92,17 @@ Write 4-6 paragraphs in "body", including exactly one pull-quote paragraph start
   const text = data.content?.find((block: { type: string; text?: string }) => block.type === "text")?.text ?? "";
   const parsed = JSON.parse(extractJson(text));
 
+  const wordCount = (parsed.body as string[]).join(" ").split(/\s+/).length;
+
   return {
     title: parsed.title,
     subtitle: parsed.subtitle,
     category: parsed.category,
     excerpt: parsed.excerpt,
     body: parsed.body,
+    relatedChapterSlugs: (parsed.relatedChapterSlugs ?? []).filter((slug: string) =>
+      chapters.some((c) => c.slug === slug)
+    ),
+    readingTime: Math.max(1, Math.round(wordCount / 200)),
   };
 }

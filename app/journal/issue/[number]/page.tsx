@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
+import { journalIssues } from "@/lib/journal";
 import {
-  journalIssues,
   getIssue,
   articlesForIssue,
   featuredChaptersForIssue,
-} from "@/lib/journal";
+} from "@/lib/journal-dynamic";
 import { MagazineReader } from "@/components/journal/MagazineReader";
+
+export const revalidate = 3600;
 
 export function generateStaticParams() {
   return journalIssues.map((i) => ({ number: String(i.number) }));
@@ -24,8 +26,8 @@ export default async function JournalIssuePage({
   const issue = getIssue(issueNumber);
   if (!issue) notFound();
 
-  const articles = articlesForIssue(issueNumber);
-  const featuredChapters = featuredChaptersForIssue(issueNumber);
+  const articles = await articlesForIssue(issueNumber);
+  const featuredChapters = await featuredChaptersForIssue(issueNumber);
 
   return (
     <MagazineReader

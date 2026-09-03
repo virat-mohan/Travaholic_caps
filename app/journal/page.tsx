@@ -1,10 +1,13 @@
-import { issuesSorted, articlesForIssue } from "@/lib/journal";
+import { issuesSorted, articlesForIssue } from "@/lib/journal-dynamic";
 import { MagazineCover } from "@/components/journal/MagazineCover";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
-export default function JournalIndexPage() {
+export const revalidate = 3600;
+
+export default async function JournalIndexPage() {
   const issues = issuesSorted();
+  const articlesByIssue = await Promise.all(issues.map((issue) => articlesForIssue(issue.number)));
 
   return (
     <>
@@ -21,8 +24,8 @@ export default function JournalIndexPage() {
         </p>
 
         <div className="mt-16 grid grid-cols-1 gap-10 sm:grid-cols-2 md:grid-cols-3">
-          {issues.map((issue) => {
-            const articles = articlesForIssue(issue.number);
+          {issues.map((issue, i) => {
+            const articles = articlesByIssue[i];
             if (articles.length === 0) return null;
 
             return (

@@ -140,8 +140,29 @@ create table if not exists journal_drafts (
   category text,
   excerpt text,
   body text[],
-  status text not null default 'draft', -- draft | ready | archived
+  status text not null default 'draft', -- draft | ready | published | archived
   created_at timestamptz not null default now()
+);
+alter table journal_drafts add column if not exists related_chapter_slugs text[];
+alter table journal_drafts add column if not exists reading_time int;
+alter table journal_drafts add column if not exists published_slug text;
+
+-- Live Journal articles published from a draft (see /admin/journal-drafts'
+-- Publish button) — merged with the static journalArticles array in
+-- lib/journal.ts at read time by lib/journal-dynamic.ts, same pattern as
+-- chapters-dynamic.ts merges chapter_hero_overrides onto lib/chapters.ts.
+create table if not exists journal_articles (
+  slug text primary key,
+  title text not null,
+  subtitle text not null,
+  category text not null,
+  reading_time int not null default 4,
+  published_at timestamptz not null default now(),
+  hero_image text not null,
+  excerpt text not null,
+  body text[] not null,
+  related_chapter_slugs text[] not null default '{}',
+  issue int not null
 );
 
 -- Claude-generated ad copy + creative brief for a Chapter, from

@@ -10,7 +10,10 @@ type Draft = {
   category: string | null;
   excerpt: string | null;
   body: string[] | null;
+  related_chapter_slugs: string[] | null;
+  reading_time: number | null;
   status: string;
+  published_slug: string | null;
   created_at: string;
 };
 
@@ -20,6 +23,7 @@ export default function JournalDraftsPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState<string | null>(null);
 
   function loadDrafts() {
     fetch("/api/admin/journal-drafts")
@@ -60,13 +64,31 @@ export default function JournalDraftsPage() {
     });
   }
 
+  async function publish(id: string) {
+    if (!confirm("Publish this to the live Journal? It'll be visible on the site immediately.")) return;
+    setPublishing(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/journal-drafts/${id}/publish`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not publish");
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, status: "published", published_slug: data.slug } : d))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not publish");
+    } finally {
+      setPublishing(null);
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-[900px] px-6 pt-28 pb-24 md:px-12">
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Journal Draft Generator</h1>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
-        Type a topic, Claude drafts a full article in Travaholic&apos;s voice. Drafts are saved here
-        for review — they don&apos;t publish to the live Journal automatically; copy an approved
-        draft into <code>lib/journal.ts</code> as a new article once it&apos;s ready.
+        Type a topic, Claude drafts a full article in Travaholic&apos;s voice, naturally referencing
+        1-2 real Chapters where it fits. Review below, then hit Publish to send it live —
+        it&apos;s the same one-click flow as everywhere else in admin.
       </p>
 
       <div className="mt-8 border-t border-divider pt-6">
@@ -102,19 +124,47 @@ export default function JournalDraftsPage() {
               <div className="flex items-center justify-between gap-4">
                 <p className="text-caption uppercase tracking-[0.1em] text-secondary-text">
                   {d.category ?? "Uncategorised"} · from topic &ldquo;{d.topic}&rdquo;
+                  {d.reading_time ? ` · ${d.reading_time} min read` : ""}
                 </p>
-                <select
-                  value={d.status}
-                  onChange={(e) => setStatus(d.id, e.target.value)}
-                  className="border border-divider bg-surface px-2 py-1 font-sans text-caption text-ink"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="ready">Ready To Publish</option>
-                  <option value="archived">Archived</option>
-                </select>
+                <div className="flex items-center gap-3">
+                  {d.status === "published" ? (
+                    <a
+                      href={`/journal/${d.published_slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-caption uppercase tracking-[0.05em] text-ink underline"
+                    >
+                      View Live ↗
+                    </a>
+                  ) : (
+                    <>
+                      <select
+                        value={d.status}
+                        onChange={(e) => setStatus(d.id, e.target.value)}
+                        className="border border-divider bg-surface px-2 py-1 font-sans text-caption text-ink"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="ready">Ready To Publish</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                      <button
+                        onClick={() => publish(d.id)}
+                        disabled={publishing === d.id}
+                        className="border border-ink px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
+                      >
+                        {publishing === d.id ? "Publishing..." : "Publish"}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <h2 className="mt-2 font-display text-heading-s uppercase text-ink">{d.title}</h2>
               <p className="mt-1 text-body-s text-secondary-text">{d.subtitle}</p>
+              {d.related_chapter_slugs && d.related_chapter_slugs.length > 0 && (
+                <p className="mt-1 text-micro uppercase tracking-[0.05em] text-tan-gold">
+                  Features: {d.related_chapter_slugs.join(", ")}
+                </p>
+              )}
               <div className="mt-4 space-y-3">
                 {(d.body ?? []).map((p, i) =>
                   p.startsWith("> ") ? (

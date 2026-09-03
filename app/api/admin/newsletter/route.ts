@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { allJournalArticlesSorted } from "@/lib/journal";
+import { allJournalArticlesSorted } from "@/lib/journal-dynamic";
 import { getSubscriberEmails, sendJournalArticleToSubscribers } from "@/lib/newsletter";
 
 export async function GET() {
@@ -12,7 +12,7 @@ export async function GET() {
     ]);
 
     const sendsBySlug = new Map((sends ?? []).map((s) => [s.article_slug, s]));
-    const articles = allJournalArticlesSorted().map((a) => ({
+    const articles = (await allJournalArticlesSorted()).map((a) => ({
       slug: a.slug,
       title: a.title,
       publishedAt: a.publishedAt,
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This article has already been sent" }, { status: 400 });
     }
 
-    const article = allJournalArticlesSorted().find((a) => a.slug === body.slug);
+    const article = (await allJournalArticlesSorted()).find((a) => a.slug === body.slug);
     if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
 
     const recipientCount = await sendJournalArticleToSubscribers(article);

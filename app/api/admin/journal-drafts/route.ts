@@ -35,6 +35,8 @@ export async function POST(request: Request) {
         category: draft.category,
         excerpt: draft.excerpt,
         body: draft.body,
+        related_chapter_slugs: draft.relatedChapterSlugs,
+        reading_time: draft.readingTime,
       })
       .select()
       .single();

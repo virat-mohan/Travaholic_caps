@@ -1,14 +1,16 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { journalArticles } from "@/lib/journal";
 import {
-  journalArticles,
   getJournalArticle,
   relatedChaptersFor,
-} from "@/lib/journal";
+} from "@/lib/journal-dynamic";
 import { chapterImageSrc } from "@/lib/chapters";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
+
+export const revalidate = 3600;
 
 export function generateStaticParams() {
   return journalArticles.map((a) => ({ slug: a.slug }));
@@ -28,7 +30,7 @@ export default async function JournalArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = getJournalArticle(slug);
+  const article = await getJournalArticle(slug);
   if (!article) notFound();
 
   const related = relatedChaptersFor(article);
