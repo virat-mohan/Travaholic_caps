@@ -93,7 +93,10 @@ export default function CheckoutPage() {
   // automatically instead of retyping everything. "Continue as guest" skips
   // straight to the manual form for anyone who'd rather not verify.
   const [identityStep, setIdentityStep] = useState<IdentityStep>("checking");
-  const [identifyPhone, setIdentifyPhone] = useState("");
+  // Temporarily email-based rather than phone — WhatsApp OTP delivery isn't
+  // reliable yet (see lib/msg91.ts), switch this back to phone once that's
+  // confirmed working end to end.
+  const [identifyEmail, setIdentifyEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [identityLoading, setIdentityLoading] = useState(false);
   const [identityError, setIdentityError] = useState<string | null>(null);
@@ -303,8 +306,8 @@ export default function CheckoutPage() {
 
   async function sendIdentifyCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!identifyPhone.trim()) {
-      setIdentityError("Enter a phone number.");
+    if (!identifyEmail.trim()) {
+      setIdentityError("Enter an email address.");
       return;
     }
     setIdentityLoading(true);
@@ -313,7 +316,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: identifyPhone.trim() }),
+        body: JSON.stringify({ email: identifyEmail.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not send code");
@@ -334,7 +337,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: identifyPhone.trim(),
+          email: identifyEmail.trim(),
           code: otpCode,
         }),
       });
@@ -601,14 +604,14 @@ export default function CheckoutPage() {
                 <form onSubmit={sendIdentifyCode} className="space-y-4">
                   <div>
                     <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                      Phone
+                      Email
                     </label>
                     <input
-                      type="tel"
-                      autoComplete="tel"
-                      value={identifyPhone}
-                      onChange={(e) => setIdentifyPhone(e.target.value)}
-                      placeholder="10-digit mobile number"
+                      type="email"
+                      autoComplete="email"
+                      value={identifyEmail}
+                      onChange={(e) => setIdentifyEmail(e.target.value)}
+                      placeholder="you@email.com"
                       className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                     />
                     <p className="mt-1.5 text-caption text-secondary-text">
@@ -628,7 +631,7 @@ export default function CheckoutPage() {
             ) : (
               <form onSubmit={verifyIdentifyCode} className="mt-8 space-y-4">
                 <p className="text-body-s text-secondary-text">
-                  Enter the 6-digit code sent to {identifyPhone.trim()}.
+                  Enter the 6-digit code sent to {identifyEmail.trim()}.
                 </p>
                 <input
                   required
