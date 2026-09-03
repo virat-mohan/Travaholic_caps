@@ -48,6 +48,8 @@ export default function LogisticsPage() {
   const [orders, setOrders] = useState<LogisticsOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<Category | "all">("needs_attention");
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   function load() {
     fetch("/api/admin/logistics")
@@ -57,6 +59,21 @@ export default function LogisticsPage() {
   }
 
   useEffect(load, []);
+
+  async function syncNow() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/cron/track-sweep");
+      const data = await res.json();
+      setSyncResult(`Checked ${data.swept ?? 0} shipment(s) against Shiprocket.`);
+      load();
+    } catch {
+      setSyncResult("Could not sync — try again.");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const categorized = useMemo(
     () => orders.filter((o) => o.status !== "cancelled").map((o) => ({ order: o, category: categorize(o) })),
@@ -85,7 +102,19 @@ export default function LogisticsPage() {
         Every confirmed order&apos;s shipment status in one place — &ldquo;Needs Attention&rdquo; is where
         a delivery attempt has failed (NDR) or a shipment is on its way back (RTO); that&apos;s the one
         worth checking daily, since a fast follow-up there is what actually prevents a return.
+        Statuses refresh automatically once a day — click Sync below to pull the latest right now.
       </p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <button
+          onClick={syncNow}
+          disabled={syncing}
+          className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
+        >
+          {syncing ? "Syncing..." : "Sync Shipment Status Now"}
+        </button>
+        {syncResult && <p className="text-caption text-secondary-text">{syncResult}</p>}
+      </div>
 
       <div className="mt-6 flex flex-wrap gap-2 border-t border-divider pt-6">
         <button

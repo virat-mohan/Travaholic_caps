@@ -94,6 +94,7 @@ export async function computeTrustedOrderTotal(
     items: pricedItems,
     subtotal,
     discountAmount,
+    discountRule,
     loyaltyDiscountAmount,
     referralDiscountAmount,
     referral,

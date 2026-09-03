@@ -868,3 +868,18 @@ alter table orders alter column customer_email drop not null;
 -- "queued successfully" regardless of whether the Flow/template is actually
 -- valid, so this is the only place a genuine failure reason ever surfaces.
 alter table whatsapp_messages add column if not exists error_detail text;
+
+-- Usage log for automatic discount_rules (e.g. "Buy 3, get 4th free") —
+-- mirrors coupon_redemptions so /admin/discounts can show how many times a
+-- rule has been used and by whom, the same way /admin/coupons already does
+-- for coupon codes.
+create table if not exists discount_rule_redemptions (
+  id uuid primary key default gen_random_uuid(),
+  discount_rule_id uuid references discount_rules(id),
+  order_id uuid references orders(id),
+  customer_phone text,
+  customer_email text,
+  discount_amount integer not null,
+  redeemed_at timestamptz not null default now()
+);
+create index if not exists discount_rule_redemptions_rule_idx on discount_rule_redemptions (discount_rule_id);

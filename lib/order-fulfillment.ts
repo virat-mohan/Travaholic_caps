@@ -130,6 +130,16 @@ export async function finalizeOrder(
   const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
   if (itemsError) throw itemsError;
 
+  if (pricing.discountRule && pricing.discountAmount > 0) {
+    await supabase.from("discount_rule_redemptions").insert({
+      discount_rule_id: pricing.discountRule.id,
+      order_id: savedOrder.id,
+      customer_phone: payload.customer.phone,
+      customer_email: payload.customer.email,
+      discount_amount: pricing.discountAmount,
+    });
+  }
+
   for (const item of pricing.items) {
     const { data: inv } = await supabase
       .from("inventory")

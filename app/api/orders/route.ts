@@ -147,6 +147,24 @@ export async function POST(request: Request) {
 
     if (itemsError) throw itemsError;
 
+    if (discountAmount > 0) {
+      const { data: activeRule } = await supabase
+        .from("discount_rules")
+        .select("id")
+        .eq("active", true)
+        .limit(1)
+        .maybeSingle();
+      if (activeRule) {
+        await supabase.from("discount_rule_redemptions").insert({
+          discount_rule_id: activeRule.id,
+          order_id: order.id,
+          customer_phone: body.customer.phone,
+          customer_email: body.customer.email,
+          discount_amount: discountAmount,
+        });
+      }
+    }
+
     if (effectiveCustomerId) {
       const capsBought = body.items.reduce((sum, item) => sum + item.quantity, 0);
       if (customer && loyaltyDiscountAmount > 0) {

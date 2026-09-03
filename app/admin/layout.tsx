@@ -10,9 +10,6 @@ const NAV_SECTIONS = [
       { href: "/admin/orders", label: "Orders" },
       { href: "/admin/orders/new", label: "Add Manual Order" },
       { href: "/admin/inventory", label: "Inventory" },
-      { href: "/admin/edit-chapter", label: "Edit Chapters" },
-      { href: "/admin/add-chapter", label: "Add Chapter" },
-      { href: "/admin/discounts", label: "Discount Rules" },
     ],
   },
   {
@@ -21,8 +18,6 @@ const NAV_SECTIONS = [
       { href: "/admin/analytics", label: "Website Analytics" },
       { href: "/admin/ad-briefs", label: "Ad Brief Generator" },
       { href: "/admin/content-calendar", label: "Content Calendar" },
-      { href: "/admin/marketing-assets", label: "Marketing Assets" },
-      { href: "/admin/brand-profile", label: "Brand Profile" },
       { href: "/admin/reports", label: "Growth Reports" },
       { href: "/admin/abandoned-carts", label: "Abandoned Carts" },
       { href: "/admin/agent-log", label: "Ad Agent" },
@@ -46,7 +41,6 @@ const NAV_SECTIONS = [
     label: "Customers",
     links: [
       { href: "/admin/customers", label: "Customers & Miles" },
-      { href: "/admin/whatsapp", label: "WhatsApp Inbox" },
       { href: "/admin/leads", label: "Leads" },
     ],
   },
@@ -62,12 +56,19 @@ const NAV_SECTIONS = [
     links: [
       { href: "/admin/pnl", label: "P&L" },
       { href: "/admin/expenses", label: "Expenses" },
+      { href: "/admin/discounts", label: "Discount Rules" },
       { href: "/admin/coupons", label: "Coupon Codes" },
     ],
   },
   {
-    label: "Configuration",
-    links: [{ href: "/admin/settings", label: "API Keys & Settings" }],
+    label: "Less Common",
+    links: [
+      { href: "/admin/edit-chapter", label: "Edit Chapters" },
+      { href: "/admin/add-chapter", label: "Add Chapter" },
+      { href: "/admin/marketing-assets", label: "Marketing Assets" },
+      { href: "/admin/brand-profile", label: "Brand Profile" },
+      { href: "/admin/settings", label: "API Keys & Settings" },
+    ],
   },
 ];
 

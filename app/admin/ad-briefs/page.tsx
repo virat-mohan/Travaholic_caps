@@ -55,6 +55,7 @@ export default function AdBriefsPage() {
   const [multiChapterMode, setMultiChapterMode] = useState(false);
   const [selectedChapterSlugs, setSelectedChapterSlugs] = useState<string[]>([]);
   const [customInstructions, setCustomInstructions] = useState("");
+  const [selectedAssetUrls, setSelectedAssetUrls] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -82,6 +83,10 @@ export default function AdBriefsPage() {
   const [captioning, setCaptioning] = useState<Record<string, boolean>>({});
   const [autoOverlay, setAutoOverlay] = useState<Record<string, boolean>>({});
   const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  function toggleAssetSelection(url: string) {
+    setSelectedAssetUrls((prev) => (prev.includes(url) ? prev.filter((u) => u !== url) : [...prev, url]));
+  }
 
   function scrollCarousel(briefId: string, direction: 1 | -1) {
     const el = carouselRefs.current[briefId];
@@ -123,12 +128,14 @@ export default function AdBriefsPage() {
           isGeneric: isCarousel && multiChapterMode ? false : isGeneric,
           isCarousel,
           customInstructions,
+          assetUrls: selectedAssetUrls.length > 0 ? selectedAssetUrls : undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not generate brief");
       setBriefs((prev) => [data.brief, ...prev]);
       setCustomInstructions("");
+      setSelectedAssetUrls([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate brief");
     } finally {
@@ -645,6 +652,52 @@ export default function AdBriefsPage() {
               ))}
             </select>
           </>
+        )}
+
+        <label className="mt-4 block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+          Use Real Photos (optional)
+        </label>
+        <p className="mt-1 text-micro text-secondary-text/70">
+          Pick one or more assets to build the post around — skips AI image generation entirely.
+          Selecting more than one makes it a carousel, one photo per card.
+        </p>
+        {assets.length === 0 ? (
+          <p className="mt-2 text-micro text-secondary-text/70">
+            No assets uploaded yet — see Marketing Assets.
+          </p>
+        ) : (
+          <div className="mt-2 grid grid-cols-6 gap-2 md:grid-cols-10">
+            {assets.map((a) => {
+              const selected = selectedAssetUrls.includes(a.url);
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => toggleAssetSelection(a.url)}
+                  className={`relative aspect-square overflow-hidden border-2 ${
+                    selected ? "border-ink" : "border-transparent"
+                  }`}
+                  title={a.label ?? undefined}
+                >
+                  <Image src={a.url} alt={a.label ?? "Asset"} fill className="object-cover" />
+                  {selected && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-ink/40 text-cream">
+                      ✓
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {selectedAssetUrls.length > 0 && (
+          <p className="mt-2 text-micro text-secondary-text">
+            {selectedAssetUrls.length} photo{selectedAssetUrls.length > 1 ? "s" : ""} selected
+            {selectedAssetUrls.length > 1 ? " — will generate as a carousel" : ""}.{" "}
+            <button type="button" onClick={() => setSelectedAssetUrls([])} className="underline">
+              Clear
+            </button>
+          </p>
         )}
 
         <label className="mt-4 block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">

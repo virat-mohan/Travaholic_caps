@@ -23,6 +23,12 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const chapterSlugs: string[] | undefined =
     Array.isArray(body?.chapterSlugs) && body.chapterSlugs.length > 0 ? body.chapterSlugs : undefined;
+  // Pre-selected real photos from the asset library — when given, the brief
+  // is written as copy to go around these exact images, skipping AI image
+  // generation entirely. Multiple assets always means a carousel (one asset
+  // per card), regardless of the isCarousel toggle.
+  const assetUrls: string[] | undefined =
+    Array.isArray(body?.assetUrls) && body.assetUrls.length > 0 ? body.assetUrls : undefined;
   if (!body?.isGeneric && !body?.chapterSlug && !chapterSlugs) {
     return NextResponse.json(
       { error: "Missing chapterSlug/chapterSlugs (or set isGeneric for a brand-wide post)" },
@@ -35,8 +41,13 @@ export async function POST(request: Request) {
 
   try {
     const isGeneric = !!body.isGeneric;
-    const isCarousel = !!body.isCarousel;
+    const isCarousel = !!body.isCarousel || (assetUrls?.length ?? 0) > 1;
     const allSales = chapterSlugs || !isGeneric ? await getTopSellingChapters(30) : undefined;
+
+    const assetInstructions = assetUrls
+      ? `\nThe creative is already decided — ${assetUrls.length} real product photo${assetUrls.length > 1 ? "s" : ""} chosen from the asset library. Write copy to go around ${assetUrls.length > 1 ? "these exact photos, one per carousel card, in the order given" : "this exact photo"} — don't describe or reference generating an image.`
+      : "";
+    const customInstructions = ((body.customInstructions || "") + assetInstructions).trim() || undefined;
 
     let brief;
     if (chapterSlugs) {
@@ -44,12 +55,12 @@ export async function POST(request: Request) {
         name: chapters.find((c) => c.slug === slug)?.name ?? slug,
         sales: allSales?.find((s) => s.chapterSlug === slug),
       }));
-      brief = await generateAdBrief(null, undefined, body.customInstructions || undefined, true, multiChapters);
+      brief = await generateAdBrief(null, undefined, customInstructions, true, multiChapters);
     } else {
       const chapter = isGeneric ? null : chapters.find((c) => c.slug === body.chapterSlug);
       const chapterName = isGeneric ? null : (chapter?.name ?? body.chapterSlug);
       const sales = isGeneric ? undefined : allSales?.find((s) => s.chapterSlug === body.chapterSlug);
-      brief = await generateAdBrief(chapterName, sales, body.customInstructions || undefined, isCarousel);
+      brief = await generateAdBrief(chapterName, sales, customInstructions, isCarousel);
     }
 
     const supabase = getSupabaseServerClient();
@@ -63,11 +74,14 @@ export async function POST(request: Request) {
         cta: brief.cta,
         target_audience: brief.targetAudience,
         is_carousel: isCarousel,
-        image_prompt: isCarousel ? null : brief.imagePrompt,
-        image_prompts: isCarousel ? (brief.imagePrompts ?? null) : null,
-        creative_style: isCarousel ? null : (brief.creativeStyle ?? "ai_photo"),
-        overlay_text: isCarousel ? null : (brief.overlayText || null),
+        image_prompt: isCarousel || assetUrls ? null : brief.imagePrompt,
+        image_prompts: isCarousel && !assetUrls ? (brief.imagePrompts ?? null) : null,
+        creative_style: isCarousel || assetUrls ? null : (brief.creativeStyle ?? "ai_photo"),
+        overlay_text: isCarousel || assetUrls ? null : (brief.overlayText || null),
         hashtags: brief.hashtags,
+        image_url: assetUrls && assetUrls.length === 1 ? assetUrls[0] : null,
+        image_urls: assetUrls && assetUrls.length > 1 ? assetUrls : null,
+        image_source: assetUrls ? "real" : null,
       })
       .select()
       .single();

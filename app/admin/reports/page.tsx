@@ -210,55 +210,91 @@ export default function ReportsPage() {
         dependent on Meta&apos;s pixel); ad spend and clicks come from Meta once configured.
       </p>
 
-      <div className="mt-6 flex flex-wrap items-center gap-4">
-        <button
-          onClick={generate}
-          disabled={generating}
-          className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
-        >
-          {generating ? "Generating..." : "Generate This Week's Report"}
-        </button>
-        <button
-          onClick={runSweep}
-          disabled={sweeping}
-          className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
-        >
-          {sweeping ? "Running..." : "Run Abandoned-Cart Sweep Now"}
-        </button>
-        {sweepResult && <p className="text-caption text-secondary-text">{sweepResult}</p>}
-      </div>
+      <div className="mt-6 space-y-5">
+        <div>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={generate}
+              disabled={generating}
+              className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
+            >
+              {generating ? "Generating..." : "Refresh This Week's Snapshot"}
+            </button>
+          </div>
+          <p className="mt-1.5 max-w-lg text-micro text-secondary-text/80">
+            Recomputes the funnel/ROAS numbers in the table below from this week&apos;s data.
+          </p>
+        </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-4">
-        <button
-          onClick={runWinback}
-          disabled={winbackRunning}
-          className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
-        >
-          {winbackRunning ? "Running..." : "Run Win-Back Sweep Now"}
-        </button>
-        {winbackResult && <p className="text-caption text-secondary-text">{winbackResult}</p>}
-      </div>
+        <div>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={runSweep}
+              disabled={sweeping}
+              className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
+            >
+              {sweeping ? "Running..." : "Nudge Abandoned Carts Now"}
+            </button>
+            {sweepResult && <p className="text-caption text-secondary-text">{sweepResult}</p>}
+          </div>
+          <p className="mt-1.5 max-w-lg text-micro text-secondary-text/80">
+            Finds carts inactive 45+ minutes, marks them abandoned, and immediately sends the
+            WhatsApp/email reminder — this normally runs automatically once a day, this button
+            just triggers it right now instead of waiting.
+          </p>
+        </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-4">
-        <button
-          onClick={runSalesSignalSweep}
-          disabled={salesSignalRunning}
-          className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
-        >
-          {salesSignalRunning ? "Running..." : "Run Sales-Signal Brief Sweep Now"}
-        </button>
-        {salesSignalResult && <p className="text-caption text-secondary-text">{salesSignalResult}</p>}
-      </div>
+        <div>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={runWinback}
+              disabled={winbackRunning}
+              className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
+            >
+              {winbackRunning ? "Running..." : "Nudge Lapsed Customers Now"}
+            </button>
+            {winbackResult && <p className="text-caption text-secondary-text">{winbackResult}</p>}
+          </div>
+          <p className="mt-1.5 max-w-lg text-micro text-secondary-text/80">
+            Messages any customer who hasn&apos;t ordered in 60+ days, reminding them of their
+            Travaholic Miles balance and inviting them back.
+          </p>
+        </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-4">
-        <button
-          onClick={runOpsDigest}
-          disabled={digestRunning}
-          className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
-        >
-          {digestRunning ? "Sending..." : "Send Ops Digest Now"}
-        </button>
-        {digestResult && <p className="text-caption text-secondary-text">{digestResult}</p>}
+        <div>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={runSalesSignalSweep}
+              disabled={salesSignalRunning}
+              className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
+            >
+              {salesSignalRunning ? "Running..." : "Draft Ads From Sales Trends"}
+            </button>
+            {salesSignalResult && <p className="text-caption text-secondary-text">{salesSignalResult}</p>}
+          </div>
+          <p className="mt-1.5 max-w-lg text-micro text-secondary-text/80">
+            Scans this week&apos;s sales and drafts an ad brief — never launches it — for any
+            product that&apos;s suddenly selling fast or has cooled off. Lands as a draft in Ad
+            Brief Generator for you to review.
+          </p>
+        </div>
+
+        <div>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={runOpsDigest}
+              disabled={digestRunning}
+              className="border border-divider px-5 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-50"
+            >
+              {digestRunning ? "Sending..." : "Email Today's Ops Summary"}
+            </button>
+            {digestResult && <p className="text-caption text-secondary-text">{digestResult}</p>}
+          </div>
+          <p className="mt-1.5 max-w-lg text-micro text-secondary-text/80">
+            Emails the team a snapshot of the last 24 hours: new orders, revenue, refunds, RTOs,
+            new leads, and any products running low on stock.
+          </p>
+        </div>
       </div>
 
       <div className="mt-10 flex flex-wrap items-center justify-between gap-4">

@@ -228,7 +228,7 @@ export async function sendReviewRequestEmail(
 ) {
   const brand = await getBrandProfile();
   const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email-v2.png`;
-  const reviewUrl = "https://g.page/r/CbvWdBDo1oxlEBM/review";
+  const googleReviewUrl = "https://g.page/r/CbvWdBDo1oxlEBM/review";
   const returnUrl = `${brand.siteUrl.replace(/\/$/, "")}/return/${orderId}`;
   const itemsLine = chapterNames.join(", ");
 
@@ -242,7 +242,7 @@ export async function sendReviewRequestEmail(
         Your ${itemsLine} should have arrived by now — how is it? A quick review helps other
         travellers pick the right Chapter, and takes under a minute.
       </p>
-      <a href="${reviewUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Leave a Review</a>
+      <a href="${googleReviewUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Leave a Review</a>
       <p style="margin-top:20px;font-size:13px;color:#666;">
         Something wrong with it? <a href="${returnUrl}" style="color:#101820;">Request a return</a>.
       </p>
