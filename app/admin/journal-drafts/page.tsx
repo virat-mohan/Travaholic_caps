@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
+import { chapters, chapterImageSrc } from "@/lib/chapters";
 
 type Draft = {
   id: string;
@@ -12,10 +14,17 @@ type Draft = {
   body: string[] | null;
   related_chapter_slugs: string[] | null;
   reading_time: number | null;
+  hero_image: string | null;
   status: string;
   published_slug: string | null;
   created_at: string;
 };
+
+type Asset = { id: string; url: string; label: string | null };
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default function JournalDraftsPage() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -24,6 +33,8 @@ export default function JournalDraftsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<string | null>(null);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [pickerForId, setPickerForId] = useState<string | null>(null);
 
   function loadDrafts() {
     fetch("/api/admin/journal-drafts")
@@ -33,6 +44,11 @@ export default function JournalDraftsPage() {
   }
 
   useEffect(loadDrafts, []);
+  useEffect(() => {
+    fetch("/api/admin/marketing-assets")
+      .then((res) => res.json())
+      .then((data) => setAssets(data.assets ?? []));
+  }, []);
 
   async function generate() {
     if (!topic.trim()) return;
@@ -64,6 +80,16 @@ export default function JournalDraftsPage() {
     });
   }
 
+  async function setHeroImage(id: string, url: string) {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, hero_image: url } : d)));
+    setPickerForId(null);
+    await fetch("/api/admin/journal-drafts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, heroImage: url }),
+    });
+  }
+
   async function publish(id: string) {
     if (!confirm("Publish this to the live Journal? It'll be visible on the site immediately.")) return;
     setPublishing(id);
@@ -83,12 +109,12 @@ export default function JournalDraftsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[900px] px-6 pt-28 pb-24 md:px-12">
+    <main className="mx-auto w-full max-w-[1100px] px-6 pt-28 pb-24 md:px-12">
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Journal Draft Generator</h1>
       <p className="mt-2 max-w-lg text-body-s text-secondary-text">
         Type a topic, Claude drafts a full article in Travaholic&apos;s voice, naturally referencing
-        1-2 real Chapters where it fits. Review below, then hit Publish to send it live —
-        it&apos;s the same one-click flow as everywhere else in admin.
+        1-2 real Chapters where it fits. The preview below is exactly how it&apos;ll look live —
+        pick a hero photo from Marketing Assets, then hit Publish.
       </p>
 
       <div className="mt-8 border-t border-divider pt-6">
@@ -113,73 +139,156 @@ export default function JournalDraftsPage() {
         {error && <p className="mt-3 text-body-s text-paint-orange">{error}</p>}
       </div>
 
-      <div className="mt-12 space-y-8">
+      <div className="mt-12 space-y-16">
         {loading ? (
           <p className="text-body-s text-secondary-text">Loading...</p>
         ) : drafts.length === 0 ? (
           <p className="text-body-s text-secondary-text">No drafts yet.</p>
         ) : (
-          drafts.map((d) => (
-            <div key={d.id} className="border-t border-divider pt-6">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-caption uppercase tracking-[0.1em] text-secondary-text">
-                  {d.category ?? "Uncategorised"} · from topic &ldquo;{d.topic}&rdquo;
-                  {d.reading_time ? ` · ${d.reading_time} min read` : ""}
-                </p>
-                <div className="flex items-center gap-3">
-                  {d.status === "published" ? (
-                    <a
-                      href={`/journal/${d.published_slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-caption uppercase tracking-[0.05em] text-ink underline"
+          drafts.map((d) => {
+            const related = chapters.filter((c) => (d.related_chapter_slugs ?? []).includes(c.slug));
+            const heroImage = d.hero_image || (related[0] ? chapterImageSrc(related[0].folder, related[0].primary) : null);
+
+            return (
+              <div key={d.id} className="border-t-2 border-ink pt-8">
+                {/* Admin controls — not part of the live preview */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-surface-alt px-4 py-3">
+                  <p className="text-caption uppercase tracking-[0.1em] text-secondary-text">
+                    from topic &ldquo;{d.topic}&rdquo; · {formatDate(d.created_at)}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setPickerForId(pickerForId === d.id ? null : d.id)}
+                      className="text-caption uppercase tracking-[0.05em] text-ink underline underline-offset-4"
                     >
-                      View Live ↗
-                    </a>
-                  ) : (
-                    <>
-                      <select
-                        value={d.status}
-                        onChange={(e) => setStatus(d.id, e.target.value)}
-                        className="border border-divider bg-surface px-2 py-1 font-sans text-caption text-ink"
+                      {pickerForId === d.id ? "Close" : "Choose Hero Photo"}
+                    </button>
+                    {d.status === "published" ? (
+                      <a
+                        href={`/journal/${d.published_slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-caption uppercase tracking-[0.05em] text-ink underline"
                       >
-                        <option value="draft">Draft</option>
-                        <option value="ready">Ready To Publish</option>
-                        <option value="archived">Archived</option>
-                      </select>
-                      <button
-                        onClick={() => publish(d.id)}
-                        disabled={publishing === d.id}
-                        className="border border-ink px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
-                      >
-                        {publishing === d.id ? "Publishing..." : "Publish"}
-                      </button>
-                    </>
-                  )}
+                        View Live ↗
+                      </a>
+                    ) : (
+                      <>
+                        <select
+                          value={d.status}
+                          onChange={(e) => setStatus(d.id, e.target.value)}
+                          className="border border-divider bg-surface px-2 py-1 font-sans text-caption text-ink"
+                        >
+                          <option value="draft">Draft</option>
+                          <option value="ready">Ready To Publish</option>
+                          <option value="archived">Archived</option>
+                        </select>
+                        <button
+                          onClick={() => publish(d.id)}
+                          disabled={publishing === d.id}
+                          className="border border-ink px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
+                        >
+                          {publishing === d.id ? "Publishing..." : "Publish"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <h2 className="mt-2 font-display text-heading-s uppercase text-ink">{d.title}</h2>
-              <p className="mt-1 text-body-s text-secondary-text">{d.subtitle}</p>
-              {d.related_chapter_slugs && d.related_chapter_slugs.length > 0 && (
-                <p className="mt-1 text-micro uppercase tracking-[0.05em] text-tan-gold">
-                  Features: {d.related_chapter_slugs.join(", ")}
-                </p>
-              )}
-              <div className="mt-4 space-y-3">
-                {(d.body ?? []).map((p, i) =>
-                  p.startsWith("> ") ? (
-                    <blockquote key={i} className="border-l-2 border-ink pl-4 text-body-s italic text-ink">
-                      {p.slice(2)}
-                    </blockquote>
-                  ) : (
-                    <p key={i} className="text-body-s leading-relaxed text-ink">
-                      {p}
+
+                {pickerForId === d.id && (
+                  <div className="mt-3 border border-divider p-3">
+                    {assets.length === 0 ? (
+                      <p className="text-caption text-secondary-text">
+                        No assets uploaded yet — see Marketing Assets.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-6 gap-2 md:grid-cols-10">
+                        {assets.map((a) => (
+                          <button
+                            key={a.id}
+                            onClick={() => setHeroImage(d.id, a.url)}
+                            className={`relative aspect-square overflow-hidden border-2 ${
+                              d.hero_image === a.url ? "border-ink" : "border-transparent"
+                            }`}
+                            title={a.label ?? undefined}
+                          >
+                            <Image src={a.url} alt={a.label ?? "Asset"} fill className="object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Live-site preview — mirrors app/journal/[slug]/page.tsx exactly */}
+                <div className="mx-auto mt-8 max-w-[760px]">
+                  <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
+                    {d.category ?? "Uncategorised"} · {formatDate(d.created_at)} · {d.reading_time ?? 4} min read
+                  </p>
+                  <h2 className="mt-3 font-display text-heading-l uppercase leading-[0.95] text-ink md:text-heading-xl">
+                    {d.title}
+                  </h2>
+                  <p className="mt-4 text-body-l text-secondary-text">{d.subtitle}</p>
+                </div>
+
+                {heroImage && (
+                  <div className="relative mx-auto mt-12 aspect-[16/9] w-full max-w-[1100px] overflow-hidden bg-surface-alt">
+                    <Image
+                      src={heroImage}
+                      alt={d.title ?? "Hero"}
+                      fill
+                      sizes="(min-width: 1100px) 1100px, 100vw"
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+
+                <article className="mx-auto mt-14 max-w-[760px]">
+                  {(d.body ?? []).map((p, i) =>
+                    p.startsWith("> ") ? (
+                      <blockquote
+                        key={i}
+                        className="my-10 border-l-2 border-ink pl-6 font-display text-heading-s uppercase leading-tight text-ink"
+                      >
+                        {p.slice(2)}
+                      </blockquote>
+                    ) : (
+                      <p key={i} className="mb-6 text-body leading-relaxed text-ink">
+                        {p}
+                      </p>
+                    )
+                  )}
+                </article>
+
+                {related.length > 0 && (
+                  <section className="mx-auto mt-20 max-w-[760px] border-t border-divider pt-10">
+                    <p className="mb-6 text-caption uppercase tracking-[0.1em] text-secondary-text">
+                      Cap Suggestions
                     </p>
-                  )
+                    <div className="grid grid-cols-2 gap-6">
+                      {related.map((chapter) => (
+                        <div key={chapter.slug} className="block">
+                          <div className="relative aspect-square overflow-hidden bg-surface-alt">
+                            <Image
+                              src={chapterImageSrc(chapter.folder, chapter.primary)}
+                              alt={chapter.name}
+                              fill
+                              sizes="(min-width: 768px) 30vw, 50vw"
+                              className="object-cover object-bottom"
+                            />
+                          </div>
+                          <p className="mt-3 text-body-s uppercase tracking-[0.03em] text-ink">{chapter.name}</p>
+                          <p className="text-caption text-secondary-text">
+                            ₹{chapter.price.toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </main>

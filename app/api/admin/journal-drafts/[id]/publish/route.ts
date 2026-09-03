@@ -36,9 +36,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const relatedSlugs: string[] = draft.related_chapter_slugs ?? [];
     const heroChapter = chapters.find((c) => c.slug === relatedSlugs[0]);
-    const heroImage = heroChapter
-      ? chapterImageSrc(heroChapter.folder, heroChapter.primary)
-      : "/images/brand/travaholic-logo-color-v2.png";
+    // A manually-picked asset (from Marketing Assets) wins over the
+    // auto-derived chapter photo — see the picker in /admin/journal-drafts.
+    const heroImage =
+      draft.hero_image ||
+      (heroChapter ? chapterImageSrc(heroChapter.folder, heroChapter.primary) : "/images/brand/travaholic-logo-color-v2.png");
 
     const issue = body.issue ?? Math.max(...journalIssues.map((i) => i.number));
 

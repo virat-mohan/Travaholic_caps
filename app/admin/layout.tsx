@@ -9,7 +9,6 @@ const NAV_SECTIONS = [
     links: [
       { href: "/admin/orders", label: "Orders" },
       { href: "/admin/orders/new", label: "Add Manual Order" },
-      { href: "/admin/inventory", label: "Inventory" },
     ],
   },
   {
@@ -63,6 +62,7 @@ const NAV_SECTIONS = [
   {
     label: "Less Common",
     links: [
+      { href: "/admin/inventory", label: "Inventory" },
       { href: "/admin/edit-chapter", label: "Edit Chapters" },
       { href: "/admin/add-chapter", label: "Add Chapter" },
       { href: "/admin/marketing-assets", label: "Marketing Assets" },

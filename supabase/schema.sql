@@ -146,6 +146,7 @@ create table if not exists journal_drafts (
 alter table journal_drafts add column if not exists related_chapter_slugs text[];
 alter table journal_drafts add column if not exists reading_time int;
 alter table journal_drafts add column if not exists published_slug text;
+alter table journal_drafts add column if not exists hero_image text;
 
 -- Live Journal articles published from a draft (see /admin/journal-drafts'
 -- Publish button) — merged with the static journalArticles array in

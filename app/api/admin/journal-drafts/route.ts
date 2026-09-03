@@ -53,16 +53,17 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
-  if (!body?.id || !body?.status) {
-    return NextResponse.json({ error: "Missing id or status" }, { status: 400 });
+  if (!body?.id || (!body?.status && body?.heroImage == null)) {
+    return NextResponse.json({ error: "Missing id and status/heroImage" }, { status: 400 });
   }
+
+  const patch: Record<string, string> = {};
+  if (body.status != null) patch.status = body.status;
+  if (body.heroImage != null) patch.hero_image = body.heroImage;
 
   try {
     const supabase = getSupabaseServerClient();
-    const { error } = await supabase
-      .from("journal_drafts")
-      .update({ status: body.status })
-      .eq("id", body.id);
+    const { error } = await supabase.from("journal_drafts").update(patch).eq("id", body.id);
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (err) {
