@@ -65,7 +65,7 @@ export default async function Home() {
   return (
     <>
       <main className="mx-auto w-full max-w-[1440px] px-6 md:px-12">
-        <div className="flex justify-center pt-6 md:pt-8">
+        <div className="flex justify-center pt-16 md:pt-24">
           <DiscountPromoBanner />
         </div>
 
