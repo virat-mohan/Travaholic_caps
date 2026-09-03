@@ -7,6 +7,7 @@ import {
   relatedChaptersFor,
 } from "@/lib/journal-dynamic";
 import { chapterImageSrc } from "@/lib/chapters";
+import { JournalParagraphText } from "@/components/journal/JournalParagraph";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 
@@ -72,11 +73,11 @@ export default async function JournalArticlePage({
                 key={i}
                 className="my-10 border-l-2 border-ink pl-6 font-display text-heading-s uppercase leading-tight text-ink"
               >
-                {paragraph.slice(2)}
+                <JournalParagraphText text={paragraph.slice(2)} />
               </blockquote>
             ) : (
               <p key={i} className="mb-6 text-body leading-relaxed text-ink">
-                {paragraph}
+                <JournalParagraphText text={paragraph} />
               </p>
             )
           )}

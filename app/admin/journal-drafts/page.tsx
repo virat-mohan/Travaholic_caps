@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { chapters, chapterImageSrc } from "@/lib/chapters";
+import { JournalParagraphText } from "@/components/journal/JournalParagraph";
 
 type Draft = {
   id: string;
@@ -250,11 +251,11 @@ export default function JournalDraftsPage() {
                         key={i}
                         className="my-10 border-l-2 border-ink pl-6 font-display text-heading-s uppercase leading-tight text-ink"
                       >
-                        {p.slice(2)}
+                        <JournalParagraphText text={p.slice(2)} />
                       </blockquote>
                     ) : (
                       <p key={i} className="mb-6 text-body leading-relaxed text-ink">
-                        {p}
+                        <JournalParagraphText text={p} />
                       </p>
                     )
                   )}

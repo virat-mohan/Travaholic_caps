@@ -52,7 +52,9 @@ Pick the single best-fitting category from this list: ${CATEGORIES.join(", ")}.
 Here is the full product catalogue (slug: name — story):
 ${chapterList}
 
-Pick 1-2 Chapters from that list whose story/vibe genuinely fits this topic (never force a fit) and weave a natural mention of them into the body — e.g. "reach for the Dunes Maroon" or "this is exactly the light Peaking was sketched from" — the way a magazine credits an outfit, not a product placement. Never mention more than 2.
+Pick 1-2 Chapters from that list whose story/vibe genuinely fits this topic (never force a fit) and weave a natural mention of each into the body — the way a magazine credits an outfit, not a product placement. Never mention more than 2.
+
+Every time you mention one of these Chapters by name, wrap ONLY that product name in this exact link syntax: [[chapter-slug|Product Name]] — e.g. "reach for the [[dunes-maroon|Dunes Maroon]]" or "this is exactly the light [[peaking|Peaking]] was sketched from". Use the real slug from the catalogue above. Do this for the first mention of each chosen Chapter (subsequent mentions of the same one can be plain text).
 
 Return ONLY a JSON object, no commentary, in this exact shape:
 {
