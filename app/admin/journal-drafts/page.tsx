@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { chapters, chapterImageSrc } from "@/lib/chapters";
+import { journalIssues, type JournalArticle } from "@/lib/journal";
 import { JournalParagraphText } from "@/components/journal/JournalParagraph";
+import { MagazineCover } from "@/components/journal/MagazineCover";
 
 type Draft = {
   id: string;
@@ -218,6 +220,36 @@ export default function JournalDraftsPage() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Journal index preview — how this reads as an Issue cover thumbnail, mirrors app/journal/page.tsx */}
+                {heroImage && (
+                  <div className="mt-8">
+                    <p className="mb-3 text-caption uppercase tracking-[0.1em] text-secondary-text">
+                      As it&apos;ll appear on /journal (Issue index)
+                    </p>
+                    <div className="max-w-[280px]">
+                      <MagazineCover
+                        issue={journalIssues[journalIssues.length - 1]}
+                        articles={[
+                          {
+                            slug: d.published_slug ?? "preview",
+                            title: d.title ?? "",
+                            subtitle: d.subtitle ?? "",
+                            category: (d.category ?? "Travel Guides") as JournalArticle["category"],
+                            readingTime: d.reading_time ?? 4,
+                            publishedAt: d.created_at,
+                            heroImage,
+                            excerpt: d.excerpt ?? "",
+                            body: d.body ?? [],
+                            relatedChapterSlugs: d.related_chapter_slugs ?? [],
+                            issue: journalIssues[journalIssues.length - 1].number,
+                          },
+                        ]}
+                        coverImage={heroImage}
+                      />
+                    </div>
                   </div>
                 )}
 
