@@ -14,6 +14,8 @@ export default function MarketingAssetsPage() {
   const [uploadLabel, setUploadLabel] = useState("");
   const [uploadTags, setUploadTags] = useState("");
   const [uploadFiles, setUploadFiles] = useState<FileList | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   function load() {
     fetch("/api/admin/marketing-assets")
@@ -34,21 +36,51 @@ export default function MarketingAssetsPage() {
     }
   }
 
+  const MAX_FILE_BYTES = 4 * 1024 * 1024; // Vercel serverless functions cap request bodies around 4.5MB
+
   async function upload() {
     if (!uploadFiles || uploadFiles.length === 0) return;
     setUploading(true);
+    setUploadError(null);
+    const files = Array.from(uploadFiles);
+    setUploadProgress({ done: 0, total: files.length });
+    const failures: string[] = [];
     try {
-      const formData = new FormData();
-      Array.from(uploadFiles).forEach((f) => formData.append("files", f));
-      formData.append("label", uploadLabel);
-      formData.append("tags", uploadTags);
-      await fetch("/api/admin/marketing-assets", { method: "POST", body: formData });
+      // One file per request, sequentially — a single multipart request with
+      // every file at once easily exceeds Vercel's ~4.5MB request-body limit
+      // for a real batch of photos, and that failure was previously
+      // completely silent (no error check on the response at all).
+      for (const file of files) {
+        if (file.size > MAX_FILE_BYTES) {
+          failures.push(`${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB — over the 4MB limit)`);
+          setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
+          continue;
+        }
+        const formData = new FormData();
+        formData.append("files", file);
+        formData.append("label", uploadLabel);
+        formData.append("tags", uploadTags);
+        try {
+          const res = await fetch("/api/admin/marketing-assets", { method: "POST", body: formData });
+          if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            failures.push(`${file.name} (${data?.error ?? `HTTP ${res.status}`})`);
+          }
+        } catch {
+          failures.push(`${file.name} (network error)`);
+        }
+        setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
+      }
+      if (failures.length > 0) {
+        setUploadError(`Failed to upload: ${failures.join(", ")}`);
+      }
       setUploadLabel("");
       setUploadTags("");
       setUploadFiles(null);
       load();
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -134,9 +166,14 @@ export default function MarketingAssetsPage() {
           disabled={uploading || !uploadFiles || uploadFiles.length === 0}
           className="border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
         >
-          {uploading ? "Uploading..." : "Upload"}
+          {uploading
+            ? uploadProgress
+              ? `Uploading ${uploadProgress.done}/${uploadProgress.total}...`
+              : "Uploading..."
+            : "Upload"}
         </button>
       </div>
+      {uploadError && <p className="mt-3 max-w-2xl text-body-s text-paint-orange">{uploadError}</p>}
 
       {allTags.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">

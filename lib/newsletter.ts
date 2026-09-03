@@ -46,7 +46,9 @@ export async function getSubscriberEmails(): Promise<string[]> {
 }
 
 function renderArticleEmailHtml(article: JournalArticle, brand: Awaited<ReturnType<typeof getBrandProfile>>) {
-  const articleUrl = `${brand.siteUrl.replace(/\/$/, "")}/journal/${article.slug}`;
+  // /journal/[slug] isn't linked from anywhere on the live site — every real
+  // visitor reads an article through the Issue's magazine-reader experience.
+  const articleUrl = `${brand.siteUrl.replace(/\/$/, "")}/journal/issue/${article.issue}?article=${article.slug}`;
   const heroUrl = article.heroImage.startsWith("/")
     ? `${brand.siteUrl.replace(/\/$/, "")}${article.heroImage}`
     : article.heroImage;

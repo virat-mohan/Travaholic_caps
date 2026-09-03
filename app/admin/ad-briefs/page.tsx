@@ -532,6 +532,24 @@ export default function AdBriefsPage() {
     }
   }
 
+  async function deleteBrief(brief: Brief) {
+    if (!confirm("Delete this draft? This can't be undone — it won't cancel an already-launched Meta campaign.")) {
+      return;
+    }
+    setError(null);
+    setBriefs((prev) => prev.filter((b) => b.id !== brief.id));
+    try {
+      const res = await fetch(`/api/admin/ad-briefs?id=${brief.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Could not delete draft");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete draft");
+      loadBriefs();
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-[900px] px-6 pt-28 pb-24 md:px-12">
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Ad Brief Generator</h1>
@@ -690,9 +708,17 @@ export default function AdBriefsPage() {
                       ? (chapters.find((c) => c.slug === brief.chapter_slug)?.name ?? brief.chapter_slug)
                       : "Generic — Brand"}
                 </p>
-                <span className="text-micro uppercase tracking-[0.05em] text-tan-gold">
-                  {brief.status}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-micro uppercase tracking-[0.05em] text-tan-gold">
+                    {brief.status}
+                  </span>
+                  <button
+                    onClick={() => deleteBrief(brief)}
+                    className="text-micro uppercase tracking-[0.05em] text-secondary-text underline hover:text-paint-orange"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
 
               <div className="mt-4 grid gap-6 md:grid-cols-[280px_1fr]">

@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { chapters, chapterImageSrc } from "@/lib/chapters";
-import { journalIssues, type JournalArticle } from "@/lib/journal";
-import { JournalParagraphText } from "@/components/journal/JournalParagraph";
+import { journalArticles, journalIssues, type JournalArticle } from "@/lib/journal";
 import { MagazineCover } from "@/components/journal/MagazineCover";
+import { MagazineReader } from "@/components/journal/MagazineReader";
 
 type Draft = {
   id: string;
@@ -38,6 +38,7 @@ export default function JournalDraftsPage() {
   const [publishing, setPublishing] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [pickerForId, setPickerForId] = useState<string | null>(null);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
 
   function loadDrafts() {
     fetch("/api/admin/journal-drafts")
@@ -168,7 +169,7 @@ export default function JournalDraftsPage() {
                     </button>
                     {d.status === "published" ? (
                       <a
-                        href={`/journal/${d.published_slug}`}
+                        href={`/journal/issue/${journalIssues[journalIssues.length - 1].number}?article=${d.published_slug}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-caption uppercase tracking-[0.05em] text-ink underline"
@@ -253,7 +254,7 @@ export default function JournalDraftsPage() {
                   </div>
                 )}
 
-                {/* Live-site preview — mirrors app/journal/[slug]/page.tsx exactly */}
+                {/* Quick glance */}
                 <div className="mx-auto mt-8 max-w-[760px]">
                   <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">
                     {d.category ?? "Uncategorised"} · {formatDate(d.created_at)} · {d.reading_time ?? 4} min read
@@ -262,63 +263,46 @@ export default function JournalDraftsPage() {
                     {d.title}
                   </h2>
                   <p className="mt-4 text-body-l text-secondary-text">{d.subtitle}</p>
+                  <button
+                    onClick={() => setPreviewingId(d.id)}
+                    disabled={!heroImage}
+                    className="mt-6 border border-ink px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream disabled:opacity-50"
+                  >
+                    Preview As It&apos;ll Look Live (Magazine Reader)
+                  </button>
                 </div>
 
-                {heroImage && (
-                  <div className="relative mx-auto mt-12 aspect-[16/9] w-full max-w-[1100px] overflow-hidden bg-surface-alt">
-                    <Image
-                      src={heroImage}
-                      alt={d.title ?? "Hero"}
-                      fill
-                      sizes="(min-width: 1100px) 1100px, 100vw"
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-
-                <article className="mx-auto mt-14 max-w-[760px]">
-                  {(d.body ?? []).map((p, i) =>
-                    p.startsWith("> ") ? (
-                      <blockquote
-                        key={i}
-                        className="my-10 border-l-2 border-ink pl-6 font-display text-heading-s uppercase leading-tight text-ink"
-                      >
-                        <JournalParagraphText text={p.slice(2)} />
-                      </blockquote>
-                    ) : (
-                      <p key={i} className="mb-6 text-body leading-relaxed text-ink">
-                        <JournalParagraphText text={p} />
-                      </p>
-                    )
-                  )}
-                </article>
-
-                {related.length > 0 && (
-                  <section className="mx-auto mt-20 max-w-[760px] border-t border-divider pt-10">
-                    <p className="mb-6 text-caption uppercase tracking-[0.1em] text-secondary-text">
-                      Cap Suggestions
-                    </p>
-                    <div className="grid grid-cols-2 gap-6">
-                      {related.map((chapter) => (
-                        <div key={chapter.slug} className="block">
-                          <div className="relative aspect-square overflow-hidden bg-surface-alt">
-                            <Image
-                              src={chapterImageSrc(chapter.folder, chapter.primary)}
-                              alt={chapter.name}
-                              fill
-                              sizes="(min-width: 768px) 30vw, 50vw"
-                              className="object-cover object-bottom"
-                            />
-                          </div>
-                          <p className="mt-3 text-body-s uppercase tracking-[0.03em] text-ink">{chapter.name}</p>
-                          <p className="text-caption text-secondary-text">
-                            ₹{chapter.price.toLocaleString("en-IN")}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
+                {previewingId === d.id &&
+                  heroImage &&
+                  (() => {
+                    const draftArticle: JournalArticle = {
+                      slug: d.published_slug ?? `__preview_${d.id}`,
+                      title: d.title ?? "",
+                      subtitle: d.subtitle ?? "",
+                      category: (d.category ?? "Travel Guides") as JournalArticle["category"],
+                      readingTime: d.reading_time ?? 4,
+                      publishedAt: d.created_at,
+                      heroImage,
+                      excerpt: d.excerpt ?? "",
+                      body: d.body ?? [],
+                      relatedChapterSlugs: d.related_chapter_slugs ?? [],
+                      issue: journalIssues[journalIssues.length - 1].number,
+                    };
+                    const issue = journalIssues[journalIssues.length - 1];
+                    const siblings = journalArticles.filter((a) => a.issue === issue.number);
+                    const articles = [...siblings, draftArticle];
+                    const featuredSlugs = new Set(articles.flatMap((a) => a.relatedChapterSlugs));
+                    const featuredChapters = chapters.filter((c) => featuredSlugs.has(c.slug));
+                    return (
+                      <MagazineReader
+                        issue={issue}
+                        articles={articles}
+                        featuredChapters={featuredChapters}
+                        startSlug={draftArticle.slug}
+                        onClose={() => setPreviewingId(null)}
+                      />
+                    );
+                  })()}
               </div>
             );
           })

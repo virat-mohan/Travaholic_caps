@@ -130,3 +130,18 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Could not update ad brief" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  try {
+    const supabase = getSupabaseServerClient();
+    const { error } = await supabase.from("ad_briefs").delete().eq("id", id);
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Failed to delete ad brief", id, err);
+    return NextResponse.json({ error: "Could not delete ad brief" }, { status: 500 });
+  }
+}

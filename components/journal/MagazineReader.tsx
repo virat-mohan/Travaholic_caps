@@ -40,11 +40,14 @@ export function MagazineReader({
   articles,
   featuredChapters,
   startSlug,
+  onClose,
 }: {
   issue: JournalIssue;
   articles: JournalArticle[];
   featuredChapters: Chapter[];
   startSlug?: string;
+  /** When given, "Close Issue" calls this instead of navigating to /journal — used to preview a not-yet-published draft inline in /admin/journal-drafts without leaving the page. */
+  onClose?: () => void;
 }) {
   const startIndex = startSlug ? articles.findIndex((a) => a.slug === startSlug) : -1;
   const [page, setPage] = useState(startIndex >= 0 ? startIndex + 1 : 0);
@@ -103,12 +106,21 @@ export function MagazineReader({
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-cream">
       <header className="flex h-14 items-center justify-between border-b border-divider px-6 md:px-12">
-        <Link
-          href="/journal"
-          className="flex items-center gap-2 text-caption uppercase tracking-[0.1em] text-secondary-text hover:text-ink"
-        >
-          <X size={14} /> Close Issue
-        </Link>
+        {onClose ? (
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 text-caption uppercase tracking-[0.1em] text-secondary-text hover:text-ink"
+          >
+            <X size={14} /> Close Preview
+          </button>
+        ) : (
+          <Link
+            href="/journal"
+            className="flex items-center gap-2 text-caption uppercase tracking-[0.1em] text-secondary-text hover:text-ink"
+          >
+            <X size={14} /> Close Issue
+          </Link>
+        )}
         <p className="text-micro uppercase tracking-[0.1em] text-secondary-text">
           {issue.name} · Page {page + 1} of {totalPages}
         </p>
