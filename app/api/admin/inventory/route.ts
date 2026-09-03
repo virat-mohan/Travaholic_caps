@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendRestockEmail } from "@/lib/email";
+import { sendRestockWhatsApp } from "@/lib/whatsapp-notify";
 import { chapters } from "@/lib/chapters";
 import { checkAndAlertLowStock } from "@/lib/inventory";
+import { getBrandProfile } from "@/lib/brand";
 
 export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
@@ -36,17 +38,28 @@ export async function PATCH(request: Request) {
     if (wasSoldOut && stockOnHand > 0) {
       try {
         const chapter = chapters.find((c) => c.slug === body.chapterSlug);
+        const chapterName = chapter?.name ?? body.chapterSlug;
+        const brand = await getBrandProfile();
+        const chapterUrl = `${brand.siteUrl.replace(/\/$/, "")}/chapter/${body.chapterSlug}`;
         const { data: pending } = await supabase
           .from("leads")
-          .select("id, name, email")
+          .select("id, name, email, phone")
           .eq("chapter_slug", body.chapterSlug)
           .eq("lead_type", "restock_notify")
           .eq("status", "new");
 
         for (const lead of pending ?? []) {
-          if (!lead.email) continue;
-          const sent = await sendRestockEmail(lead.email, lead.name, chapter?.name ?? body.chapterSlug, body.chapterSlug);
-          if (sent) {
+          // WhatsApp-first: a phone number gets this via WhatsApp only;
+          // email is the fallback, used only when there's no phone (or
+          // WhatsApp failed to send).
+          const whatsappSent = lead.phone
+            ? await sendRestockWhatsApp(lead.phone, lead.name, chapterName, chapterUrl)
+            : false;
+          const emailSent =
+            !whatsappSent && lead.email
+              ? await sendRestockEmail(lead.email, lead.name, chapterName, body.chapterSlug)
+              : false;
+          if (whatsappSent || emailSent) {
             await supabase.from("leads").update({ status: "contacted" }).eq("id", lead.id);
           }
         }

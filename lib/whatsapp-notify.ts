@@ -1,6 +1,6 @@
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { sendMsg91WhatsAppFlow } from "@/lib/msg91";
+import { sendMsg91WhatsAppFlow, sendMsg91Template } from "@/lib/msg91";
 import { generateAndUploadOrderCard } from "@/lib/order-card";
 
 type OrderForWhatsApp = { id: string; customer_name: string; customer_phone: string; total: number };
@@ -48,6 +48,27 @@ async function sendTemplate(
 }
 
 /**
+ * Same as sendTemplate above, but via MSG91's bulk outbound-message API
+ * (sendMsg91Template) — addresses the template by its actual approved name
+ * rather than a Flow slug. Prefer this for any new template going forward.
+ */
+async function sendTemplateByName(
+  phone: string,
+  templateName: string,
+  msg91TemplateName: string | null,
+  variables: string[],
+  logAgainst: { cartSessionId?: string; orderId?: string }
+) {
+  if (!msg91TemplateName) return false;
+  const result = await sendMsg91Template(msg91TemplateName, phone, variables);
+  if (result.sent) {
+    await logSend(result.messageId, templateName, logAgainst);
+    return true;
+  }
+  return false;
+}
+
+/**
  * Sends an order-confirmation WhatsApp message via MSG91, with a branded
  * "Order Confirmed" card (generated via @vercel/og) as the template's header
  * image — WhatsApp doesn't render HTML, so an image + formatted text is the
@@ -81,20 +102,43 @@ export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp, ite
 }
 
 /**
- * Sends an abandoned-cart nudge via MSG91. Needs a Flow with two variables:
- * customer name, item summary — set its ID as
- * MSG91_ABANDONED_CART_TEMPLATE_ID in /admin/settings. Called from the
- * abandon-sweep cron/route, never more than once per session (caller checks
- * retargeted_at first).
+ * Sends an abandoned-cart nudge via MSG91. MSG91_ABANDONED_CART_TEMPLATE_ID
+ * holds the approved template's actual name (e.g. "abandoned_cart_nudge"),
+ * not a Flow slug — set in /admin/settings. Called from the abandon-sweep
+ * cron/route, never more than once per session (caller checks retargeted_at
+ * first).
  */
 export async function sendAbandonedCartWhatsApp(session: CartSessionForWhatsApp) {
   if (!session.customer_phone) return false;
   const itemSummary = session.items.map((i) => `${i.quantity}x ${i.name}`).join(", ") || "your cart";
-  const msg91TemplateId = await getSetting("MSG91_ABANDONED_CART_TEMPLATE_ID");
+  const msg91TemplateName = await getSetting("MSG91_ABANDONED_CART_TEMPLATE_ID");
   const variables = [session.customer_name ?? "there", itemSummary];
-  return sendTemplate(session.customer_phone, "abandoned_cart", msg91TemplateId, variables, {
+  return sendTemplateByName(session.customer_phone, "abandoned_cart", msg91TemplateName, variables, {
     cartSessionId: session.id,
   });
+}
+
+/**
+ * Sends a restock alert via MSG91 — template takes three variables: customer
+ * name, chapter name, chapter URL. Set MSG91_RESTOCK_TEMPLATE_ID in
+ * /admin/settings to the approved template's name.
+ */
+export async function sendRestockWhatsApp(phone: string, name: string | null, chapterName: string, chapterUrl: string) {
+  const msg91TemplateName = await getSetting("MSG91_RESTOCK_TEMPLATE_ID");
+  const variables = [name ?? "there", chapterName, chapterUrl];
+  return sendTemplateByName(phone, "restock_alert", msg91TemplateName, variables, {});
+}
+
+/**
+ * Sends a post-delivery review-request nudge via MSG91 — template takes
+ * three variables: customer name, item summary, and (by design, always the
+ * same constant) the Google review link. Set MSG91_REVIEW_REQUEST_TEMPLATE_ID
+ * in /admin/settings to the approved template's name.
+ */
+export async function sendReviewRequestWhatsApp(phone: string, name: string | null, itemsLine: string) {
+  const msg91TemplateName = await getSetting("MSG91_REVIEW_REQUEST_TEMPLATE_ID");
+  const variables = [name ?? "there", itemsLine, "https://g.page/r/CbvWdBDo1oxlEBM/review"];
+  return sendTemplateByName(phone, "review_request", msg91TemplateName, variables, {});
 }
 
 /**

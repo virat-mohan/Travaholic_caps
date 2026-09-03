@@ -1,5 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { sendNdrWhatsApp, sendRtoInitiatedWhatsApp, sendRtoRefundedWhatsApp } from "@/lib/whatsapp-notify";
+import { sendNdrWhatsApp, sendRtoInitiatedWhatsApp, sendRtoRefundedWhatsApp, sendReviewRequestWhatsApp } from "@/lib/whatsapp-notify";
 import { sendReviewRequestEmail, sendRtoInitiatedEmail, sendRtoRefundedEmail } from "@/lib/email";
 import { refundRazorpayPayment } from "@/lib/razorpay";
 import { checkAndAlertLowStock } from "@/lib/inventory";
@@ -181,12 +181,21 @@ export async function applyShipmentStatusUpdate(input: {
   // Same transition-only guard, plus review_requested_at as a second safety
   // net in case a delivered->something->delivered flip ever happens on a
   // courier's side — never send the review ask twice.
-  if (isDelivered && !wasDelivered && !existing.review_requested_at && existing.customer_email) {
+  if (isDelivered && !wasDelivered && !existing.review_requested_at && (existing.customer_phone || existing.customer_email)) {
     const { data: items } = await supabase.from("order_items").select("chapter_name").eq("order_id", existing.id);
     const chapterNames = [...new Set((items ?? []).map((i) => i.chapter_name))];
     if (chapterNames.length > 0) {
-      const sent = await sendReviewRequestEmail(existing.customer_email, existing.customer_name, existing.id, chapterNames);
-      if (sent) {
+      const itemsLine = chapterNames.join(", ");
+      // WhatsApp-first: a phone number gets this via WhatsApp only; email is
+      // the fallback, used only when there's no phone (or WhatsApp failed).
+      const whatsappSent = existing.customer_phone
+        ? await sendReviewRequestWhatsApp(existing.customer_phone, existing.customer_name, itemsLine)
+        : false;
+      const emailSent =
+        !whatsappSent && existing.customer_email
+          ? await sendReviewRequestEmail(existing.customer_email, existing.customer_name, existing.id, chapterNames)
+          : false;
+      if (whatsappSent || emailSent) {
         await supabase.from("orders").update({ review_requested_at: new Date().toISOString() }).eq("id", existing.id);
       }
     }

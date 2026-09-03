@@ -199,6 +199,67 @@ export async function sendMsg91Campaign(
 }
 
 /**
+ * Sends a WhatsApp template message via MSG91's bulk outbound-message API —
+ * a third distinct MSG91 product from the two above (Flow and Campaign),
+ * addressing the template by its actual approved name plus the WABA's
+ * namespace, rather than a Flow/Campaign slug. This is what MSG91's own
+ * "Send WhatsApp" UI generates code for, and is the simplest of the three:
+ * one endpoint, one payload shape, works for any approved template just by
+ * name. Prefer this over sendMsg91Flow/sendMsg91Campaign for any new
+ * template going forward. `bodyValues` map positionally to {{1}}, {{2}}, ...
+ * in the template.
+ */
+export async function sendMsg91Template(templateName: string, phone: string, bodyValues: string[]) {
+  const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
+  if (enabled !== "true") {
+    return { sent: false as const };
+  }
+
+  const authKey = await getSetting("MSG91_AUTH_KEY");
+  const integratedNumber = await getSetting("MSG91_WHATSAPP_INTEGRATED_NUMBER");
+  const namespace = await getSetting("MSG91_WHATSAPP_NAMESPACE");
+  if (!authKey || !integratedNumber || !namespace) {
+    return { sent: false as const };
+  }
+
+  const components = Object.fromEntries(
+    bodyValues.map((v, i) => [`body_${i + 1}`, { type: "text", value: v }])
+  );
+
+  try {
+    const res = await fetch("https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/", {
+      method: "POST",
+      headers: { authkey: authKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        integrated_number: integratedNumber,
+        content_type: "template",
+        payload: {
+          messaging_product: "whatsapp",
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: "en", policy: "deterministic" },
+            namespace,
+            to_and_components: [{ to: [toMobile(phone)], components }],
+          },
+        },
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.hasError) {
+      console.error("MSG91 template send failed", res.status, data);
+      return { sent: false as const };
+    }
+    const messageId =
+      data?.data?.[0]?.message_id ?? data?.data?.request_id ?? data?.request_id ?? null;
+    return { sent: true as const, messageId: messageId ? String(messageId) : undefined };
+  } catch (err) {
+    console.error("MSG91 template send failed", err);
+    return { sent: false as const };
+  }
+}
+
+/**
  * Sends a free-text WhatsApp message (not a pre-approved template) — only
  * valid within Meta's 24-hour "session" window after the customer last
  * messaged in, which is exactly the admin-inbox reply use case. Payload
