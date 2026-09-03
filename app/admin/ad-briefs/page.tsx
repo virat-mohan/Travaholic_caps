@@ -14,6 +14,7 @@ type Brief = {
   target_audience: string;
   hashtags: string[] | null;
   is_carousel: boolean;
+  creative_format: string | null;
   image_prompt: string | null;
   image_prompts: string[] | null;
   creative_style: string | null;
@@ -55,7 +56,12 @@ export default function AdBriefsPage() {
   const [multiChapterMode, setMultiChapterMode] = useState(false);
   const [selectedChapterSlugs, setSelectedChapterSlugs] = useState<string[]>([]);
   const [customInstructions, setCustomInstructions] = useState("");
-  const [selectedAssetUrls, setSelectedAssetUrls] = useState<string[]>([]);
+  // Per-brief asset selection + format choice for the post-brief "pick
+  // assets, then decide static/carousel" step — see creative_format on the
+  // Brief type and the stage UI below.
+  const [stageAssetUrls, setStageAssetUrls] = useState<Record<string, string[]>>({});
+  const [stageFormat, setStageFormat] = useState<Record<string, "static" | "carousel">>({});
+  const [settingFormat, setSettingFormat] = useState<Record<string, boolean>>({});
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -84,8 +90,30 @@ export default function AdBriefsPage() {
   const [autoOverlay, setAutoOverlay] = useState<Record<string, boolean>>({});
   const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  function toggleAssetSelection(url: string) {
-    setSelectedAssetUrls((prev) => (prev.includes(url) ? prev.filter((u) => u !== url) : [...prev, url]));
+  function toggleStageAsset(briefId: string, url: string) {
+    setStageAssetUrls((prev) => {
+      const current = prev[briefId] ?? [];
+      return { ...prev, [briefId]: current.includes(url) ? current.filter((u) => u !== url) : [...current, url] };
+    });
+  }
+
+  async function confirmFormat(brief: Brief, format: "static" | "carousel") {
+    setError(null);
+    setSettingFormat((prev) => ({ ...prev, [brief.id]: true }));
+    try {
+      const res = await fetch("/api/admin/ad-briefs/set-format", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brief.id, format, assetUrls: stageAssetUrls[brief.id] ?? [] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not set format");
+      setBriefs((prev) => prev.map((b) => (b.id === brief.id ? { ...b, ...data.brief } : b)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not set format");
+    } finally {
+      setSettingFormat((prev) => ({ ...prev, [brief.id]: false }));
+    }
   }
 
   function scrollCarousel(briefId: string, direction: 1 | -1) {
@@ -128,14 +156,12 @@ export default function AdBriefsPage() {
           isGeneric: isCarousel && multiChapterMode ? false : isGeneric,
           isCarousel,
           customInstructions,
-          assetUrls: selectedAssetUrls.length > 0 ? selectedAssetUrls : undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not generate brief");
       setBriefs((prev) => [data.brief, ...prev]);
       setCustomInstructions("");
-      setSelectedAssetUrls([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate brief");
     } finally {
@@ -537,102 +563,70 @@ export default function AdBriefsPage() {
           </button>
         </div>
 
-        <label className="mt-4 flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={isCarousel}
-            onChange={(e) => setIsCarousel(e.target.checked)}
-            className="h-4 w-4 accent-ink"
-          />
-          <span className="font-sans text-body-s text-ink">
-            Carousel (Claude picks how many cards it needs)
-          </span>
-        </label>
+        {!isGeneric && (
+          <label className="mt-4 flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={multiChapterMode}
+              onChange={(e) => {
+                setMultiChapterMode(e.target.checked);
+                setIsCarousel(e.target.checked);
+              }}
+              className="h-4 w-4 accent-ink"
+            />
+            <span className="font-sans text-body-s text-ink">
+              Multi-Product Carousel (one card per Chapter)
+            </span>
+          </label>
+        )}
+        {!isGeneric && !multiChapterMode && (
+          <p className="mt-1 text-micro text-secondary-text/70">
+            For a single Chapter, pick Static vs. Carousel after the brief is written — see below.
+          </p>
+        )}
 
         {isGeneric ? (
           <p className="mt-3 text-micro text-secondary-text/70">
             Not tied to one product — the copy covers the brand as a whole, and the CTA links to
             the homepage instead of a Chapter page.
           </p>
-        ) : isCarousel ? (
+        ) : multiChapterMode ? (
           <>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-3 flex items-center justify-between">
+              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                Chapters ({selectedChapterSlugs.length} selected)
+              </label>
               <button
                 type="button"
-                onClick={() => setMultiChapterMode(false)}
-                className={`border px-3 py-1.5 text-caption uppercase tracking-[0.05em] ${
-                  !multiChapterMode ? "border-ink bg-ink text-cream" : "border-divider text-ink"
-                }`}
+                onClick={() =>
+                  setSelectedChapterSlugs(
+                    selectedChapterSlugs.length === chapters.length ? [] : chapters.map((c) => c.slug)
+                  )
+                }
+                className="text-micro text-secondary-text underline"
               >
-                One Chapter, Multiple Angles
-              </button>
-              <button
-                type="button"
-                onClick={() => setMultiChapterMode(true)}
-                className={`border px-3 py-1.5 text-caption uppercase tracking-[0.05em] ${
-                  multiChapterMode ? "border-ink bg-ink text-cream" : "border-divider text-ink"
-                }`}
-              >
-                One Card Per Chapter
+                {selectedChapterSlugs.length === chapters.length ? "Clear All" : "Select All"}
               </button>
             </div>
-
-            {multiChapterMode ? (
-              <>
-                <div className="mt-3 flex items-center justify-between">
-                  <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                    Chapters ({selectedChapterSlugs.length} selected)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedChapterSlugs(
-                        selectedChapterSlugs.length === chapters.length ? [] : chapters.map((c) => c.slug)
+            <div className="mt-2 grid max-h-56 grid-cols-2 gap-1.5 overflow-y-auto border border-divider p-2 md:grid-cols-3">
+              {chapters.map((c) => (
+                <label key={c.slug} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedChapterSlugs.includes(c.slug)}
+                    onChange={(e) =>
+                      setSelectedChapterSlugs((prev) =>
+                        e.target.checked ? [...prev, c.slug] : prev.filter((s) => s !== c.slug)
                       )
                     }
-                    className="text-micro text-secondary-text underline"
-                  >
-                    {selectedChapterSlugs.length === chapters.length ? "Clear All" : "Select All"}
-                  </button>
-                </div>
-                <div className="mt-2 grid max-h-56 grid-cols-2 gap-1.5 overflow-y-auto border border-divider p-2 md:grid-cols-3">
-                  {chapters.map((c) => (
-                    <label key={c.slug} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedChapterSlugs.includes(c.slug)}
-                        onChange={(e) =>
-                          setSelectedChapterSlugs((prev) =>
-                            e.target.checked ? [...prev, c.slug] : prev.filter((s) => s !== c.slug)
-                          )
-                        }
-                        className="h-3.5 w-3.5 accent-ink"
-                      />
-                      <span className="text-body-s text-ink">{c.name}</span>
-                    </label>
-                  ))}
-                </div>
-                {selectedChapterSlugs.length > 0 && selectedChapterSlugs.length < 2 && (
-                  <p className="mt-1 text-micro text-paint-orange">Pick at least 2 chapters for a carousel.</p>
-                )}
-              </>
-            ) : (
-              <>
-                <label className="mt-4 block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                  Chapter
+                    className="h-3.5 w-3.5 accent-ink"
+                  />
+                  <span className="text-body-s text-ink">{c.name}</span>
                 </label>
-                <select
-                  value={chapterSlug}
-                  onChange={(e) => setChapterSlug(e.target.value)}
-                  className="mt-3 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
-                >
-                  {chapters.map((c) => (
-                    <option key={c.slug} value={c.slug}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </>
+              ))}
+            </div>
+            {selectedChapterSlugs.length > 0 && selectedChapterSlugs.length < 2 && (
+              <p className="mt-1 text-micro text-paint-orange">Pick at least 2 chapters for a carousel.</p>
             )}
           </>
         ) : (
@@ -652,52 +646,6 @@ export default function AdBriefsPage() {
               ))}
             </select>
           </>
-        )}
-
-        <label className="mt-4 block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-          Use Real Photos (optional)
-        </label>
-        <p className="mt-1 text-micro text-secondary-text/70">
-          Pick one or more assets to build the post around — skips AI image generation entirely.
-          Selecting more than one makes it a carousel, one photo per card.
-        </p>
-        {assets.length === 0 ? (
-          <p className="mt-2 text-micro text-secondary-text/70">
-            No assets uploaded yet — see Marketing Assets.
-          </p>
-        ) : (
-          <div className="mt-2 grid grid-cols-6 gap-2 md:grid-cols-10">
-            {assets.map((a) => {
-              const selected = selectedAssetUrls.includes(a.url);
-              return (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => toggleAssetSelection(a.url)}
-                  className={`relative aspect-square overflow-hidden border-2 ${
-                    selected ? "border-ink" : "border-transparent"
-                  }`}
-                  title={a.label ?? undefined}
-                >
-                  <Image src={a.url} alt={a.label ?? "Asset"} fill className="object-cover" />
-                  {selected && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-ink/40 text-cream">
-                      ✓
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {selectedAssetUrls.length > 0 && (
-          <p className="mt-2 text-micro text-secondary-text">
-            {selectedAssetUrls.length} photo{selectedAssetUrls.length > 1 ? "s" : ""} selected
-            {selectedAssetUrls.length > 1 ? " — will generate as a carousel" : ""}.{" "}
-            <button type="button" onClick={() => setSelectedAssetUrls([])} className="underline">
-              Clear
-            </button>
-          </p>
         )}
 
         <label className="mt-4 block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
@@ -749,7 +697,102 @@ export default function AdBriefsPage() {
 
               <div className="mt-4 grid gap-6 md:grid-cols-[280px_1fr]">
                 <div>
-                  {brief.is_carousel ? (
+                  {!brief.creative_format &&
+                  !brief.image_url &&
+                  !(brief.image_urls ?? []).some(Boolean) &&
+                  !brief.is_carousel ? (
+                    <div className="w-[280px]">
+                      <p className="mb-2 text-micro uppercase tracking-[0.1em] text-secondary-text">
+                        1. Pick photos (optional)
+                      </p>
+                      {assets.length === 0 ? (
+                        <p className="text-micro text-secondary-text/70">
+                          No assets uploaded yet — see Marketing Assets. You can still generate with AI below.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {assets.map((a) => {
+                            const selected = (stageAssetUrls[brief.id] ?? []).includes(a.url);
+                            return (
+                              <button
+                                key={a.id}
+                                type="button"
+                                onClick={() => toggleStageAsset(brief.id, a.url)}
+                                className={`relative aspect-square overflow-hidden border-2 ${
+                                  selected ? "border-ink" : "border-transparent"
+                                }`}
+                                title={a.label ?? undefined}
+                              >
+                                <Image src={a.url} alt={a.label ?? "Asset"} fill className="object-cover" />
+                                {selected && (
+                                  <span className="absolute inset-0 flex items-center justify-center bg-ink/40 text-cream">
+                                    ✓
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {(stageAssetUrls[brief.id] ?? []).length > 0 && (
+                        <p className="mt-1.5 text-micro text-secondary-text">
+                          {(stageAssetUrls[brief.id] ?? []).length} selected —{" "}
+                          <button
+                            type="button"
+                            onClick={() => setStageAssetUrls((prev) => ({ ...prev, [brief.id]: [] }))}
+                            className="underline"
+                          >
+                            Clear
+                          </button>
+                        </p>
+                      )}
+
+                      <p className="mb-2 mt-4 text-micro uppercase tracking-[0.1em] text-secondary-text">
+                        2. Pick a format
+                      </p>
+                      {(() => {
+                        const pickedCount = (stageAssetUrls[brief.id] ?? []).length;
+                        const recommended: "static" | "carousel" = pickedCount >= 2 ? "carousel" : "static";
+                        return (
+                          <>
+                            <div className="flex gap-2">
+                              {(["static", "carousel"] as const).map((f) => (
+                                <button
+                                  key={f}
+                                  type="button"
+                                  onClick={() => setStageFormat((prev) => ({ ...prev, [brief.id]: f }))}
+                                  className={`relative border px-3 py-1.5 text-caption uppercase tracking-[0.05em] ${
+                                    (stageFormat[brief.id] ?? recommended) === f
+                                      ? "border-ink bg-ink text-cream"
+                                      : "border-divider text-ink"
+                                  }`}
+                                >
+                                  {f === "static" ? "Static" : "Carousel"}
+                                  {recommended === f && (
+                                    <span className="ml-1.5 text-micro normal-case opacity-70">(suggested)</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                            <p className="mt-1.5 text-micro text-secondary-text/70">
+                              {pickedCount >= 2
+                                ? "2+ photos picked — a Carousel uses each as its own card."
+                                : pickedCount === 1
+                                  ? "One photo picked — Static uses it directly, or pick more for a Carousel."
+                                  : "No photos picked — either format will generate fresh AI images."}
+                            </p>
+                            <button
+                              onClick={() => confirmFormat(brief, stageFormat[brief.id] ?? recommended)}
+                              disabled={settingFormat[brief.id]}
+                              className="mt-3 block w-full border border-ink bg-ink px-3 py-1.5 text-micro font-bold uppercase tracking-[0.05em] text-cream disabled:opacity-50"
+                            >
+                              {settingFormat[brief.id] ? "Confirming..." : "Confirm & Continue"}
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  ) : brief.is_carousel ? (
                     <div className="w-[280px]">
                       <div className="relative">
                         <div

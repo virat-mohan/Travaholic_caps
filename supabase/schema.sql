@@ -878,6 +878,15 @@ alter table ad_briefs add column if not exists ad_daily_budget_rupees int not nu
 -- angles on a single product) has no single chapter_slug — this array
 -- carries the ordered list instead, one entry per carousel card.
 alter table ad_briefs add column if not exists chapter_slugs text[];
+
+-- Explicit marker for "the assets + static/carousel format decision has
+-- been made" — a fresh single-chapter/generic brief starts with this null
+-- so /admin/ad-briefs shows the asset-picker + format-choice step before
+-- the full creative-editing UI, matching a real strategist's flow (brief
+-- first, then pick source photos, then decide the format they call for).
+-- A multi-chapter carousel brief is already carousel by construction and
+-- sets this at creation, skipping the step entirely.
+alter table ad_briefs add column if not exists creative_format text;
 create index if not exists ad_briefs_queue_idx on ad_briefs (queue_status, scheduled_for);
 
 -- Checkout no longer requires an email address — phone (WhatsApp) is the

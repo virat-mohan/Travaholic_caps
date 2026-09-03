@@ -82,6 +82,12 @@ export async function POST(request: Request) {
         image_url: assetUrls && assetUrls.length === 1 ? assetUrls[0] : null,
         image_urls: assetUrls && assetUrls.length > 1 ? assetUrls : null,
         image_source: assetUrls ? "real" : null,
+        // A multi-chapter carousel is carousel by construction — resolved
+        // immediately. Anything else starts undecided: /admin/ad-briefs
+        // shows the asset-picker + static/carousel choice before the full
+        // creative UI, unless assetUrls were already given (then the
+        // format's already implied by how many were picked).
+        creative_format: chapterSlugs ? "carousel" : assetUrls ? (isCarousel ? "carousel" : "static") : null,
       })
       .select()
       .single();
@@ -101,7 +107,7 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body?.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const patch: Record<string, string | string[]> = {};
+  const patch: Record<string, string | string[] | boolean> = {};
   if (body.headline != null) patch.headline = body.headline;
   if (body.primaryText != null) patch.primary_text = body.primaryText;
   if (body.cta != null) patch.cta = body.cta;
@@ -111,6 +117,8 @@ export async function PATCH(request: Request) {
   if (body.imageUrls != null) patch.image_urls = body.imageUrls;
   if (body.imageSource != null) patch.image_source = body.imageSource;
   if (body.status != null) patch.status = body.status;
+  if (body.isCarousel != null) patch.is_carousel = body.isCarousel;
+  if (body.creativeFormat != null) patch.creative_format = body.creativeFormat;
 
   try {
     const supabase = getSupabaseServerClient();
