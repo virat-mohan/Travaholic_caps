@@ -59,6 +59,13 @@ export default function CheckoutPage() {
     keyId: null,
     codAdvanceRupees: 99,
   });
+  // razorpay.enabled defaults to false until /api/checkout/config resolves —
+  // without this separate flag, a customer submitting the form before that
+  // fetch completes (a real risk: it's an async call fired on mount) would
+  // silently fall through to the WhatsApp-manual-order path instead of
+  // actually being charged via Razorpay, even though Razorpay is properly
+  // configured. The submit button stays disabled until this is true.
+  const [configLoaded, setConfigLoaded] = useState(false);
   // Only seeded from a real `?ref=` link capture (see captureReferral in
   // lib/client-tracking.ts) — typing a code here is deliberately local
   // component state only, not persisted, so a code tried once doesn't keep
@@ -235,7 +242,8 @@ export default function CheckoutPage() {
           codAdvanceRupees: data.codAdvanceRupees ?? 99,
         })
       )
-      .catch(() => setRazorpay({ enabled: false, keyId: null, codAdvanceRupees: 99 }));
+      .catch(() => setRazorpay({ enabled: false, keyId: null, codAdvanceRupees: 99 }))
+      .finally(() => setConfigLoaded(true));
   }, []);
 
   function applyAccount(data: Account) {
@@ -436,6 +444,8 @@ export default function CheckoutPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!configLoaded) return; // guarded — see the disabled submit button below
 
     if (razorpay.enabled) {
       await handleRazorpayPayment();
@@ -874,16 +884,18 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={paying || shippingBlocking}
+                disabled={paying || shippingBlocking || !configLoaded}
                 className="w-full border border-ink bg-ink px-8 py-4 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
               >
-                {shippingBlocking
-                  ? "Undeliverable Pincode"
-                  : razorpay.enabled
-                    ? paying
-                      ? "Processing..."
-                      : `Pay ₹${total.toLocaleString("en-IN")}`
-                    : "Place Order via WhatsApp"}
+                {!configLoaded
+                  ? "Loading..."
+                  : shippingBlocking
+                    ? "Undeliverable Pincode"
+                    : razorpay.enabled
+                      ? paying
+                        ? "Processing..."
+                        : `Pay ₹${total.toLocaleString("en-IN")}`
+                      : "Place Order via WhatsApp"}
               </button>
 
               <div className="flex items-center gap-1.5 pt-1">

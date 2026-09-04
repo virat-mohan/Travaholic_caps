@@ -129,6 +129,17 @@ alter table orders add column if not exists payment_status text not null default
 alter table orders add column if not exists razorpay_order_id text;
 alter table orders add column if not exists razorpay_payment_id text;
 
+-- Without this, the client's /verify call and Razorpay's payment.captured
+-- webhook can both pass finalizeOrder's "does this order exist yet?" check
+-- before either has inserted (they fire within milliseconds of each other)
+-- and create two order rows for the same payment — two invoice emails, two
+-- WhatsApp confirmations, double-counted revenue. This constraint plus the
+-- unique-violation handling in lib/order-fulfillment.ts closes that race
+-- regardless of timing.
+create unique index if not exists orders_razorpay_payment_id_idx
+  on orders (razorpay_payment_id)
+  where razorpay_payment_id is not null;
+
 -- Claude-generated Journal article drafts from /admin/journal-drafts. These
 -- are NOT auto-published — the live Journal is still the static list in
 -- lib/journal.ts, so a draft has to be copied in by hand once it's approved.

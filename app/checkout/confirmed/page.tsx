@@ -43,6 +43,13 @@ export default function OrderConfirmedPage() {
   const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Landing here scrolled halfway down the page (carried over from
+    // checkout's own scroll position) reads as broken — the confirmation
+    // needs to open at the top every time.
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, []);
+
+  useEffect(() => {
     // orderId/paid are read from window.location via lazy useState
     // initializers above (avoids a Suspense boundary from useSearchParams,
     // same reasoning as the attribution/referral capture in
@@ -109,11 +116,11 @@ export default function OrderConfirmedPage() {
         </p>
         <CheckoutSteps current="confirmed" />
         <h1 className="mt-6 font-display text-heading-xl uppercase text-ink md:text-display-m">
-          {paid ? "You're All Set." : "Check WhatsApp."}
+          {paid ? "Thank You For Your Purchase." : "Check WhatsApp."}
         </h1>
         <p className="mt-4 text-body text-secondary-text">
           {paid
-            ? "We've emailed your invoice and sent a confirmation on WhatsApp — your order is on its way to being packed."
+            ? "Welcome to being an Explorer — we've emailed your invoice and sent a confirmation on WhatsApp, and your order is on its way to being packed."
             : "Your order details opened in WhatsApp — send that message through and we'll confirm payment and delivery with you directly, usually within a few hours."}
         </p>
 

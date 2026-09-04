@@ -117,7 +117,22 @@ export async function finalizeOrder(
     .select()
     .single();
 
-  if (orderError) throw orderError;
+  if (orderError) {
+    // 23505 = unique_violation on orders_razorpay_payment_id_idx — the
+    // client's /verify call and Razorpay's payment.captured webhook raced
+    // each other past the "does this exist yet?" check above and both tried
+    // to insert. Whichever loses the race just returns the winner's row
+    // instead of creating a duplicate order (and duplicate emails/WhatsApp).
+    if (orderError.code === "23505") {
+      const { data: winner } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("razorpay_payment_id", razorpayPaymentId)
+        .maybeSingle();
+      if (winner) return { orderId: winner.id as string, alreadyExisted: true };
+    }
+    throw orderError;
+  }
 
   const orderItems = pricing.items.map((item) => ({
     order_id: savedOrder.id,
