@@ -171,6 +171,32 @@ export async function sendAbandonedCartEmail(session: CartSessionForEmail) {
   return sendEmail(session.customer_email, `You left something at ${brand.brandName}`, html);
 }
 
+/** Second-stage abandoned-cart nudge by email, carrying the BUYNOW10 coupon — mirrors sendBuyNow10WhatsApp for customers without/before WhatsApp delivery. */
+export async function sendBuyNow10Email(session: CartSessionForEmail, couponCode: string) {
+  if (!session.customer_email) return false;
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email-v2.png`;
+  const cartUrl = `${brand.siteUrl.replace(/\/$/, "")}/cart`;
+  const itemLines = session.items
+    .map((i) => `<li style="margin-bottom:4px;">${i.quantity} × ${i.name}</li>`)
+    .join("");
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${session.customer_name ?? "there"},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">Still thinking it over? Here's 10% off to help you decide:</p>
+      <p style="margin:16px 0;padding:12px 20px;background:#f0eee4;border:1px dashed #101820;display:inline-block;font-size:18px;font-weight:bold;letter-spacing:0.08em;">${couponCode}</p>
+      <ul style="font-size:14px;color:#1a1a1a;list-style:none;margin:0;padding:0;">${itemLines}</ul>
+      <a href="${cartUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Use Code &amp; Check Out</a>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(session.customer_email, `10% off what's still in your cart — ${brand.brandName}`, html);
+}
+
 /** Sent once to each pending "notify me" lead when a sold-out Chapter's stock goes back above zero. */
 export async function sendRestockEmail(email: string, name: string | null, chapterName: string, chapterSlug: string) {
   const brand = await getBrandProfile();

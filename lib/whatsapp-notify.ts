@@ -130,6 +130,25 @@ export async function sendRestockWhatsApp(phone: string, name: string | null, ch
 }
 
 /**
+ * Second-stage abandoned-cart nudge, 2 hours after the first plain reminder
+ * — this one carries a discount code to actually push the sale over the
+ * line. Template takes three variables: customer name, item summary,
+ * coupon code. Set MSG91_BUYNOW10_TEMPLATE_ID in /admin/settings to the
+ * approved template's name.
+ */
+export async function sendBuyNow10WhatsApp(
+  phone: string,
+  name: string | null,
+  itemsLine: string,
+  couponCode: string,
+  cartSessionId: string
+) {
+  const msg91TemplateName = await getSetting("MSG91_BUYNOW10_TEMPLATE_ID");
+  const variables = [name ?? "there", itemsLine, couponCode];
+  return sendTemplateByName(phone, "buynow10_nudge", msg91TemplateName, variables, { cartSessionId });
+}
+
+/**
  * Sends a post-delivery review-request nudge via MSG91 — template takes
  * three variables: customer name, item summary, and (by design, always the
  * same constant) the Google review link. Set MSG91_REVIEW_REQUEST_TEMPLATE_ID

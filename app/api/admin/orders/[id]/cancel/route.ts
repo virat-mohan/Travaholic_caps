@@ -41,21 +41,33 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
     }
 
+    // A refund failure (e.g. Razorpay account balance too low to process
+    // it) must never block cancellation itself — the order still needs to
+    // stop being fulfilled and its stock still needs to come back,
+    // independent of whether Razorpay could move money right now. Same
+    // resilience pattern as the RTO auto-refund in lib/shiprocket-status.ts.
     const alreadyRefunded = order.refunded_amount ?? 0;
     const refundRupees = Math.max(0, order.total - alreadyRefunded);
     let refundedRupees = 0;
+    let refundError: string | null = null;
 
     if (refundRupees > 0 && order.razorpay_payment_id) {
-      const refund = await refundRazorpayPayment(order.razorpay_payment_id, refundRupees);
-      refundedRupees = refund.amountRupees;
-      await supabase
-        .from("orders")
-        .update({
-          refunded_amount: alreadyRefunded + refundedRupees,
-          razorpay_refund_id: refund.refundId,
-          refund_status: "refunded",
-        })
-        .eq("id", id);
+      try {
+        const refund = await refundRazorpayPayment(order.razorpay_payment_id, refundRupees);
+        refundedRupees = refund.amountRupees;
+        await supabase
+          .from("orders")
+          .update({
+            refunded_amount: alreadyRefunded + refundedRupees,
+            razorpay_refund_id: refund.refundId,
+            refund_status: "refunded",
+          })
+          .eq("id", id);
+      } catch (err) {
+        refundError = err instanceof Error ? err.message : "Unknown error";
+        console.error("Refund failed during order cancellation — cancelling anyway", id, err);
+        await supabase.from("orders").update({ refund_status: "failed" }).eq("id", id);
+      }
     }
 
     await supabase.from("orders").update({ status: "cancelled" }).eq("id", id);
@@ -81,10 +93,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await supabase.from("order_events").insert({
       order_id: id,
       event_type: "cancelled",
-      detail: refundedRupees > 0 ? `refunded ₹${refundedRupees}` : "no refund needed",
+      detail: refundError
+        ? `refund failed: ${refundError}`
+        : refundedRupees > 0
+          ? `refunded ₹${refundedRupees}`
+          : "no refund needed",
     });
 
-    return NextResponse.json({ ok: true, refundedRupees });
+    return NextResponse.json({ ok: true, refundedRupees, refundError });
   } catch (err) {
     console.error("Failed to cancel order", id, err);
     return NextResponse.json(

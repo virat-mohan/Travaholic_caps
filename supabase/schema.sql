@@ -250,6 +250,10 @@ create table if not exists cart_sessions (
   last_activity_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+-- Two-stage abandoned-cart sequence: retargeted_at is stage 1 (plain
+-- reminder, 5 minutes after going idle); this is stage 2 (a BUYNOW10
+-- coupon nudge, 2 hours after stage 1) — see app/api/cron/abandon-sweep.
+alter table cart_sessions add column if not exists second_nudge_sent_at timestamptz;
 
 -- First-party funnel log — deliberately NOT dependent on Meta's pixel or any
 -- third-party analytics being configured. This is what /admin/reports reads
