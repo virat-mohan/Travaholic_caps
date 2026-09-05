@@ -28,7 +28,8 @@ export async function computeTrustedOrderTotal(
   deliveryPincode?: string,
   referralCode?: string | null,
   checkoutPhone?: string,
-  couponCode?: string | null
+  couponCode?: string | null,
+  paymentType: "prepaid" | "cod_advance" = "prepaid"
 ) {
   const chapters = await getAllChapters();
   const pricedItems = items.map((item) => {
@@ -63,6 +64,9 @@ export async function computeTrustedOrderTotal(
     loyaltyDiscountAmount = Math.min(requestedRedeemRupees, maxRedeemableRupees);
   }
 
+  // Free shipping is a prepaid-only perk — a COD order still needs the real
+  // Shiprocket rate checked (both to confirm the pincode is deliverable at
+  // all, and because the courier collects it as part of the balance due).
   let shippingCharge = 0;
   if (deliveryPincode) {
     const unitCount = pricedItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -75,7 +79,8 @@ export async function computeTrustedOrderTotal(
         `We can't currently deliver to pincode ${deliveryPincode} — please double-check it or use a different address.`
       );
     }
-    shippingCharge = shippingResult.status === "available" ? shippingResult.rate : 0;
+    const realRate = shippingResult.status === "available" ? shippingResult.rate : 0;
+    shippingCharge = paymentType === "prepaid" ? 0 : realRate;
   }
 
   const referral = await resolveReferralDiscount(referralCode, customer?.id ?? null, checkoutPhone ?? "");

@@ -16,7 +16,8 @@ export async function POST(request: Request) {
       body.pincode,
       body.referralCode,
       body.phone,
-      body.couponCode
+      body.couponCode,
+      body.paymentType === "cod_advance" ? "cod_advance" : "prepaid"
     );
     if (pricing.total <= 0) {
       return NextResponse.json({ error: "Order total must be greater than zero" }, { status: 400 });

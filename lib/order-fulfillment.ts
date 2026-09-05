@@ -66,7 +66,8 @@ export async function finalizeOrder(
     payload.customer.pincode,
     payload.referralCode,
     payload.customer.phone,
-    payload.couponCode
+    payload.couponCode,
+    payload.paymentType === "cod_advance" ? "cod_advance" : "prepaid"
   );
 
   const wasGuest = !pricing.customer;

@@ -83,10 +83,10 @@ export default function CheckoutPage() {
   const [payError, setPayError] = useState<string | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [redeemMiles, setRedeemMiles] = useState(false);
-  // COD is off at launch — every order is prepaid in full. Kept as a
-  // constant (not a toggle) rather than deleting payment_type plumbing
-  // downstream, so COD can come back later without re-threading it.
-  const paymentType = "prepaid" as const;
+  // Prepaid ships free nationwide; COD charges the real Shiprocket rate
+  // (collected by the courier alongside the balance due) plus a small
+  // upfront advance to filter out fake/non-serious COD orders.
+  const [paymentType, setPaymentType] = useState<"prepaid" | "cod_advance">("prepaid");
   const [shippingCharge, setShippingCharge] = useState<number | null>(null);
   const [shippingUnavailable, setShippingUnavailable] = useState(false);
   // Distinct from shippingUnavailable: this specifically means Shiprocket
@@ -119,9 +119,13 @@ export default function CheckoutPage() {
     couponPreview?.checked === normalizedCouponCode && couponPreview.valid
       ? Math.min(couponPreview.discountRupees, subtotal)
       : 0;
+  // Free-shipping-on-prepaid is what the customer is actually charged;
+  // shippingCharge itself always holds the real Shiprocket rate (needed to
+  // confirm the pincode is even deliverable, and shown as-is for COD).
+  const displayShippingCharge = paymentType === "prepaid" ? 0 : (shippingCharge ?? 0);
   const total =
     Math.max(0, subtotal - discount - loyaltyDiscount - referralDiscount - couponDiscount) +
-    (shippingCharge ?? 0);
+    displayShippingCharge;
   const unitCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   // Live referral-code validation — mirrors resolveReferralDiscount's rules
@@ -493,7 +497,7 @@ export default function CheckoutPage() {
       `Subtotal: ₹${subtotal.toLocaleString("en-IN")}`,
       ...(discount > 0 ? [`Discount: −₹${discount.toLocaleString("en-IN")}`] : []),
       ...(loyaltyDiscount > 0 ? [`Travaholic Miles redeemed: −₹${loyaltyDiscount.toLocaleString("en-IN")}`] : []),
-      ...(shippingCharge ? [`Shipping: ₹${shippingCharge.toLocaleString("en-IN")}`] : []),
+      ...(displayShippingCharge ? [`Shipping: ₹${displayShippingCharge.toLocaleString("en-IN")}`] : []),
       `Total: ₹${total.toLocaleString("en-IN")}`,
       "",
       `Name: ${form.name}`,
@@ -560,7 +564,11 @@ export default function CheckoutPage() {
       {shippingCharge != null && (
         <div className="flex items-center justify-between text-body-s">
           <span className="text-secondary-text">Shipping</span>
-          <span className="text-secondary-text">₹{shippingCharge.toLocaleString("en-IN")}</span>
+          {paymentType === "prepaid" ? (
+            <span className="text-tan-gold">FREE</span>
+          ) : (
+            <span className="text-secondary-text">₹{shippingCharge.toLocaleString("en-IN")}</span>
+          )}
         </div>
       )}
       {shippingBlocking && (
@@ -702,6 +710,41 @@ export default function CheckoutPage() {
                 </button>
               )}
             </div>
+
+            {razorpay.enabled && (
+              <div className="mt-6 border-2 border-ink bg-tan-gold/20 p-4">
+                <p className="font-sans text-body-m font-bold uppercase tracking-[0.03em] text-ink">
+                  Pay in full — ship free, anywhere in India.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType("prepaid")}
+                    className={`relative flex-1 border px-4 py-2.5 text-left font-sans text-body-s transition-colors duration-200 ${
+                      paymentType === "prepaid" ? "border-ink bg-ink text-cream" : "border-ink/30 text-ink"
+                    }`}
+                  >
+                    <span className="absolute -top-2.5 right-2 bg-tan-gold px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.03em] text-ink">
+                      Free Shipping
+                    </span>
+                    <span className="block font-bold uppercase tracking-[0.03em]">Prepaid</span>
+                    <span className="block text-caption opacity-80">Free shipping, pay ₹{total.toLocaleString("en-IN")} now</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType("cod_advance")}
+                    className={`flex-1 border px-4 py-2.5 text-left font-sans text-body-s transition-colors duration-200 ${
+                      paymentType === "cod_advance" ? "border-ink bg-ink text-cream" : "border-ink/30 text-ink"
+                    }`}
+                  >
+                    <span className="block font-bold uppercase tracking-[0.03em]">Cash On Delivery</span>
+                    <span className="block text-caption opacity-80">
+                      Pay ₹{razorpay.codAdvanceRupees.toLocaleString("en-IN")} now, rest on delivery
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {orderSummary}
 
@@ -894,7 +937,9 @@ export default function CheckoutPage() {
                     : razorpay.enabled
                       ? paying
                         ? "Processing..."
-                        : `Pay ₹${total.toLocaleString("en-IN")}`
+                        : paymentType === "cod_advance"
+                          ? `Pay ₹${Math.min(razorpay.codAdvanceRupees, total).toLocaleString("en-IN")} Now`
+                          : `Pay ₹${total.toLocaleString("en-IN")}`
                       : "Place Order via WhatsApp"}
               </button>
 
