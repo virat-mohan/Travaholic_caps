@@ -55,7 +55,7 @@ export default async function Home() {
   // /community and each chapter's "Explorers Wearing X" section, surfaced
   // here too so a first-time visitor sees real customers wearing the caps
   // before ever reaching a product page.
-  const explorerPosts = (await getExplorerPosts()).slice(0, 8);
+  const explorerPosts = (await getExplorerPosts()).slice(0, 12);
 
   // Trending Now — whichever chapters got the most product-page views over
   // the last 7 days, first-party (tracking_events), refreshed by the
@@ -149,11 +149,14 @@ export default async function Home() {
               </Link>
             </div>
 
-            <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+            <div className="mt-10 -mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-4 md:-mx-12 md:px-12">
               {explorerPosts.map((post) => {
                 const primarySlug = post.chapterSlugs[0];
                 return (
-                  <div key={post.file}>
+                  <div
+                    key={post.file}
+                    className="w-[45vw] flex-none snap-start sm:w-[30vw] md:w-[22vw] lg:w-[240px]"
+                  >
                     <Link
                       href={primarySlug ? `/chapter/${primarySlug}` : "/community"}
                       className="group block"
@@ -163,7 +166,7 @@ export default async function Home() {
                           src={post.src}
                           alt={post.testimonial}
                           fill
-                          sizes="(min-width: 768px) 25vw, 50vw"
+                          sizes="(min-width: 1024px) 240px, (min-width: 768px) 22vw, (min-width: 640px) 30vw, 45vw"
                           className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                         />
                       </div>
