@@ -255,6 +255,15 @@ create table if not exists cart_sessions (
 -- coupon nudge, 2 hours after stage 1) — see app/api/cron/abandon-sweep.
 alter table cart_sessions add column if not exists second_nudge_sent_at timestamptz;
 
+-- Captured from the one-click "why didn't you buy" links in the BUYNOW10
+-- nudge email — see /api/cart-feedback and lib/email.ts's sendBuyNow10Email.
+-- abandon_reason is one of: price | designs | technical | later | other.
+-- abandon_reason_note is only populated for 'other' (free text from the
+-- /cart-feedback/other page).
+alter table cart_sessions add column if not exists abandon_reason text;
+alter table cart_sessions add column if not exists abandon_reason_note text;
+alter table cart_sessions add column if not exists abandon_reason_at timestamptz;
+
 -- First-party funnel log — deliberately NOT dependent on Meta's pixel or any
 -- third-party analytics being configured. This is what /admin/reports reads
 -- to compute the funnel (views -> add to cart -> checkout -> purchase);

@@ -69,7 +69,8 @@ export async function sendSecondNudgeForSession(session: CartSession) {
             customer_email: session.customer_email,
             items: session.items ?? [],
           },
-          BUYNOW10_COUPON_CODE
+          BUYNOW10_COUPON_CODE,
+          session.id
         )
       : false;
 
