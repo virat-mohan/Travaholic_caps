@@ -80,7 +80,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${manrope.variable} ${archivoBlack.variable} h-full antialiased`}
+      className={`${manrope.variable} ${archivoBlack.variable} h-full scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
         <script

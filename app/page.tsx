@@ -104,13 +104,25 @@ export default async function Home() {
         )}
 
         <section className="pb-24 pt-8 md:pb-30 md:pt-12">
-          <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
-            Shop
-          </p>
-          <h1 className="mb-3 font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
-            The Collection.
-          </h1>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
+                Shop
+              </p>
+              <h1 className="font-display text-heading-xl uppercase leading-[0.95] text-ink md:text-display-m">
+                The Collection.
+              </h1>
+            </div>
+            {explorerPosts.length > 0 && (
+              <a
+                href="#explorers"
+                className="whitespace-nowrap border border-ink px-6 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
+              >
+                See Our Explorers
+              </a>
+            )}
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-10 md:mt-0 md:grid-cols-4">
             {collection.map((chapter) => (
               <CollectionItem
                 key={chapter.slug}
@@ -122,7 +134,7 @@ export default async function Home() {
         </section>
 
         {explorerPosts.length > 0 && (
-          <section className="border-t border-divider py-24 md:py-30">
+          <section id="explorers" className="scroll-mt-24 border-t border-divider py-24 md:py-30">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div>
                 <p className="mb-2 text-caption uppercase tracking-[0.08em] text-secondary-text">
