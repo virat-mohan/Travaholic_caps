@@ -161,7 +161,7 @@ export async function sendAbandonedCartEmail(session: CartSessionForEmail) {
       <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
         <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
       </div>
-      <p style="font-size:16px;">Hi ${session.customer_name ?? "there"},</p>
+      <p style="font-size:16px;">Hi${session.customer_name ? ` ${session.customer_name}` : ""},</p>
       <p style="font-size:14px;color:#444;line-height:1.6;">You left something in your cart:</p>
       <ul style="font-size:14px;color:#1a1a1a;list-style:none;margin:0;padding:0;">${itemLines}</ul>
       <a href="${cartUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Finish Checking Out</a>
@@ -199,7 +199,7 @@ export async function sendBuyNow10Email(
       <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
         <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
       </div>
-      <p style="font-size:16px;">Hi ${session.customer_name ?? "there"},</p>
+      <p style="font-size:16px;">Hi${session.customer_name ? ` ${session.customer_name}` : ""},</p>
       <p style="font-size:14px;color:#444;line-height:1.6;">Still thinking it over? Here's 10% off to help you decide:</p>
       <p style="margin:16px 0;padding:12px 20px;background:#f0eee4;border:1px dashed #101820;display:inline-block;font-size:18px;font-weight:bold;letter-spacing:0.08em;">${couponCode}</p>
       <ul style="font-size:14px;color:#1a1a1a;list-style:none;margin:0;padding:0;">${itemLines}</ul>

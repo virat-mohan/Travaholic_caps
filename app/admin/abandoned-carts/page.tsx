@@ -12,6 +12,17 @@ type Session = {
   status: string;
   retargeted_at: string | null;
   last_activity_at: string;
+  abandon_reason: string | null;
+  abandon_reason_note: string | null;
+  abandon_reason_at: string | null;
+};
+
+const REASON_LABELS: Record<string, string> = {
+  price: "Price too high",
+  designs: "Not excited about designs",
+  technical: "Technical/website issue",
+  later: "Will buy later",
+  other: "Other",
 };
 
 function formatDate(iso: string) {
@@ -75,19 +86,20 @@ export default function AbandonedCartsPage() {
               <th className="py-2 pr-4">Items</th>
               <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">Retargeted</th>
+              <th className="py-2 pr-4">Why Not (Customer)</th>
               <th className="py-2 pr-4">Action</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-body-s text-secondary-text">
+                <td colSpan={8} className="py-8 text-center text-body-s text-secondary-text">
                   Loading...
                 </td>
               </tr>
             ) : sessions.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-body-s text-secondary-text">
+                <td colSpan={8} className="py-8 text-center text-body-s text-secondary-text">
                   No active or abandoned carts right now.
                 </td>
               </tr>
@@ -107,6 +119,17 @@ export default function AbandonedCartsPage() {
                   <td className="py-3 text-caption text-secondary-text">{s.status}</td>
                   <td className="py-3 text-caption text-secondary-text">
                     {s.retargeted_at ? formatDate(s.retargeted_at) : "—"}
+                  </td>
+                  <td className="py-3 text-caption text-secondary-text">
+                    {s.abandon_reason ? (
+                      <>
+                        <div className="text-ink">{REASON_LABELS[s.abandon_reason] ?? s.abandon_reason}</div>
+                        {s.abandon_reason_note && <div className="italic">&quot;{s.abandon_reason_note}&quot;</div>}
+                        {s.abandon_reason_at && <div>{formatDate(s.abandon_reason_at)}</div>}
+                      </>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="py-3">
                     <button

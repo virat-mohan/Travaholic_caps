@@ -7,7 +7,9 @@ export async function GET() {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("cart_sessions")
-      .select("id, customer_name, customer_email, customer_phone, items, subtotal, status, retargeted_at, last_activity_at, created_at")
+      .select(
+        "id, customer_name, customer_email, customer_phone, items, subtotal, status, retargeted_at, last_activity_at, created_at, abandon_reason, abandon_reason_note, abandon_reason_at"
+      )
       .in("status", ["active", "abandoned"])
       .order("last_activity_at", { ascending: false })
       .limit(50);
