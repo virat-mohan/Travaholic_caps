@@ -35,8 +35,11 @@ function formatDate(iso: string) {
   });
 }
 
+const REASON_ORDER = ["price", "designs", "technical", "later", "other"];
+
 export default function AbandonedCartsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [reasonCounts, setReasonCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [resultById, setResultById] = useState<Record<string, string>>({});
@@ -44,7 +47,10 @@ export default function AbandonedCartsPage() {
   function load() {
     fetch("/api/admin/abandoned-carts")
       .then((res) => res.json())
-      .then((data) => setSessions(data.sessions ?? []))
+      .then((data) => {
+        setSessions(data.sessions ?? []);
+        setReasonCounts(data.reasonCounts ?? {});
+      })
       .finally(() => setLoading(false));
   }
 
@@ -75,6 +81,22 @@ export default function AbandonedCartsPage() {
         one specific session directly — e.g. to test the flow against your own cart — instead of
         running the sweep on /admin/reports, which touches every stale session at once.
       </p>
+
+      {!loading && Object.keys(reasonCounts).length > 0 && (
+        <div className="mt-8 border-t border-divider pt-8">
+          <p className="mb-4 text-caption uppercase tracking-[0.05em] text-secondary-text">
+            Why Customers Didn&apos;t Buy — {Object.values(reasonCounts).reduce((a, b) => a + b, 0)} responses
+          </p>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+            {REASON_ORDER.map((reason) => (
+              <div key={reason} className="border border-divider p-4">
+                <p className="font-display text-heading-m text-ink">{reasonCounts[reason] ?? 0}</p>
+                <p className="mt-1 text-caption text-secondary-text">{REASON_LABELS[reason]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 overflow-x-auto">
         <table className="w-full min-w-[900px] text-left">

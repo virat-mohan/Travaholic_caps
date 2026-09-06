@@ -14,9 +14,26 @@ export async function GET() {
       .order("last_activity_at", { ascending: false })
       .limit(50);
     if (error) throw error;
-    return NextResponse.json({ sessions: data ?? [] });
+
+    // Reason counts cover every session that ever answered, regardless of
+    // status (a cart can convert after answering, or fall outside the
+    // 50-row window above) — a separate, unlimited query keeps that count
+    // accurate independent of the list pagination.
+    const { data: reasonRows, error: reasonError } = await supabase
+      .from("cart_sessions")
+      .select("abandon_reason")
+      .not("abandon_reason", "is", null);
+    if (reasonError) throw reasonError;
+
+    const reasonCounts: Record<string, number> = {};
+    for (const row of reasonRows ?? []) {
+      const reason = row.abandon_reason as string;
+      reasonCounts[reason] = (reasonCounts[reason] ?? 0) + 1;
+    }
+
+    return NextResponse.json({ sessions: data ?? [], reasonCounts });
   } catch (err) {
     console.error("Failed to list cart sessions", err);
-    return NextResponse.json({ sessions: [] }, { status: 500 });
+    return NextResponse.json({ sessions: [], reasonCounts: {} }, { status: 500 });
   }
 }
