@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import { CollectionItem } from "@/components/collection/CollectionItem";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
@@ -5,6 +7,12 @@ import { DiscountPromoBanner } from "@/components/ui/DiscountPromoBanner";
 import { getAllChapters } from "@/lib/chapters-dynamic";
 import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
 import { computeWebsiteAnalytics } from "@/lib/website-analytics";
+import { getExplorerPosts } from "@/lib/community";
+import { chapters } from "@/lib/chapters";
+
+function chapterName(slug: string) {
+  return chapters.find((c) => c.slug === slug)?.name ?? slug;
+}
 
 // Without this, "/" is fully static — baked once at build/deploy time — so
 // the Trending strip below would never actually update day to day the way
@@ -42,6 +50,12 @@ export default async function Home() {
     .filter((c): c is (typeof grouped)[number] => !!c);
   const collection = [...featured, ...grouped.filter((c) => !featuredSlugs.includes(c.slug))];
   const inventory = await getInventoryMap();
+
+  // A curated slice of real Explorer photos — the same content that powers
+  // /community and each chapter's "Explorers Wearing X" section, surfaced
+  // here too so a first-time visitor sees real customers wearing the caps
+  // before ever reaching a product page.
+  const explorerPosts = (await getExplorerPosts()).slice(0, 8);
 
   // Trending Now — whichever chapters got the most product-page views over
   // the last 7 days, first-party (tracking_events), refreshed by the
@@ -115,6 +129,62 @@ export default async function Home() {
             </div>
           ))}
         </section>
+
+        {explorerPosts.length > 0 && (
+          <section className="border-t border-divider py-24 md:py-30">
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <p className="mb-2 text-caption uppercase tracking-[0.08em] text-secondary-text">
+                  Explorers
+                </p>
+                <h2 className="font-display text-heading-l uppercase leading-[0.95] text-ink">
+                  Real People. Real Journeys.
+                </h2>
+              </div>
+              <Link
+                href="/community"
+                className="whitespace-nowrap border border-ink px-6 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
+              >
+                See All Explorers
+              </Link>
+            </div>
+
+            <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+              {explorerPosts.map((post) => {
+                const primarySlug = post.chapterSlugs[0];
+                return (
+                  <div key={post.file}>
+                    <Link
+                      href={primarySlug ? `/chapter/${primarySlug}` : "/community"}
+                      className="group block"
+                    >
+                      <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
+                        <Image
+                          src={post.src}
+                          alt={post.testimonial}
+                          fill
+                          sizes="(min-width: 768px) 25vw, 50vw"
+                          className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                        />
+                      </div>
+                    </Link>
+                    <p className="mt-3 text-caption text-secondary-text">
+                      &ldquo;{post.testimonial}&rdquo;
+                    </p>
+                    {primarySlug && (
+                      <p className="mt-2 text-caption uppercase tracking-[0.05em] text-ink">
+                        Worn by Explorer —{" "}
+                        <Link href={`/chapter/${primarySlug}`} className="underline underline-offset-4">
+                          {chapterName(primarySlug)}
+                        </Link>
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </main>
 
       <NewsletterBlock />
