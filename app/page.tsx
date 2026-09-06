@@ -55,7 +55,7 @@ export default async function Home() {
   // /community and each chapter's "Explorers Wearing X" section, surfaced
   // here too so a first-time visitor sees real customers wearing the caps
   // before ever reaching a product page.
-  const explorerPosts = (await getExplorerPosts()).slice(0, 12);
+  const explorerPosts = await getExplorerPosts();
 
   // Trending Now — whichever chapters got the most product-page views over
   // the last 7 days, first-party (tracking_events), refreshed by the
@@ -121,15 +121,6 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-8 border-t border-divider py-24 md:grid-cols-4 md:py-30">
-          {pillars.map((p) => (
-            <div key={p.title}>
-              <p className="text-body-s text-charcoal">{p.title}</p>
-              <p className="mt-2 text-caption text-secondary-text">{p.copy}</p>
-            </div>
-          ))}
-        </section>
-
         {explorerPosts.length > 0 && (
           <section className="border-t border-divider py-24 md:py-30">
             <div className="flex flex-wrap items-end justify-between gap-6">
@@ -145,7 +136,7 @@ export default async function Home() {
                 href="/community"
                 className="whitespace-nowrap border border-ink px-6 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
               >
-                See All Explorers
+                See Explorers Wearing It
               </Link>
             </div>
 
@@ -188,6 +179,15 @@ export default async function Home() {
             </div>
           </section>
         )}
+
+        <section className="grid grid-cols-2 gap-8 border-t border-divider py-24 md:grid-cols-4 md:py-30">
+          {pillars.map((p) => (
+            <div key={p.title}>
+              <p className="text-body-s text-charcoal">{p.title}</p>
+              <p className="mt-2 text-caption text-secondary-text">{p.copy}</p>
+            </div>
+          ))}
+        </section>
       </main>
 
       <NewsletterBlock />
