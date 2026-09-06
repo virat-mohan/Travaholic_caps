@@ -192,7 +192,7 @@ export async function sendBuyNow10Email(
     .map((i) => `<li style="margin-bottom:4px;">${i.quantity} × ${i.name}</li>`)
     .join("");
   const reasonLink = (reason: string, label: string) =>
-    `<a href="${feedbackUrl}&reason=${reason}" style="display:block;color:#101820;text-decoration:underline;margin-bottom:6px;">${label}</a>`;
+    `<a href="${feedbackUrl}&reason=${reason}" style="display:block;color:#101820;text-decoration:underline;font-size:15px;line-height:1.8;margin-bottom:10px;">&bull;&nbsp;&nbsp;${label}</a>`;
 
   const html = `
     <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
@@ -204,8 +204,8 @@ export async function sendBuyNow10Email(
       <p style="margin:16px 0;padding:12px 20px;background:#f0eee4;border:1px dashed #101820;display:inline-block;font-size:18px;font-weight:bold;letter-spacing:0.08em;">${couponCode}</p>
       <ul style="font-size:14px;color:#1a1a1a;list-style:none;margin:0;padding:0;">${itemLines}</ul>
       <a href="${cartUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Use Code &amp; Check Out</a>
-      <p style="margin-top:32px;margin-bottom:8px;font-size:13px;color:#666;">Didn't get a chance to buy? Tell us why — takes one click:</p>
-      <div style="font-size:13px;">
+      <p style="margin-top:32px;margin-bottom:14px;font-size:14px;color:#666;">Didn't get a chance to buy? Tell us why — takes one click:</p>
+      <div>
         ${reasonLink("price", "Price felt too high")}
         ${reasonLink("designs", "Wasn't excited about the designs")}
         ${reasonLink("technical", "Ran into a technical/website issue")}
