@@ -9,6 +9,17 @@ function buildCaption(brief: { primary_text: string; hashtags: string[] | null }
     : brief.primary_text;
 }
 
+/**
+ * Instagram/Meta's Graph API fetches image_url itself, so it must be a real
+ * absolute URL — a brief created via "Use Real Photo" can end up with a
+ * site-relative path (e.g. "/images/lifestyle/DSCF5030.jpg") instead, which
+ * Meta can't resolve and silently/opaquely fails on. Resolve any such path
+ * against the live site before it's ever handed to Meta.
+ */
+function resolveImageUrl(url: string, siteUrl: string) {
+  return url.startsWith("/") ? `${siteUrl.replace(/\/$/, "")}${url}` : url;
+}
+
 /** Publishes a brief's copy/image straight to Instagram as an organic feed post — no ad spend. */
 export async function postBriefToInstagram(briefId: string) {
   const supabase = getSupabaseServerClient();
@@ -16,11 +27,14 @@ export async function postBriefToInstagram(briefId: string) {
   if (!brief) throw new Error("Brief not found");
   if (brief.posted_at) throw new Error("This brief has already been posted");
 
+  const brand = await getBrandProfile();
   const caption = buildCaption(brief);
 
   let postId: string;
   if (brief.is_carousel) {
-    const images: string[] = (brief.image_urls ?? []).filter((url: string | null): url is string => !!url);
+    const images: string[] = (brief.image_urls ?? [])
+      .filter((url: string | null): url is string => !!url)
+      .map((url: string) => resolveImageUrl(url, brand.siteUrl));
     const required = Math.max(brief.image_prompts?.length ?? 0, 2);
     if (images.length < required) {
       throw new Error(`Generate or attach all ${required} carousel images before posting`);
@@ -28,7 +42,7 @@ export async function postBriefToInstagram(briefId: string) {
     ({ postId } = await postToInstagramCarouselFeed(images, caption));
   } else {
     if (!brief.image_url) throw new Error("Generate or attach an image before posting");
-    ({ postId } = await postToInstagramFeed(brief.image_url, caption));
+    ({ postId } = await postToInstagramFeed(resolveImageUrl(brief.image_url, brand.siteUrl), caption));
   }
 
   const { error } = await supabase
@@ -49,12 +63,10 @@ export async function launchBriefCampaign(
   const { data: brief } = await supabase.from("ad_briefs").select("*").eq("id", briefId).maybeSingle();
   if (!brief) throw new Error("Brief not found");
 
-  const carouselImages: string[] = brief.is_carousel
-    ? (brief.image_urls ?? []).filter((url: string | null): url is string => !!url)
-    : [];
   if (brief.is_carousel) {
     const required = Math.max(brief.image_prompts?.length ?? 0, 2);
-    if (carouselImages.length < required) {
+    const rawCount = (brief.image_urls ?? []).filter((url: string | null): url is string => !!url).length;
+    if (rawCount < required) {
       throw new Error(`Generate or attach all ${required} carousel images before launching`);
     }
   }
@@ -63,6 +75,11 @@ export async function launchBriefCampaign(
   }
 
   const brand = await getBrandProfile();
+  const carouselImages: string[] = brief.is_carousel
+    ? (brief.image_urls ?? [])
+        .filter((url: string | null): url is string => !!url)
+        .map((url: string) => resolveImageUrl(url, brand.siteUrl))
+    : [];
   const baseUrl = brief.chapter_slug ? `${brand.siteUrl}/chapter/${brief.chapter_slug}` : brand.siteUrl;
   const landingUrl = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}ab=${brief.id}`;
   const cta = options.cta || brief.ad_cta_override || brief.cta;
@@ -87,7 +104,7 @@ export async function launchBriefCampaign(
         headline: brief.headline,
         primaryText: brief.primary_text,
         cta,
-        imageUrl: brief.image_url,
+        imageUrl: resolveImageUrl(brief.image_url, brand.siteUrl),
         landingUrl,
         dailyBudgetRupees: options.dailyBudgetRupees,
         hashtags: brief.hashtags ?? undefined,
