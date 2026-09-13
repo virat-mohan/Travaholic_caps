@@ -85,6 +85,8 @@ export default function AdBriefsPage() {
   const [editingCopyFor, setEditingCopyFor] = useState<string | null>(null);
   const [copyDraft, setCopyDraft] = useState({ headline: "", primaryText: "", cta: "", targetAudience: "", hashtags: "" });
   const [savingCopy, setSavingCopy] = useState(false);
+  const [reviseInstructions, setReviseInstructions] = useState<Record<string, string>>({});
+  const [revisingCopy, setRevisingCopy] = useState<Record<string, boolean>>({});
   const [captionTexts, setCaptionTexts] = useState<Record<string, string>>({});
   const [captioning, setCaptioning] = useState<Record<string, boolean>>({});
   const [autoOverlay, setAutoOverlay] = useState<Record<string, boolean>>({});
@@ -433,6 +435,42 @@ export default function AdBriefsPage() {
     }
   }
 
+  /** Sends the brief's current copy + a free-text instruction to Claude for a revision (not a from-scratch rewrite) — see reviseAdBriefCopy. */
+  async function reviseCopy(brief: Brief) {
+    const instruction = reviseInstructions[brief.id]?.trim();
+    if (!instruction) return;
+    setError(null);
+    setRevisingCopy((prev) => ({ ...prev, [brief.id]: true }));
+    try {
+      const res = await fetch("/api/admin/ad-briefs/revise-copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brief.id, instruction }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not revise copy");
+      setBriefs((prev) =>
+        prev.map((b) =>
+          b.id === brief.id
+            ? {
+                ...b,
+                headline: data.brief.headline,
+                primary_text: data.brief.primary_text,
+                cta: data.brief.cta,
+                target_audience: data.brief.target_audience,
+                hashtags: data.brief.hashtags,
+              }
+            : b
+        )
+      );
+      setReviseInstructions((prev) => ({ ...prev, [brief.id]: "" }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not revise copy");
+    } finally {
+      setRevisingCopy((prev) => ({ ...prev, [brief.id]: false }));
+    }
+  }
+
   async function queueBrief(brief: Brief) {
     const scheduledFor = scheduleAt[brief.id];
     const action = scheduleAction[brief.id] ?? "post";
@@ -621,6 +659,27 @@ export default function AdBriefsPage() {
     }
   }
 
+  const [duplicating, setDuplicating] = useState<Record<string, boolean>>({});
+
+  async function duplicateBrief(brief: Brief) {
+    setError(null);
+    setDuplicating((prev) => ({ ...prev, [brief.id]: true }));
+    try {
+      const res = await fetch("/api/admin/ad-briefs/duplicate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: brief.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not duplicate brief");
+      setBriefs((prev) => [data.brief, ...prev]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not duplicate brief");
+    } finally {
+      setDuplicating((prev) => ({ ...prev, [brief.id]: false }));
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-[900px] px-6 pt-28 pb-24 md:px-12">
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Ad Brief Generator</h1>
@@ -784,6 +843,13 @@ export default function AdBriefsPage() {
                     {brief.status}
                   </span>
                   <button
+                    onClick={() => duplicateBrief(brief)}
+                    disabled={duplicating[brief.id]}
+                    className="text-micro uppercase tracking-[0.05em] text-secondary-text underline hover:text-ink disabled:opacity-40"
+                  >
+                    {duplicating[brief.id] ? "Duplicating..." : "Duplicate"}
+                  </button>
+                  <button
                     onClick={() => deleteBrief(brief)}
                     className="text-micro uppercase tracking-[0.05em] text-secondary-text underline hover:text-paint-orange"
                   >
@@ -800,86 +866,84 @@ export default function AdBriefsPage() {
                   !brief.is_carousel ? (
                     <div className="w-[280px]">
                       <p className="mb-2 text-micro uppercase tracking-[0.1em] text-secondary-text">
-                        1. Pick photos (optional)
+                        1. Pick a format
                       </p>
-                      {assets.length === 0 ? (
-                        <p className="text-micro text-secondary-text/70">
-                          No assets uploaded yet — see Marketing Assets. You can still generate with AI below.
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {assets.map((a) => {
-                            const selected = (stageAssetUrls[brief.id] ?? []).includes(a.url);
-                            return (
-                              <button
-                                key={a.id}
-                                type="button"
-                                onClick={() => toggleStageAsset(brief.id, a.url)}
-                                className={`relative aspect-square overflow-hidden border-2 ${
-                                  selected ? "border-ink" : "border-transparent"
-                                }`}
-                                title={a.label ?? undefined}
-                              >
-                                <Image src={a.url} alt={a.label ?? "Asset"} fill className="object-cover" />
-                                {selected && (
-                                  <span className="absolute inset-0 flex items-center justify-center bg-ink/40 text-cream">
-                                    ✓
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {(stageAssetUrls[brief.id] ?? []).length > 0 && (
-                        <p className="mt-1.5 text-micro text-secondary-text">
-                          {(stageAssetUrls[brief.id] ?? []).length} selected —{" "}
+                      <div className="flex gap-2">
+                        {(["static", "carousel", "story"] as const).map((f) => (
                           <button
+                            key={f}
                             type="button"
-                            onClick={() => setStageAssetUrls((prev) => ({ ...prev, [brief.id]: [] }))}
-                            className="underline"
+                            onClick={() => setStageFormat((prev) => ({ ...prev, [brief.id]: f }))}
+                            className={`border px-3 py-1.5 text-caption uppercase tracking-[0.05em] ${
+                              (stageFormat[brief.id] ?? "static") === f
+                                ? "border-ink bg-ink text-cream"
+                                : "border-divider text-ink"
+                            }`}
                           >
-                            Clear
+                            {f === "static" ? "Static" : f === "carousel" ? "Carousel" : "Story"}
                           </button>
-                        </p>
-                      )}
-
-                      <p className="mb-2 mt-4 text-micro uppercase tracking-[0.1em] text-secondary-text">
-                        2. Pick a format
-                      </p>
+                        ))}
+                      </div>
                       {(() => {
+                        const format = stageFormat[brief.id] ?? "static";
                         const pickedCount = (stageAssetUrls[brief.id] ?? []).length;
-                        const recommended: "static" | "carousel" | "story" = pickedCount >= 2 ? "carousel" : "static";
                         return (
                           <>
-                            <div className="flex gap-2">
-                              {(["static", "carousel", "story"] as const).map((f) => (
+                            <p className="mb-2 mt-4 text-micro uppercase tracking-[0.1em] text-secondary-text">
+                              2. Pick photos (optional)
+                            </p>
+                            {assets.length === 0 ? (
+                              <p className="text-micro text-secondary-text/70">
+                                No assets uploaded yet — see Marketing Assets. You can still generate with AI below.
+                              </p>
+                            ) : (
+                              <div className="grid grid-cols-5 gap-1.5">
+                                {assets.map((a) => {
+                                  const selected = (stageAssetUrls[brief.id] ?? []).includes(a.url);
+                                  return (
+                                    <button
+                                      key={a.id}
+                                      type="button"
+                                      onClick={() => toggleStageAsset(brief.id, a.url)}
+                                      className={`relative aspect-square overflow-hidden border-2 ${
+                                        selected ? "border-ink" : "border-transparent"
+                                      }`}
+                                      title={a.label ?? undefined}
+                                    >
+                                      <Image src={a.url} alt={a.label ?? "Asset"} fill className="object-cover" />
+                                      {selected && (
+                                        <span className="absolute inset-0 flex items-center justify-center bg-ink/40 text-cream">
+                                          ✓
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {pickedCount > 0 && (
+                              <p className="mt-1.5 text-micro text-secondary-text">
+                                {pickedCount} selected —{" "}
                                 <button
-                                  key={f}
                                   type="button"
-                                  onClick={() => setStageFormat((prev) => ({ ...prev, [brief.id]: f }))}
-                                  className={`relative border px-3 py-1.5 text-caption uppercase tracking-[0.05em] ${
-                                    (stageFormat[brief.id] ?? recommended) === f
-                                      ? "border-ink bg-ink text-cream"
-                                      : "border-divider text-ink"
-                                  }`}
+                                  onClick={() => setStageAssetUrls((prev) => ({ ...prev, [brief.id]: [] }))}
+                                  className="underline"
                                 >
-                                  {f === "static" ? "Static" : f === "carousel" ? "Carousel" : "Story"}
-                                  {recommended === f && (
-                                    <span className="ml-1.5 text-micro normal-case opacity-70">(suggested)</span>
-                                  )}
+                                  Clear
                                 </button>
-                              ))}
-                            </div>
+                              </p>
+                            )}
                             <p className="mt-1.5 text-micro text-secondary-text/70">
-                              {pickedCount >= 2
-                                ? "2+ photos picked — a Carousel uses each as its own card. Static/Story use only the first."
-                                : pickedCount === 1
-                                  ? "One photo picked — Static or Story use it directly, or pick more for a Carousel."
-                                  : "No photos picked — every format will generate fresh AI images."}
+                              {format === "carousel"
+                                ? pickedCount >= 2
+                                  ? "2+ photos picked — a Carousel uses each as its own card."
+                                  : "Pick 2+ photos for a Carousel, or leave empty to generate fresh AI cards."
+                                : pickedCount >= 1
+                                  ? `One photo picked — ${format === "story" ? "Story" : "Static"} uses it directly (only the first if you picked more).`
+                                  : `No photos picked — ${format === "story" ? "Story" : "Static"} will generate a fresh AI image.`}
                             </p>
                             <button
-                              onClick={() => confirmFormat(brief, stageFormat[brief.id] ?? recommended)}
+                              onClick={() => confirmFormat(brief, format)}
                               disabled={settingFormat[brief.id]}
                               className="mt-3 block w-full border border-ink bg-ink px-3 py-1.5 text-micro font-bold uppercase tracking-[0.05em] text-cream disabled:opacity-50"
                             >
@@ -1270,6 +1334,22 @@ export default function AdBriefsPage() {
                           {brief.hashtags.map((h) => `#${h}`).join(" ")}
                         </p>
                       )}
+                      <div className="mt-2 flex gap-1.5">
+                        <input
+                          type="text"
+                          placeholder="Revise copy with AI — e.g. &quot;make it punchier&quot;"
+                          value={reviseInstructions[brief.id] ?? ""}
+                          onChange={(e) => setReviseInstructions((prev) => ({ ...prev, [brief.id]: e.target.value }))}
+                          className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                        />
+                        <button
+                          onClick={() => reviseCopy(brief)}
+                          disabled={!reviseInstructions[brief.id]?.trim() || revisingCopy[brief.id]}
+                          className="shrink-0 border border-divider px-2 py-1.5 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                        >
+                          {revisingCopy[brief.id] ? "..." : "Revise"}
+                        </button>
+                      </div>
                     </>
                   )}
 

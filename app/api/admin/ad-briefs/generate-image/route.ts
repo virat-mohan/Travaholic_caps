@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServerClient();
     const { data: brief } = await supabase
       .from("ad_briefs")
-      .select("chapter_slug, chapter_slugs, image_urls")
+      .select("chapter_slug, chapter_slugs, image_urls, creative_format")
       .eq("id", body.id)
       .maybeSingle();
 
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
       prompt: body.imagePrompt,
       referenceImageUrl: absoluteReference,
       storagePathPrefix: "generated",
+      aspectRatio: brief?.creative_format === "story" ? "portrait" : "square",
     });
 
     // A carousel card (slotIndex present) writes into image_urls[slotIndex]

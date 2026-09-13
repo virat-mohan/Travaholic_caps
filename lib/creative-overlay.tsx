@@ -32,12 +32,17 @@ async function loadArchivoBlackFont(): Promise<ArrayBuffer> {
  * fetching the source image ourselves and inlining it as a data URI —
  * Satori's own remote-image fetching has proven unreliable here.
  */
-export async function renderTextOverlayImage(baseImageUrl: string, overlayText: string): Promise<ArrayBuffer> {
+export async function renderTextOverlayImage(
+  baseImageUrl: string,
+  overlayText: string,
+  dimensions: { width: number; height: number } = { width: 1080, height: 1080 }
+): Promise<ArrayBuffer> {
   const [imgRes, archivoBlack] = await Promise.all([fetch(baseImageUrl), loadArchivoBlackFont()]);
   if (!imgRes.ok) throw new Error(`Could not fetch base image: ${imgRes.status}`);
   const imgBuffer = await imgRes.arrayBuffer();
   const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
   const dataUri = `data:${contentType};base64,${Buffer.from(imgBuffer).toString("base64")}`;
+  const { width, height } = dimensions;
 
   const image = new ImageResponse(
     (
@@ -52,8 +57,8 @@ export async function renderTextOverlayImage(baseImageUrl: string, overlayText: 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={dataUri}
-          width={1080}
-          height={1080}
+          width={width}
+          height={height}
           style={{ objectFit: "cover", position: "absolute", top: 0, left: 0 }}
           alt=""
         />
@@ -95,8 +100,8 @@ export async function renderTextOverlayImage(baseImageUrl: string, overlayText: 
       </div>
     ),
     {
-      width: 1080,
-      height: 1080,
+      width,
+      height,
       fonts: [{ name: "Archivo Black", data: archivoBlack, weight: 400, style: "normal" }],
     }
   );
@@ -108,9 +113,10 @@ export async function renderTextOverlayImage(baseImageUrl: string, overlayText: 
 export async function generateAndUploadTextOverlayImage(
   briefId: string,
   baseImageUrl: string,
-  overlayText: string
+  overlayText: string,
+  dimensions?: { width: number; height: number }
 ) {
-  const png = await renderTextOverlayImage(baseImageUrl, overlayText);
+  const png = await renderTextOverlayImage(baseImageUrl, overlayText, dimensions);
   const supabase = getSupabaseServerClient();
   const path = `text-overlay/${briefId}-${Date.now()}.png`;
 

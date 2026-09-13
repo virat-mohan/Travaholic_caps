@@ -9,24 +9,34 @@ import { getSupabaseServerClient } from "@/lib/supabase";
  * instead of hallucinating a new product. Add a case below for another
  * provider (OpenAI, Flux, Ideogram) without touching any of the callers.
  */
+export type ImageAspectRatio = "square" | "portrait";
+
 export async function generateAdImage(options: {
   prompt: string;
   referenceImageUrl?: string;
   storagePathPrefix: string;
+  /**
+   * "portrait" is for Instagram Stories (9:16) — a Story posted with a
+   * square image gets pillarboxed/cropped oddly by Instagram's Story
+   * viewer, which is what actually happens when a "square" creative gets
+   * posted there. Defaults to "square" for feed/carousel creatives.
+   */
+  aspectRatio?: ImageAspectRatio;
 }): Promise<string> {
   const geminiKey = await getSetting("IMAGE_GEN_API_KEY");
   const openaiKey = await getSetting("OPENAI_API_KEY");
+  const aspectRatio = options.aspectRatio ?? "square";
 
   let base64Png: string;
   if (geminiKey) {
     try {
-      base64Png = await generateWithGemini(geminiKey, options.prompt, options.referenceImageUrl);
+      base64Png = await generateWithGemini(geminiKey, options.prompt, options.referenceImageUrl, aspectRatio);
     } catch (err) {
       if (!openaiKey) throw err;
-      base64Png = await generateWithOpenAI(openaiKey, options.prompt);
+      base64Png = await generateWithOpenAI(openaiKey, options.prompt, aspectRatio);
     }
   } else if (openaiKey) {
-    base64Png = await generateWithOpenAI(openaiKey, options.prompt);
+    base64Png = await generateWithOpenAI(openaiKey, options.prompt, aspectRatio);
   } else {
     throw new Error(
       "Neither IMAGE_GEN_API_KEY (Gemini) nor OPENAI_API_KEY is set — add one in /admin/settings"
@@ -36,7 +46,7 @@ export async function generateAdImage(options: {
   return uploadGeneratedImage(base64Png, options.storagePathPrefix);
 }
 
-async function generateWithOpenAI(apiKey: string, prompt: string) {
+async function generateWithOpenAI(apiKey: string, prompt: string, aspectRatio: ImageAspectRatio) {
   const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: {
@@ -46,7 +56,9 @@ async function generateWithOpenAI(apiKey: string, prompt: string) {
     body: JSON.stringify({
       model: "gpt-image-1",
       prompt,
-      size: "1024x1024",
+      // gpt-image-1 only offers these three fixed sizes — 1024x1536 is the
+      // closest portrait option to a 9:16 Story (there's no exact 9:16 size).
+      size: aspectRatio === "portrait" ? "1024x1536" : "1024x1024",
     }),
   });
 
@@ -60,8 +72,17 @@ async function generateWithOpenAI(apiKey: string, prompt: string) {
   return b64;
 }
 
-async function generateWithGemini(apiKey: string, prompt: string, referenceImageUrl?: string) {
-  const parts: Record<string, unknown>[] = [{ text: prompt }];
+async function generateWithGemini(
+  apiKey: string,
+  prompt: string,
+  referenceImageUrl: string | undefined,
+  aspectRatio: ImageAspectRatio
+) {
+  const orientationInstruction =
+    aspectRatio === "portrait"
+      ? " The image MUST be composed as a vertical 9:16 portrait frame (like a phone screen, 1080x1920) — full-bleed, with the main subject centered so nothing important sits in the top or bottom strip that a UI overlay might cover."
+      : "";
+  const parts: Record<string, unknown>[] = [{ text: `${prompt}${orientationInstruction}` }];
 
   if (referenceImageUrl) {
     const refRes = await fetch(referenceImageUrl);
@@ -79,7 +100,12 @@ async function generateWithGemini(apiKey: string, prompt: string, referenceImage
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts }] }),
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          imageConfig: { aspectRatio: aspectRatio === "portrait" ? "9:16" : "1:1" },
+        },
+      }),
     }
   );
 

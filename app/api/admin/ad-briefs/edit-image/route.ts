@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServerClient();
     const { data: brief } = await supabase
       .from("ad_briefs")
-      .select("image_url, image_urls")
+      .select("image_url, image_urls, creative_format")
       .eq("id", body.id)
       .maybeSingle();
     if (!brief) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       prompt: body.editInstruction,
       referenceImageUrl: currentImageUrl,
       storagePathPrefix: "generated",
+      aspectRatio: brief.creative_format === "story" ? "portrait" : "square",
     });
 
     // Re-reading image_urls HERE (right before the write), rather than

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServerClient();
     const { data: brief } = await supabase
       .from("ad_briefs")
-      .select("image_url, image_urls")
+      .select("image_url, image_urls, creative_format")
       .eq("id", body.id)
       .maybeSingle();
     if (!brief) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
@@ -29,7 +29,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "There is no existing image to caption yet — generate one first" }, { status: 400 });
     }
 
-    const imageUrl = await generateAndUploadTextOverlayImage(body.id, baseImageUrl, body.text);
+    const dimensions = brief.creative_format === "story" ? { width: 1080, height: 1920 } : undefined;
+    const imageUrl = await generateAndUploadTextOverlayImage(body.id, baseImageUrl, body.text, dimensions);
 
     // Re-reading image_urls HERE (right before the write), rather than
     // reusing the row fetched before the slow overlay-generation call above,

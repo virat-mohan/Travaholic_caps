@@ -132,3 +132,77 @@ Return ONLY a JSON object, no commentary, in this exact shape:
     hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags : [],
   };
 }
+
+export type AdBriefCopy = {
+  headline: string;
+  primaryText: string;
+  cta: string;
+  targetAudience: string;
+  hashtags: string[];
+};
+
+/**
+ * Revises an already-generated brief's copy against a free-text instruction
+ * ("make it punchier", "mention the 10% off code", "lean into Diwali") —
+ * unlike generateAdBrief, this doesn't write from scratch: it hands Claude
+ * the CURRENT copy and asks for a revised version, so anything not touched
+ * by the instruction stays consistent instead of drifting on every pass.
+ * Only the copy fields change — image_prompt(s)/creative_style/overlay_text
+ * are left alone, since a copy edit shouldn't silently redo the visual.
+ */
+export async function reviseAdBriefCopy(current: AdBriefCopy, instruction: string): Promise<AdBriefCopy> {
+  const apiKey = await getSetting("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set — add it in /admin/settings first");
+
+  const brand = await getBrandProfile();
+
+  const prompt = `You are revising an existing Meta (Instagram/Facebook) ad brief for ${brand.brandName} ("${brand.tagline}"), a D2C brand selling a ${brand.productNoun}.
+
+Brand voice: ${brand.voice}
+
+Current brief:
+Headline: "${current.headline}"
+Body: "${current.primaryText}"
+CTA: ${current.cta}
+Target audience: ${current.targetAudience}
+Hashtags: ${current.hashtags.join(", ")}
+
+The admin wants this specific change: "${instruction}"
+
+Apply that instruction. Keep everything else about the brief's voice and intent as close to the original as makes sense — this is a revision, not a rewrite from scratch. Return ONLY a JSON object, no commentary, in this exact shape:
+{
+  "headline": "string, under 40 characters, punchy",
+  "primaryText": "string, 1-3 sentences, the actual ad body copy",
+  "cta": "one of: SHOP_NOW, LEARN_MORE, SIGN_UP",
+  "targetAudience": "one line describing who this ad should target (interests/demographics), for setting up Meta ad targeting",
+  "hashtags": ["array of 8-15 relevant Instagram hashtags as plain strings without the # symbol"]
+}`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Claude API error: ${res.status} ${await res.text()}`);
+
+  const data = await res.json();
+  const text = data.content?.find((block: { type: string; text?: string }) => block.type === "text")?.text ?? "";
+  const parsed = JSON.parse(extractJson(text));
+
+  return {
+    headline: parsed.headline,
+    primaryText: parsed.primaryText,
+    cta: parsed.cta,
+    targetAudience: parsed.targetAudience,
+    hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags : [],
+  };
+}
