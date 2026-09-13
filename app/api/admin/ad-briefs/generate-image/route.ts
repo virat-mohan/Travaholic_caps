@@ -39,9 +39,21 @@ export async function POST(request: Request) {
 
     // A carousel card (slotIndex present) writes into image_urls[slotIndex]
     // instead of the singular image_url — read-modify-write since Supabase
-    // doesn't support a partial array-index update directly.
+    // doesn't support a partial array-index update directly. Re-reading the
+    // array HERE (right before the write) rather than reusing the row
+    // fetched before the slow generateAdImage call above is what makes this
+    // safe when two slots are generated close together: reusing the
+    // pre-generation snapshot let a later-finishing request silently
+    // overwrite an earlier one's slot with stale (missing) data for every
+    // OTHER slot — exactly how a full carousel came back with only the
+    // last-written slots filled in.
     if (typeof body.slotIndex === "number") {
-      const current: (string | null)[] = Array.isArray(brief?.image_urls) ? [...brief.image_urls] : [];
+      const { data: latest } = await supabase
+        .from("ad_briefs")
+        .select("image_urls")
+        .eq("id", body.id)
+        .maybeSingle();
+      const current: (string | null)[] = Array.isArray(latest?.image_urls) ? [...latest.image_urls] : [];
       while (current.length < body.slotIndex + 1) current.push(null);
       current[body.slotIndex] = imageUrl;
       const { error } = await supabase

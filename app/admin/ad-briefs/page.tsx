@@ -88,6 +88,8 @@ export default function AdBriefsPage() {
   const [captionTexts, setCaptionTexts] = useState<Record<string, string>>({});
   const [captioning, setCaptioning] = useState<Record<string, boolean>>({});
   const [autoOverlay, setAutoOverlay] = useState<Record<string, boolean>>({});
+  const [regenNotes, setRegenNotes] = useState<Record<string, string>>({});
+  const [generatingAll, setGeneratingAll] = useState<Record<string, boolean>>({});
   const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   function toggleStageAsset(briefId: string, url: string) {
@@ -196,7 +198,7 @@ export default function AdBriefsPage() {
     }
   }
 
-  async function generateSlotImage(brief: Brief, slotIndex: number) {
+  async function generateSlotImage(brief: Brief, slotIndex: number, promptOverride?: string) {
     const key = `${brief.id}:${slotIndex}`;
     setError(null);
     setImageGenerating((prev) => ({ ...prev, [key]: true }));
@@ -204,7 +206,11 @@ export default function AdBriefsPage() {
       const res = await fetch("/api/admin/ad-briefs/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: brief.id, imagePrompt: brief.image_prompts?.[slotIndex], slotIndex }),
+        body: JSON.stringify({
+          id: brief.id,
+          imagePrompt: promptOverride ?? brief.image_prompts?.[slotIndex],
+          slotIndex,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not generate image");
@@ -225,6 +231,38 @@ export default function AdBriefsPage() {
     } finally {
       setImageGenerating((prev) => ({ ...prev, [key]: false }));
     }
+  }
+
+  /** Generates every carousel card that doesn't have an image yet, one at a time (not in parallel — each generation already takes a while, and running them sequentially is what makes the per-slot race-safe write actually race-free in practice). */
+  async function generateAllSlotImages(brief: Brief) {
+    const total = Math.max(brief.image_prompts?.length ?? 0, brief.image_urls?.length ?? 0);
+    setGeneratingAll((prev) => ({ ...prev, [brief.id]: true }));
+    try {
+      for (let i = 0; i < total; i++) {
+        if (brief.image_urls?.[i]) continue;
+        if (!brief.image_prompts?.[i]) continue;
+        await generateSlotImage(brief, i);
+      }
+    } finally {
+      setGeneratingAll((prev) => ({ ...prev, [brief.id]: false }));
+    }
+  }
+
+  /**
+   * Regenerates a single carousel card from scratch — the stored prompt plus
+   * whatever note the admin typed — instead of image-to-image editing the
+   * previous AI output (that's what the separate "Edit instruction" flow
+   * does). Going through generateSlotImage means it re-anchors to the real
+   * product reference photo every time, so a note like "make the sky more
+   * dramatic" can't slowly drift the cap's look away from the actual product
+   * the way repeated image-to-image edits would.
+   */
+  async function regenerateSlotWithNote(brief: Brief, slotIndex: number) {
+    const key = `${brief.id}:${slotIndex}`;
+    const note = regenNotes[key]?.trim();
+    const basePrompt = brief.image_prompts?.[slotIndex] ?? "";
+    const prompt = note ? `${basePrompt} ${note}` : basePrompt;
+    await generateSlotImage(brief, slotIndex, prompt);
   }
 
   async function generateVideo(brief: Brief) {
@@ -820,6 +858,13 @@ export default function AdBriefsPage() {
                     </div>
                   ) : brief.is_carousel ? (
                     <div className="w-[280px]">
+                      <button
+                        onClick={() => generateAllSlotImages(brief)}
+                        disabled={generatingAll[brief.id]}
+                        className="mb-2 block w-full border border-ink px-2 py-1.5 text-micro font-bold uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream disabled:opacity-40"
+                      >
+                        {generatingAll[brief.id] ? "Generating All..." : "Generate All Missing Cards"}
+                      </button>
                       <div className="relative">
                         <div
                           ref={(el) => {
@@ -857,11 +902,27 @@ export default function AdBriefsPage() {
                               >
                                 {imageGenerating[slotKey] ? "Generating..." : url ? "Regenerate" : "Generate"}
                               </button>
+                              <div className="mt-1.5 flex gap-1.5">
+                                <input
+                                  type="text"
+                                  placeholder="Note, e.g. &quot;more sunlight&quot; — from scratch"
+                                  value={regenNotes[slotKey] ?? ""}
+                                  onChange={(e) => setRegenNotes((prev) => ({ ...prev, [slotKey]: e.target.value }))}
+                                  className="w-full min-w-0 border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                                />
+                                <button
+                                  onClick={() => regenerateSlotWithNote(brief, i)}
+                                  disabled={!brief.image_prompts?.[i] || imageGenerating[slotKey]}
+                                  className="shrink-0 border border-divider px-2 py-1.5 text-micro uppercase text-ink hover:border-ink disabled:opacity-40"
+                                >
+                                  {imageGenerating[slotKey] ? "..." : "Regenerate"}
+                                </button>
+                              </div>
                               {url && (
                                 <div className="mt-1.5 flex gap-1.5">
                                   <input
                                     type="text"
-                                    placeholder="Edit instruction"
+                                    placeholder="Tweak current image, e.g. &quot;remove sunglasses&quot;"
                                     value={editInstructions[`${brief.id}:${i}`] ?? ""}
                                     onChange={(e) =>
                                       setEditInstructions((prev) => ({ ...prev, [`${brief.id}:${i}`]: e.target.value }))

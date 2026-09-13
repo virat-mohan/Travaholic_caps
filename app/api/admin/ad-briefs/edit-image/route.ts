@@ -35,8 +35,17 @@ export async function POST(request: Request) {
       storagePathPrefix: "generated",
     });
 
+    // Re-reading image_urls HERE (right before the write), rather than
+    // reusing the row fetched before the slow generateAdImage call above,
+    // avoids a lost-update race when two slots are edited/generated close
+    // together — see generate-image/route.ts for the full story.
     if (typeof body.slotIndex === "number") {
-      const current: (string | null)[] = Array.isArray(brief.image_urls) ? [...brief.image_urls] : [];
+      const { data: latest } = await supabase
+        .from("ad_briefs")
+        .select("image_urls")
+        .eq("id", body.id)
+        .maybeSingle();
+      const current: (string | null)[] = Array.isArray(latest?.image_urls) ? [...latest.image_urls] : [];
       while (current.length < body.slotIndex + 1) current.push(null);
       current[body.slotIndex] = imageUrl;
       const { error } = await supabase

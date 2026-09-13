@@ -25,6 +25,34 @@ async function igPost(path: string, accessToken: string, body: Record<string, un
 }
 
 /**
+ * Meta fetches and processes image_url asynchronously after a media
+ * container is created — publishing (or referencing it as a carousel child)
+ * before it reports FINISHED fails with "Media ID is not available"
+ * (subcode 2207027). This is common on multi-image carousels since every
+ * child is uploading in parallel-ish succession. Polls status_code and only
+ * returns once Meta says the container is actually ready.
+ */
+async function waitForMediaReady(containerId: string, accessToken: string) {
+  const timeoutMs = 60_000;
+  const intervalMs = 1500;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const res = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/${containerId}?` +
+        new URLSearchParams({ fields: "status_code", access_token: accessToken })
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Instagram Graph API error: ${JSON.stringify(data)}`);
+    if (data.status_code === "FINISHED") return;
+    if (data.status_code === "ERROR") {
+      throw new Error(`Instagram media container ${containerId} failed processing`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(`Instagram media container ${containerId} did not finish processing in time`);
+}
+
+/**
  * Publishes a single-image feed post — a real, permanent post on the
  * Instagram grid, not a paid ad and not a 24-hour Story. Throws on
  * failure rather than swallowing it (unlike postToInstagramStory below),
@@ -35,6 +63,7 @@ export async function postToInstagramFeed(imageUrl: string, caption: string) {
   const { accessToken, igUserId } = await getInstagramAuth();
 
   const created = await igPost(`${igUserId}/media`, accessToken, { image_url: imageUrl, caption });
+  await waitForMediaReady(created.id, accessToken);
   const published = await igPost(`${igUserId}/media_publish`, accessToken, { creation_id: created.id });
 
   return { postId: published.id as string };
@@ -56,6 +85,7 @@ export async function postToInstagramCarouselFeed(imageUrls: string[], caption: 
       image_url: imageUrl,
       is_carousel_item: true,
     });
+    await waitForMediaReady(item.id, accessToken);
     childIds.push(item.id);
   }
 
@@ -64,6 +94,7 @@ export async function postToInstagramCarouselFeed(imageUrls: string[], caption: 
     children: childIds,
     caption,
   });
+  await waitForMediaReady(container.id, accessToken);
   const published = await igPost(`${igUserId}/media_publish`, accessToken, { creation_id: container.id });
 
   return { postId: published.id as string };
@@ -174,6 +205,7 @@ export async function postToInstagramStory(imageUrl: string) {
     );
     const created = await createRes.json();
     if (!createRes.ok) throw new Error(JSON.stringify(created));
+    await waitForMediaReady(created.id, accessToken);
 
     const publishRes = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/${igUserId}/media_publish`,
