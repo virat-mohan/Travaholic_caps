@@ -90,6 +90,10 @@ export default function AdBriefsPage() {
   const [autoOverlay, setAutoOverlay] = useState<Record<string, boolean>>({});
   const [regenNotes, setRegenNotes] = useState<Record<string, string>>({});
   const [generatingAll, setGeneratingAll] = useState<Record<string, boolean>>({});
+  const [tagUsernames, setTagUsernames] = useState<Record<string, string>>({});
+  const [postingStory, setPostingStory] = useState<Record<string, boolean>>({});
+  const [storyResultById, setStoryResultById] = useState<Record<string, string>>({});
+  const [storyLinks, setStoryLinks] = useState<Record<string, string>>({});
   const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   function toggleStageAsset(briefId: string, url: string) {
@@ -523,10 +527,14 @@ export default function AdBriefsPage() {
     setError(null);
     setPosting((prev) => ({ ...prev, [brief.id]: true }));
     try {
+      const taggedUsernames = (tagUsernames[brief.id] ?? "")
+        .split(",")
+        .map((u) => u.trim())
+        .filter(Boolean);
       const res = await fetch("/api/admin/ad-briefs/post", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: brief.id }),
+        body: JSON.stringify({ id: brief.id, taggedUsernames: taggedUsernames.length ? taggedUsernames : undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not post to Instagram");
@@ -539,6 +547,31 @@ export default function AdBriefsPage() {
       setError(err instanceof Error ? err.message : "Could not post to Instagram");
     } finally {
       setPosting((prev) => ({ ...prev, [brief.id]: false }));
+    }
+  }
+
+  /** Posts one image (the static brief's image, or one carousel card) to the connected Instagram account's Story feed — independent of the brief's feed-post status, so it can be re-run per card. */
+  async function postToStory(briefId: string, slotIndex?: number) {
+    const key = slotIndex != null ? `${briefId}:${slotIndex}` : briefId;
+    setStoryResultById((prev) => ({ ...prev, [key]: "" }));
+    setPostingStory((prev) => ({ ...prev, [key]: true }));
+    try {
+      const linkUrl = storyLinks[key]?.trim() || undefined;
+      const res = await fetch("/api/admin/ad-briefs/post-story", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: briefId, slotIndex, linkUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not post to Story");
+      setStoryResultById((prev) => ({ ...prev, [key]: "Posted to Story" }));
+    } catch (err) {
+      setStoryResultById((prev) => ({
+        ...prev,
+        [key]: err instanceof Error ? err.message : "Could not post to Story",
+      }));
+    } finally {
+      setPostingStory((prev) => ({ ...prev, [key]: false }));
     }
   }
 
@@ -965,6 +998,27 @@ export default function AdBriefsPage() {
                                 />
                                 <span className="text-micro text-secondary-text">Auto-add on generate</span>
                               </label>
+                              {url && (
+                                <div className="mt-1.5">
+                                  <input
+                                    type="text"
+                                    placeholder={`Story link (defaults to /chapter/${brief.chapter_slugs?.[i] ?? "..."})`}
+                                    value={storyLinks[slotKey] ?? ""}
+                                    onChange={(e) => setStoryLinks((prev) => ({ ...prev, [slotKey]: e.target.value }))}
+                                    className="mb-1.5 block w-full border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                                  />
+                                  <button
+                                    onClick={() => postToStory(brief.id, i)}
+                                    disabled={postingStory[slotKey]}
+                                    className="block w-full border border-divider px-2 py-1.5 text-micro uppercase text-ink hover:border-ink disabled:opacity-40"
+                                  >
+                                    {postingStory[slotKey] ? "Posting..." : "Post To Story"}
+                                  </button>
+                                  {storyResultById[slotKey] && (
+                                    <p className="mt-1 text-micro text-secondary-text">{storyResultById[slotKey]}</p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1231,19 +1285,49 @@ export default function AdBriefsPage() {
                         })}
                       </p>
                     ) : (
-                      <button
-                        onClick={() => postNow(brief)}
-                        disabled={
-                          posting[brief.id] ||
-                          (brief.is_carousel
-                            ? (brief.image_urls ?? []).filter(Boolean).length <
-                              Math.max(brief.image_prompts?.length ?? 0, 2)
-                            : !brief.image_url)
-                        }
-                        className="border border-divider px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
-                      >
-                        {posting[brief.id] ? "Posting..." : "Post Now (No Ad Spend)"}
-                      </button>
+                      <>
+                        <input
+                          type="text"
+                          placeholder="Tag @username(s), comma-separated (optional)"
+                          value={tagUsernames[brief.id] ?? ""}
+                          onChange={(e) => setTagUsernames((prev) => ({ ...prev, [brief.id]: e.target.value }))}
+                          className="mb-2 block w-full max-w-xs border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                        />
+                        <button
+                          onClick={() => postNow(brief)}
+                          disabled={
+                            posting[brief.id] ||
+                            (brief.is_carousel
+                              ? (brief.image_urls ?? []).filter(Boolean).length <
+                                Math.max(brief.image_prompts?.length ?? 0, 2)
+                              : !brief.image_url)
+                          }
+                          className="border border-divider px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                        >
+                          {posting[brief.id] ? "Posting..." : "Post Now (No Ad Spend)"}
+                        </button>
+                      </>
+                    )}
+                    {!brief.is_carousel && (
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          placeholder={`Story link (defaults to /chapter/${brief.chapter_slug ?? "..."})`}
+                          value={storyLinks[brief.id] ?? ""}
+                          onChange={(e) => setStoryLinks((prev) => ({ ...prev, [brief.id]: e.target.value }))}
+                          className="mb-2 block w-full max-w-xs border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                        />
+                        <button
+                          onClick={() => postToStory(brief.id)}
+                          disabled={postingStory[brief.id] || !brief.image_url}
+                          className="border border-divider px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                        >
+                          {postingStory[brief.id] ? "Posting..." : "Post To Story"}
+                        </button>
+                        {storyResultById[brief.id] && (
+                          <p className="mt-1 text-micro text-secondary-text">{storyResultById[brief.id]}</p>
+                        )}
+                      </div>
                     )}
                   </div>
 

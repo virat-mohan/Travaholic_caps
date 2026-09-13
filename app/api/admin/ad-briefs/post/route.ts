@@ -7,7 +7,10 @@ export async function POST(request: Request) {
   if (!body?.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   try {
-    const { postId } = await postBriefToInstagram(body.id);
+    const taggedUsernames: string[] | undefined = Array.isArray(body.taggedUsernames)
+      ? body.taggedUsernames.filter((u: unknown): u is string => typeof u === "string" && u.trim().length > 0)
+      : undefined;
+    const { postId } = await postBriefToInstagram(body.id, taggedUsernames);
     return NextResponse.json({ ok: true, postId });
   } catch (err) {
     console.error("Failed to post ad brief to Instagram", err);

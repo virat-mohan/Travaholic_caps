@@ -59,10 +59,21 @@ async function waitForMediaReady(containerId: string, accessToken: string) {
  * since this is always an explicit admin action, never a best-effort
  * side-effect of something else.
  */
-export async function postToInstagramFeed(imageUrl: string, caption: string) {
+function buildUserTags(usernames?: string[]) {
+  if (!usernames || usernames.length === 0) return undefined;
+  // Centered on the image — Instagram doesn't expose a way to place these
+  // precisely through this API, only a documented (x, y) pair per tag.
+  return usernames.map((username) => ({ username: username.replace(/^@/, ""), x: 0.5, y: 0.5 }));
+}
+
+export async function postToInstagramFeed(imageUrl: string, caption: string, taggedUsernames?: string[]) {
   const { accessToken, igUserId } = await getInstagramAuth();
 
-  const created = await igPost(`${igUserId}/media`, accessToken, { image_url: imageUrl, caption });
+  const created = await igPost(`${igUserId}/media`, accessToken, {
+    image_url: imageUrl,
+    caption,
+    user_tags: buildUserTags(taggedUsernames),
+  });
   await waitForMediaReady(created.id, accessToken);
   const published = await igPost(`${igUserId}/media_publish`, accessToken, { creation_id: created.id });
 
@@ -73,9 +84,15 @@ export async function postToInstagramFeed(imageUrl: string, caption: string) {
  * Publishes a carousel feed post — each image is first uploaded as its own
  * unpublished carousel-item container (is_carousel_item: true, no caption
  * of its own), then a parent container references all of them via
- * children, and that parent is what actually gets published.
+ * children, and that parent is what actually gets published. Person tags go
+ * on each child item, not the parent — Instagram doesn't accept user_tags on
+ * a CAROUSEL container itself, only on its children.
  */
-export async function postToInstagramCarouselFeed(imageUrls: string[], caption: string) {
+export async function postToInstagramCarouselFeed(
+  imageUrls: string[],
+  caption: string,
+  taggedUsernames?: string[]
+) {
   const { accessToken, igUserId } = await getInstagramAuth();
   if (imageUrls.length < 2) throw new Error("A carousel post needs at least 2 images");
 
@@ -84,6 +101,7 @@ export async function postToInstagramCarouselFeed(imageUrls: string[], caption: 
     const item = await igPost(`${igUserId}/media`, accessToken, {
       image_url: imageUrl,
       is_carousel_item: true,
+      user_tags: buildUserTags(taggedUsernames),
     });
     await waitForMediaReady(item.id, accessToken);
     childIds.push(item.id);
@@ -180,47 +198,61 @@ export async function getRecentPostPerformance(limit = 12): Promise<InstagramPos
  * an Explorer submission).
  */
 export async function postToInstagramStory(imageUrl: string) {
+  try {
+    await postImageToInstagramStory(imageUrl);
+    return true;
+  } catch (err) {
+    console.error("Instagram Story post failed", err);
+    return false;
+  }
+}
+
+/**
+ * Same Story-post flow as postToInstagramStory above, but throws on failure
+ * instead of swallowing it — for the manual "Post to Story" button in
+ * /admin/ad-briefs, where the admin needs to actually see why a post failed
+ * rather than have it silently no-op.
+ */
+export async function postImageToInstagramStory(imageUrl: string, linkUrl?: string) {
   const [accessToken, igUserId] = await Promise.all([
     getSetting("META_ACCESS_TOKEN"),
     getSetting("INSTAGRAM_BUSINESS_ACCOUNT_ID"),
   ]);
 
   if (!accessToken || !igUserId) {
-    console.log("Instagram not configured — skipping Story post for", imageUrl);
-    return false;
+    throw new Error("Instagram is not configured — add META_ACCESS_TOKEN and INSTAGRAM_BUSINESS_ACCOUNT_ID in /admin/settings");
   }
 
-  try {
-    const createRes = await fetch(
-      `https://graph.facebook.com/${GRAPH_VERSION}/${igUserId}/media`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_url: imageUrl,
-          media_type: "STORIES",
-          access_token: accessToken,
-        }),
-      }
-    );
-    const created = await createRes.json();
-    if (!createRes.ok) throw new Error(JSON.stringify(created));
-    await waitForMediaReady(created.id, accessToken);
+  const createRes = await fetch(
+    `https://graph.facebook.com/${GRAPH_VERSION}/${igUserId}/media`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        media_type: "STORIES",
+        // Story link sticker — a real Instagram feature for API-published
+        // Stories on Business/Creator accounts. Meta may reject this for
+        // accounts that don't qualify; that surfaces as a normal error here.
+        ...(linkUrl ? { link: linkUrl } : {}),
+        access_token: accessToken,
+      }),
+    }
+  );
+  const created = await createRes.json();
+  if (!createRes.ok) throw new Error(`Instagram Graph API error: ${JSON.stringify(created)}`);
+  await waitForMediaReady(created.id, accessToken);
 
-    const publishRes = await fetch(
-      `https://graph.facebook.com/${GRAPH_VERSION}/${igUserId}/media_publish`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ creation_id: created.id, access_token: accessToken }),
-      }
-    );
-    const published = await publishRes.json();
-    if (!publishRes.ok) throw new Error(JSON.stringify(published));
+  const publishRes = await fetch(
+    `https://graph.facebook.com/${GRAPH_VERSION}/${igUserId}/media_publish`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creation_id: created.id, access_token: accessToken }),
+    }
+  );
+  const published = await publishRes.json();
+  if (!publishRes.ok) throw new Error(`Instagram Graph API error: ${JSON.stringify(published)}`);
 
-    return true;
-  } catch (err) {
-    console.error("Instagram Story post failed", err);
-    return false;
-  }
+  return { postId: published.id as string };
 }

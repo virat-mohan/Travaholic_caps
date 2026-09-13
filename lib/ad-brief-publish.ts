@@ -21,7 +21,7 @@ function resolveImageUrl(url: string, siteUrl: string) {
 }
 
 /** Publishes a brief's copy/image straight to Instagram as an organic feed post — no ad spend. */
-export async function postBriefToInstagram(briefId: string) {
+export async function postBriefToInstagram(briefId: string, taggedUsernames?: string[]) {
   const supabase = getSupabaseServerClient();
   const { data: brief } = await supabase.from("ad_briefs").select("*").eq("id", briefId).maybeSingle();
   if (!brief) throw new Error("Brief not found");
@@ -39,10 +39,10 @@ export async function postBriefToInstagram(briefId: string) {
     if (images.length < required) {
       throw new Error(`Generate or attach all ${required} carousel images before posting`);
     }
-    ({ postId } = await postToInstagramCarouselFeed(images, caption));
+    ({ postId } = await postToInstagramCarouselFeed(images, caption, taggedUsernames));
   } else {
     if (!brief.image_url) throw new Error("Generate or attach an image before posting");
-    ({ postId } = await postToInstagramFeed(resolveImageUrl(brief.image_url, brand.siteUrl), caption));
+    ({ postId } = await postToInstagramFeed(resolveImageUrl(brief.image_url, brand.siteUrl), caption, taggedUsernames));
   }
 
   const { error } = await supabase
