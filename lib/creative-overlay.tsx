@@ -5,20 +5,17 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 // any CSS-loaded font — it needs the actual font bytes handed to it. Archivo
 // Black is the brand's display face (see app/layout.tsx's font-display /
 // --font-archivo-black), so on-image captions use the same one instead of
-// Satori's generic fallback sans-serif. Fetched once per server instance
-// and cached in memory; the odd User-Agent is the standard trick to make
-// Google's CSS2 endpoint hand back a .ttf (Satori can't parse .woff2).
+// Satori's generic fallback sans-serif. Fetched once per server instance and
+// cached in memory. Satori supports woff directly, which is what Google's
+// CSS2 endpoint serves regardless of User-Agent now — the old trick of
+// spoofing an ancient browser to coax out a .ttf no longer works (Google
+// stopped serving ttf/otf to any UA at some point), and isn't needed anyway.
 let cachedFontData: ArrayBuffer | null = null;
 async function loadArchivoBlackFont(): Promise<ArrayBuffer> {
   if (cachedFontData) return cachedFontData;
-  const cssRes = await fetch("https://fonts.googleapis.com/css2?family=Archivo+Black", {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36",
-    },
-  });
+  const cssRes = await fetch("https://fonts.googleapis.com/css2?family=Archivo+Black");
   const css = await cssRes.text();
-  const match = css.match(/src: url\(([^)]+)\) format\('(opentype|truetype)'\)/);
+  const match = css.match(/src: url\(([^)]+)\) format\('(woff2?|opentype|truetype)'\)/);
   if (!match) throw new Error("Could not resolve Archivo Black font file from Google Fonts");
   const fontRes = await fetch(match[1]);
   if (!fontRes.ok) throw new Error(`Could not download Archivo Black font: ${fontRes.status}`);
