@@ -38,8 +38,16 @@ export async function retargetOneSession(session: CartSession) {
       : false;
 
   if (whatsappSent || emailSent) {
+    const now = new Date().toISOString();
     const supabase = getSupabaseServerClient();
-    await supabase.from("cart_sessions").update({ retargeted_at: new Date().toISOString() }).eq("id", session.id);
+    await supabase
+      .from("cart_sessions")
+      .update({
+        retargeted_at: now,
+        ...(whatsappSent ? { last_whatsapp_sent_at: now } : {}),
+        ...(emailSent ? { last_email_sent_at: now } : {}),
+      })
+      .eq("id", session.id);
   }
 
   return { whatsappSent, emailSent };
@@ -75,10 +83,15 @@ export async function sendSecondNudgeForSession(session: CartSession) {
       : false;
 
   if (whatsappSent || emailSent) {
+    const now = new Date().toISOString();
     const supabase = getSupabaseServerClient();
     await supabase
       .from("cart_sessions")
-      .update({ second_nudge_sent_at: new Date().toISOString() })
+      .update({
+        second_nudge_sent_at: now,
+        ...(whatsappSent ? { last_whatsapp_sent_at: now } : {}),
+        ...(emailSent ? { last_email_sent_at: now } : {}),
+      })
       .eq("id", session.id);
   }
 

@@ -8,7 +8,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("cart_sessions")
       .select(
-        "id, customer_name, customer_email, customer_phone, items, subtotal, status, retargeted_at, last_activity_at, created_at, abandon_reason, abandon_reason_note, abandon_reason_at"
+        "id, customer_name, customer_email, customer_phone, items, subtotal, status, retargeted_at, last_activity_at, created_at, abandon_reason, abandon_reason_note, abandon_reason_at, last_whatsapp_sent_at, last_email_sent_at"
       )
       .in("status", ["active", "abandoned"])
       .order("last_activity_at", { ascending: false })

@@ -264,6 +264,15 @@ alter table cart_sessions add column if not exists abandon_reason text;
 alter table cart_sessions add column if not exists abandon_reason_note text;
 alter table cart_sessions add column if not exists abandon_reason_at timestamptz;
 
+-- Per-channel visibility into the abandoned-cart nudges — whichever channel
+-- actually delivers a nudge (stage 1 or stage 2, whatsapp-first/email-fallback,
+-- see lib/abandoned-cart.ts) stamps its own column here, independent of
+-- retargeted_at/second_nudge_sent_at (which just guard against re-sending).
+-- Lets /admin/abandoned-carts show each channel's last-sent time separately —
+-- useful while WhatsApp delivery is down and only email is actually going out.
+alter table cart_sessions add column if not exists last_whatsapp_sent_at timestamptz;
+alter table cart_sessions add column if not exists last_email_sent_at timestamptz;
+
 -- First-party funnel log — deliberately NOT dependent on Meta's pixel or any
 -- third-party analytics being configured. This is what /admin/reports reads
 -- to compute the funnel (views -> add to cart -> checkout -> purchase);
