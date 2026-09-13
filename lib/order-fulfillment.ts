@@ -10,6 +10,7 @@ import { rewardReferrer } from "@/lib/referrals";
 import { redeemCoupon } from "@/lib/coupons";
 import { findOrCreateCustomerForGuest } from "@/lib/auth";
 import { checkAndAlertLowStock } from "@/lib/inventory";
+import { shipOrder } from "@/lib/order-shipping";
 
 export type OrderPayload = {
   customer: {
@@ -223,6 +224,21 @@ export async function finalizeOrder(
     customer_phone: savedOrder.customer_phone,
     total: pricing.total,
   });
+
+  // Auto-ship immediately on order confirmation — creates the Shiprocket
+  // shipment, assigns a courier, requests pickup, and emails the invoice +
+  // label to the warehouse recipients, with zero admin action needed. Only
+  // this winning insert path ever reaches here (the loser of a
+  // client/webhook race returns early above), so this can never double-ship.
+  // Best-effort: a Shiprocket outage or a missing address (an order placed
+  // before structured addresses existed) must never fail the order itself —
+  // /admin/orders' manual "Ship" button calls the exact same shipOrder() to
+  // retry.
+  try {
+    await shipOrder(savedOrder.id);
+  } catch (shipErr) {
+    console.error("Auto-ship failed for order", savedOrder.id, shipErr);
+  }
 
   return { orderId: savedOrder.id as string, alreadyExisted: false };
 }
