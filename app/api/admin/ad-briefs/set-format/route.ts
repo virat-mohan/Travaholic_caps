@@ -25,8 +25,8 @@ export async function POST(request: Request) {
   const id = body?.id;
   const format = body?.format;
   const assetUrls: string[] = Array.isArray(body?.assetUrls) ? body.assetUrls : [];
-  if (!id || (format !== "static" && format !== "carousel")) {
-    return NextResponse.json({ error: "Missing id or format (static|carousel)" }, { status: 400 });
+  if (!id || (format !== "static" && format !== "carousel" && format !== "story")) {
+    return NextResponse.json({ error: "Missing id or format (static|carousel|story)" }, { status: 400 });
   }
 
   try {
@@ -39,9 +39,12 @@ export async function POST(request: Request) {
     if (fetchError) throw fetchError;
     if (!existing) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
 
-    if (format === "static") {
+    if (format === "static" || format === "story") {
+      // A Story is a single image, same as Static — just tracked under its
+      // own creative_format so the admin UI can lead with "Post To Story"
+      // for it instead of the feed-post flow.
       const patch: Record<string, string | boolean | null> = {
-        creative_format: "static",
+        creative_format: format,
         is_carousel: false,
       };
       if (assetUrls.length > 0) {

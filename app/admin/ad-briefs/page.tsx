@@ -60,7 +60,7 @@ export default function AdBriefsPage() {
   // assets, then decide static/carousel" step — see creative_format on the
   // Brief type and the stage UI below.
   const [stageAssetUrls, setStageAssetUrls] = useState<Record<string, string[]>>({});
-  const [stageFormat, setStageFormat] = useState<Record<string, "static" | "carousel">>({});
+  const [stageFormat, setStageFormat] = useState<Record<string, "static" | "carousel" | "story">>({});
   const [settingFormat, setSettingFormat] = useState<Record<string, boolean>>({});
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +103,7 @@ export default function AdBriefsPage() {
     });
   }
 
-  async function confirmFormat(brief: Brief, format: "static" | "carousel") {
+  async function confirmFormat(brief: Brief, format: "static" | "carousel" | "story") {
     setError(null);
     setSettingFormat((prev) => ({ ...prev, [brief.id]: true }));
     try {
@@ -849,11 +849,11 @@ export default function AdBriefsPage() {
                       </p>
                       {(() => {
                         const pickedCount = (stageAssetUrls[brief.id] ?? []).length;
-                        const recommended: "static" | "carousel" = pickedCount >= 2 ? "carousel" : "static";
+                        const recommended: "static" | "carousel" | "story" = pickedCount >= 2 ? "carousel" : "static";
                         return (
                           <>
                             <div className="flex gap-2">
-                              {(["static", "carousel"] as const).map((f) => (
+                              {(["static", "carousel", "story"] as const).map((f) => (
                                 <button
                                   key={f}
                                   type="button"
@@ -864,7 +864,7 @@ export default function AdBriefsPage() {
                                       : "border-divider text-ink"
                                   }`}
                                 >
-                                  {f === "static" ? "Static" : "Carousel"}
+                                  {f === "static" ? "Static" : f === "carousel" ? "Carousel" : "Story"}
                                   {recommended === f && (
                                     <span className="ml-1.5 text-micro normal-case opacity-70">(suggested)</span>
                                   )}
@@ -873,10 +873,10 @@ export default function AdBriefsPage() {
                             </div>
                             <p className="mt-1.5 text-micro text-secondary-text/70">
                               {pickedCount >= 2
-                                ? "2+ photos picked — a Carousel uses each as its own card."
+                                ? "2+ photos picked — a Carousel uses each as its own card. Static/Story use only the first."
                                 : pickedCount === 1
-                                  ? "One photo picked — Static uses it directly, or pick more for a Carousel."
-                                  : "No photos picked — either format will generate fresh AI images."}
+                                  ? "One photo picked — Static or Story use it directly, or pick more for a Carousel."
+                                  : "No photos picked — every format will generate fresh AI images."}
                             </p>
                             <button
                               onClick={() => confirmFormat(brief, stageFormat[brief.id] ?? recommended)}
@@ -1274,61 +1274,80 @@ export default function AdBriefsPage() {
                   )}
 
                   <div className="mt-4">
-                    {brief.posted_at ? (
-                      <p className="text-caption text-tan-gold">
-                        Posted to Instagram — {new Date(brief.posted_at).toLocaleString("en-IN", {
-                          timeZone: "Asia/Kolkata",
-                          day: "numeric",
-                          month: "short",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    ) : (
-                      <>
-                        <input
-                          type="text"
-                          placeholder="Tag @username(s), comma-separated (optional)"
-                          value={tagUsernames[brief.id] ?? ""}
-                          onChange={(e) => setTagUsernames((prev) => ({ ...prev, [brief.id]: e.target.value }))}
-                          className="mb-2 block w-full max-w-xs border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
-                        />
-                        <button
-                          onClick={() => postNow(brief)}
-                          disabled={
-                            posting[brief.id] ||
-                            (brief.is_carousel
-                              ? (brief.image_urls ?? []).filter(Boolean).length <
-                                Math.max(brief.image_prompts?.length ?? 0, 2)
-                              : !brief.image_url)
-                          }
-                          className="border border-divider px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
-                        >
-                          {posting[brief.id] ? "Posting..." : "Post Now (No Ad Spend)"}
-                        </button>
-                      </>
-                    )}
-                    {!brief.is_carousel && (
-                      <div className="mt-2">
-                        <input
-                          type="text"
-                          placeholder={`Story link (defaults to /chapter/${brief.chapter_slug ?? "..."})`}
-                          value={storyLinks[brief.id] ?? ""}
-                          onChange={(e) => setStoryLinks((prev) => ({ ...prev, [brief.id]: e.target.value }))}
-                          className="mb-2 block w-full max-w-xs border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
-                        />
-                        <button
-                          onClick={() => postToStory(brief.id)}
-                          disabled={postingStory[brief.id] || !brief.image_url}
-                          className="border border-divider px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
-                        >
-                          {postingStory[brief.id] ? "Posting..." : "Post To Story"}
-                        </button>
-                        {storyResultById[brief.id] && (
-                          <p className="mt-1 text-micro text-secondary-text">{storyResultById[brief.id]}</p>
-                        )}
-                      </div>
-                    )}
+                    {(() => {
+                      const feedBlock = brief.posted_at ? (
+                        <p className="text-caption text-tan-gold">
+                          Posted to Instagram — {new Date(brief.posted_at).toLocaleString("en-IN", {
+                            timeZone: "Asia/Kolkata",
+                            day: "numeric",
+                            month: "short",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      ) : (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Tag @username(s), comma-separated (optional)"
+                            value={tagUsernames[brief.id] ?? ""}
+                            onChange={(e) => setTagUsernames((prev) => ({ ...prev, [brief.id]: e.target.value }))}
+                            className="mb-2 block w-full max-w-xs border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                          />
+                          <button
+                            onClick={() => postNow(brief)}
+                            disabled={
+                              posting[brief.id] ||
+                              (brief.is_carousel
+                                ? (brief.image_urls ?? []).filter(Boolean).length <
+                                  Math.max(brief.image_prompts?.length ?? 0, 2)
+                                : !brief.image_url)
+                            }
+                            className="border border-divider px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                          >
+                            {posting[brief.id] ? "Posting..." : "Post Now (No Ad Spend)"}
+                          </button>
+                        </>
+                      );
+
+                      const storyBlock = !brief.is_carousel && (
+                        <div className={brief.creative_format === "story" ? "" : "mt-2"}>
+                          <input
+                            type="text"
+                            placeholder={`Story link (defaults to /chapter/${brief.chapter_slug ?? "..."})`}
+                            value={storyLinks[brief.id] ?? ""}
+                            onChange={(e) => setStoryLinks((prev) => ({ ...prev, [brief.id]: e.target.value }))}
+                            className="mb-2 block w-full max-w-xs border border-divider bg-surface px-2 py-1.5 text-micro text-ink"
+                          />
+                          <button
+                            onClick={() => postToStory(brief.id)}
+                            disabled={postingStory[brief.id] || !brief.image_url}
+                            className="border border-divider px-4 py-1.5 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                          >
+                            {postingStory[brief.id] ? "Posting..." : "Post To Story"}
+                          </button>
+                          {storyResultById[brief.id] && (
+                            <p className="mt-1 text-micro text-secondary-text">{storyResultById[brief.id]}</p>
+                          )}
+                        </div>
+                      );
+
+                      // A Story-format brief leads with "Post To Story" — the
+                      // feed-post option (with its own ad-spend-free caveat)
+                      // still exists underneath for the rare case someone
+                      // wants both.
+                      return brief.creative_format === "story" ? (
+                        <>
+                          {storyBlock}
+                          <div className="mt-2">{feedBlock}</div>
+                        </>
+                      ) : (
+                        <>
+                          {feedBlock}
+                          {storyBlock}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {brief.status !== "launched" && (
