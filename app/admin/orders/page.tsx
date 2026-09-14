@@ -9,6 +9,32 @@ import { OpsDigestCard } from "@/components/admin/OpsDigestCard";
 // env vars — never prerender it at build time.
 export const dynamic = "force-dynamic";
 
+const SHIPMENT_STATUS_LABELS: Record<string, string> = {
+  not_shipped: "Not Shipped",
+  processing: "Processing",
+  ready_to_ship: "Ready To Ship",
+  pickup_pending: "Pickup Pending",
+};
+
+/**
+ * "processing"/"ready_to_ship"/"pickup_pending" are our own local statuses,
+ * written by lib/order-shipping.ts before Shiprocket has any real tracking
+ * data yet (their tracking API stays empty until the courier actually scans
+ * the parcel). Anything else is whatever raw status string Shiprocket's own
+ * tracking API/webhook reported (see lib/shiprocket-status.ts) — title-cased
+ * as a reasonable fallback rather than requiring every possible courier
+ * status string to be hand-mapped here.
+ */
+function formatShipmentStatus(raw: string) {
+  if (SHIPMENT_STATUS_LABELS[raw]) return SHIPMENT_STATUS_LABELS[raw];
+  return raw
+    .replace(/_/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -99,7 +125,7 @@ export default async function AdminOrdersPage() {
               <th className="py-2 pr-4">Total</th>
               <th className="py-2 pr-4">Payment</th>
               <th className="py-2 pr-4">Status</th>
-              <th className="py-2 pr-4">Shipment</th>
+              <th className="py-2 pr-4">Shipping Status</th>
               <th className="py-2 pr-4">Shipping</th>
               <th className="py-2 pr-4">Refund</th>
               <th className="py-2 pr-4">Actions</th>
@@ -137,7 +163,7 @@ export default async function AdminOrdersPage() {
                   <OrderStatusCell orderId={o.id} field="status" value={o.status} />
                 </td>
                 <td className="py-3 text-caption text-secondary-text">
-                  {(o.shipment_status ?? "not_shipped").replace(/_/g, " ")}
+                  {formatShipmentStatus(o.shipment_status ?? "not_shipped")}
                 </td>
                 <td className="py-3">
                   <ShipmentCell

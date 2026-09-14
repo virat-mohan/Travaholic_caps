@@ -79,12 +79,19 @@ export async function shipOrder(orderId: string) {
     awbCode = assigned.awbCode;
     courierName = assigned.courierName;
     if (awbCode) {
+      // Explicit local status between "order created" and whatever Shiprocket's
+      // own tracking API eventually reports — that tracking data is empty
+      // until the courier actually scans the parcel, so without these two
+      // writes the order would just say "processing" the entire time between
+      // creation and real pickup, even once a courier is assigned and
+      // waiting on collection.
       await supabase
         .from("orders")
-        .update({ shiprocket_awb_code: awbCode, courier_name: courierName })
+        .update({ shiprocket_awb_code: awbCode, courier_name: courierName, shipment_status: "ready_to_ship" })
         .eq("id", orderId);
       try {
         await requestShiprocketPickup(shipmentId);
+        await supabase.from("orders").update({ shipment_status: "pickup_pending" }).eq("id", orderId);
       } catch (pickupErr) {
         console.error("Shiprocket pickup request failed", orderId, pickupErr);
         courierWarning = "Courier assigned, but the pickup request failed — schedule it from Shiprocket's dashboard.";
