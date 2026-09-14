@@ -6,6 +6,7 @@ import {
   generateShiprocketLabel,
 } from "@/lib/shiprocket";
 import { sendWarehouseNotificationEmail } from "@/lib/email";
+import { buildAndUploadDuplicatedLabel } from "@/lib/label-print";
 
 /**
  * Creates the Shiprocket shipment for an order — courier assignment, pickup
@@ -102,10 +103,16 @@ export async function shipOrder(orderId: string) {
         if (labelUrl) {
           await supabase.from("orders").update({ shiprocket_label_url: labelUrl }).eq("id", orderId);
         }
+        // The warehouse email gets a "2 copies on one A4" version, not the
+        // raw single label — one copy for the parcel, one to keep, printed
+        // together on the same sheet. Falls back to the plain single label
+        // if the duplicate-sheet build fails for any reason, so the email
+        // still goes out with something printable.
+        const duplicatedLabelUrl = await buildAndUploadDuplicatedLabel(shipmentId, orderId);
         await sendWarehouseNotificationEmail(
           { ...order, shiprocket_awb_code: awbCode, courier_name: courierName },
           items ?? [],
-          labelUrl
+          duplicatedLabelUrl ?? labelUrl
         );
       } catch (notifyErr) {
         console.error("Warehouse notification email failed", orderId, notifyErr);
