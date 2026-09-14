@@ -45,9 +45,16 @@ export default function AbandonedCartsPage() {
   const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [resultById, setResultById] = useState<Record<string, string>>({});
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   function load() {
-    fetch("/api/admin/abandoned-carts")
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (fromDate) params.set("from", fromDate);
+    if (toDate) params.set("to", toDate);
+    const qs = params.toString();
+    fetch(`/api/admin/abandoned-carts${qs ? `?${qs}` : ""}`)
       .then((res) => res.json())
       .then((data) => {
         setSessions(data.sessions ?? []);
@@ -56,7 +63,7 @@ export default function AbandonedCartsPage() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, []);
+  useEffect(load, [fromDate, toDate]);
 
   async function sendTo(session: Session) {
     setSendingId(session.id);
@@ -83,6 +90,39 @@ export default function AbandonedCartsPage() {
         one specific session directly — e.g. to test the flow against your own cart — instead of
         running the sweep on /admin/reports, which touches every stale session at once.
       </p>
+
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-micro uppercase tracking-[0.05em] text-secondary-text">From</span>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="border border-divider bg-surface px-2 py-1.5 text-caption text-ink"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-micro uppercase tracking-[0.05em] text-secondary-text">To</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="border border-divider bg-surface px-2 py-1.5 text-caption text-ink"
+          />
+        </label>
+        {(fromDate || toDate) && (
+          <button
+            type="button"
+            onClick={() => {
+              setFromDate("");
+              setToDate("");
+            }}
+            className="text-micro uppercase tracking-[0.05em] text-secondary-text underline hover:text-ink"
+          >
+            Clear range
+          </button>
+        )}
+      </div>
 
       {!loading && Object.keys(reasonCounts).length > 0 && (
         <div className="mt-8 border-t border-divider pt-8">

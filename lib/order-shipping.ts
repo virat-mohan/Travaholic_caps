@@ -99,6 +99,9 @@ export async function shipOrder(orderId: string) {
 
       try {
         const labelUrl = await generateShiprocketLabel(shipmentId);
+        if (labelUrl) {
+          await supabase.from("orders").update({ shiprocket_label_url: labelUrl }).eq("id", orderId);
+        }
         await sendWarehouseNotificationEmail(
           { ...order, shiprocket_awb_code: awbCode, courier_name: courierName },
           items ?? [],

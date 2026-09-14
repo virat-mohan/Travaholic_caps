@@ -546,6 +546,10 @@ alter table orders add column if not exists delivery_pincode text;
 alter table orders add column if not exists shiprocket_shipment_id text;
 alter table orders add column if not exists shiprocket_awb_code text;
 alter table orders add column if not exists courier_name text;
+-- Cached from generateShiprocketLabel at ship time — lets /admin/orders
+-- print a label again later (e.g. the "2 labels per A4" merge) without
+-- re-calling Shiprocket every time. Regenerated on demand if ever missing.
+alter table orders add column if not exists shiprocket_label_url text;
 
 -- ============================================================
 -- Ad copy caption + hashtags, generated alongside the rest of an ad brief
