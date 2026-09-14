@@ -76,8 +76,7 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
   );
 }
 
-// travaholiccaps@gmail.com temporarily paused per request — re-add when ready.
-export const ORDER_NOTIFICATION_RECIPIENTS = ["viratmohan@gmail.com"];
+export const ORDER_NOTIFICATION_RECIPIENTS = ["viratmohan@gmail.com", "travaholiccaps@gmail.com"];
 
 /** Internal heads-up the moment an order is confirmed — same invoice, sent to the team instead of the customer. */
 export async function sendOrderNotificationEmail(order: InvoiceOrder, items: InvoiceItem[]) {
