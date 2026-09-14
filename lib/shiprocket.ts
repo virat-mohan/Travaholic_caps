@@ -296,14 +296,28 @@ export async function requestShiprocketPickup(shipmentId: string) {
  * (currently: skip the warehouse email rather than fail the whole ship).
  */
 export async function generateShiprocketLabel(shipmentId: string): Promise<string | null> {
+  return generateShiprocketLabelsBatch([shipmentId]);
+}
+
+/**
+ * Shiprocket's generate/label endpoint is designed to be called ONCE with
+ * every shipment_id you want a label for — it returns a single PDF with one
+ * page per shipment, in the order given. Calling it once per shipment (the
+ * old per-order pattern) still "works" in that it returns 200 with a
+ * label_url each time, but Shiprocket can hand back the SAME cached/shared
+ * label_url for closely-timed separate calls — which is exactly why a
+ * "2 labels per A4" print built by calling this once per order came out as
+ * the same label twice. Always batch the ids you actually want together.
+ */
+export async function generateShiprocketLabelsBatch(shipmentIds: string[]): Promise<string | null> {
   try {
     const data = await shiprocketFetch("/courier/generate/label", {
       method: "POST",
-      body: JSON.stringify({ shipment_id: [Number(shipmentId)] }),
+      body: JSON.stringify({ shipment_id: shipmentIds.map(Number) }),
     });
     return data?.label_url ?? null;
   } catch (err) {
-    console.error("Shiprocket label generation failed", shipmentId, err);
+    console.error("Shiprocket batch label generation failed", shipmentIds, err);
     return null;
   }
 }

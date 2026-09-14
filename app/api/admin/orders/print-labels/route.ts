@@ -16,14 +16,19 @@ export async function GET(request: Request) {
     const supabase = getSupabaseServerClient();
     const { data: orders, error } = await supabase
       .from("orders")
-      .select("id, shiprocket_shipment_id, shiprocket_label_url")
+      .select("id, shiprocket_shipment_id")
       .in("id", ids);
     if (error) throw error;
     if (!orders || orders.length === 0) {
       return NextResponse.json({ error: "No matching orders found" }, { status: 404 });
     }
 
-    const pdfBytes = await mergeLabelsToA4(orders);
+    // Supabase's .in() doesn't preserve the given id order — put the
+    // results back in the order the admin actually selected them.
+    const byId = new Map(orders.map((o) => [o.id, o]));
+    const orderedOrders = ids.map((id) => byId.get(id)).filter((o): o is NonNullable<typeof o> => !!o);
+
+    const pdfBytes = await mergeLabelsToA4(orderedOrders);
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
