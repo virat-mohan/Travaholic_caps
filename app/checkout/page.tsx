@@ -787,6 +787,37 @@ export default function CheckoutPage() {
               )}
             </div>
 
+            <div className="mt-4">
+              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                Coupon Code (Optional)
+              </label>
+              <div className="mt-1.5 flex max-w-[280px] items-center gap-1.5">
+                <input
+                  value={couponCodeInput}
+                  onChange={(e) => setCouponCodeInput(e.target.value)}
+                  placeholder="Have a code? Enter it here"
+                  className="min-w-0 flex-1 border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
+                />
+                <button
+                  type="button"
+                  onClick={applyCoupon}
+                  disabled={!normalizedCouponCode || couponChecking}
+                  className="shrink-0 border border-ink/30 px-3 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                >
+                  {couponChecking ? "..." : "Apply"}
+                </button>
+              </div>
+              {normalizedCouponCode && couponPreview?.checked === normalizedCouponCode && (
+                <p className="mt-2 text-caption">
+                  {couponPreview.valid ? (
+                    <span className="text-tan-gold">Code applied — ₹{couponDiscount.toLocaleString("en-IN")} off</span>
+                  ) : (
+                    <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
+                  )}
+                </p>
+              )}
+            </div>
+
             <form onSubmit={handleSubmit} className="mt-10 space-y-4">
               <div>
                 <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
@@ -942,32 +973,6 @@ export default function CheckoutPage() {
                           : `Pay ₹${total.toLocaleString("en-IN")}`
                       : "Place Order via WhatsApp"}
               </button>
-
-              <div className="flex items-center gap-1.5 pt-1">
-                <input
-                  value={couponCodeInput}
-                  onChange={(e) => setCouponCodeInput(e.target.value)}
-                  placeholder="Coupon code"
-                  className="min-w-0 flex-1 border border-divider bg-surface px-2 py-1 font-sans text-micro uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
-                />
-                <button
-                  type="button"
-                  onClick={applyCoupon}
-                  disabled={!normalizedCouponCode || couponChecking}
-                  className="shrink-0 border border-divider px-2 py-1 font-sans text-micro uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
-                >
-                  {couponChecking ? "..." : "Apply"}
-                </button>
-              </div>
-              {normalizedCouponCode && couponPreview?.checked === normalizedCouponCode && (
-                <p className="text-micro">
-                  {couponPreview.valid ? (
-                    <span className="text-tan-gold">Code applied — ₹{couponDiscount.toLocaleString("en-IN")} off</span>
-                  ) : (
-                    <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
-                  )}
-                </p>
-              )}
             </form>
           </>
         )}
