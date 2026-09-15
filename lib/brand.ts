@@ -20,7 +20,7 @@ export const DEFAULT_BRAND_PROFILE: BrandProfile = {
   productNoun: "trucker cap",
   currencySymbol: "₹",
   siteUrl: "https://travaholic.in",
-  instagramHandle: "@travaholic.in",
+  instagramHandle: "@travaholiccaps",
 };
 
 /**
