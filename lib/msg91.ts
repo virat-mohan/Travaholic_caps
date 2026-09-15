@@ -209,7 +209,12 @@ export async function sendMsg91Campaign(
  * template going forward. `bodyValues` map positionally to {{1}}, {{2}}, ...
  * in the template.
  */
-export async function sendMsg91Template(templateName: string, phone: string, bodyValues: string[]) {
+export async function sendMsg91Template(
+  templateName: string,
+  phone: string,
+  bodyValues: string[],
+  headerImageUrl?: string
+) {
   const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
   if (enabled !== "true") {
     return { sent: false as const };
@@ -222,9 +227,12 @@ export async function sendMsg91Template(templateName: string, phone: string, bod
     return { sent: false as const };
   }
 
-  const components = Object.fromEntries(
+  const components: Record<string, { type: string; value: string }> = Object.fromEntries(
     bodyValues.map((v, i) => [`body_${i + 1}`, { type: "text", value: v }])
   );
+  if (headerImageUrl) {
+    components.header_1 = { type: "image", value: headerImageUrl };
+  }
 
   try {
     const res = await fetch("https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/", {

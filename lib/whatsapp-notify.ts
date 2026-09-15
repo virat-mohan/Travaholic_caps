@@ -57,10 +57,11 @@ async function sendTemplateByName(
   templateName: string,
   msg91TemplateName: string | null,
   variables: string[],
-  logAgainst: { cartSessionId?: string; orderId?: string }
+  logAgainst: { cartSessionId?: string; orderId?: string },
+  headerImageUrl?: string
 ) {
   if (!msg91TemplateName) return false;
-  const result = await sendMsg91Template(msg91TemplateName, phone, variables);
+  const result = await sendMsg91Template(msg91TemplateName, phone, variables, headerImageUrl);
   if (result.sent) {
     await logSend(result.messageId, templateName, logAgainst);
     return true;
@@ -69,15 +70,16 @@ async function sendTemplateByName(
 }
 
 /**
- * Sends an order-confirmation WhatsApp message via MSG91, with a branded
- * "Order Confirmed" card (generated via @vercel/og) as the template's header
- * image — WhatsApp doesn't render HTML, so an image + formatted text is the
- * closest equivalent to a designed email. Needs a Flow with an image header
- * and three body variables in order: customer name, order number, total —
- * set its ID as MSG91_ORDER_CONFIRMATION_TEMPLATE_ID in /admin/settings.
+ * Sends an order-confirmation WhatsApp message via MSG91's bulk API, with a
+ * branded "Order Confirmed" card (generated via @vercel/og) as the
+ * template's image header — WhatsApp doesn't render HTML, so an image +
+ * formatted text is the closest equivalent to a designed email. Needs an
+ * approved template (image header, three body variables in order: customer
+ * name, order number, total) named exactly as set in
+ * MSG91_ORDER_CONFIRMATION_TEMPLATE_ID in /admin/settings.
  */
 export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp, items: OrderItemForCard[] = []) {
-  const msg91TemplateId = await getSetting("MSG91_ORDER_CONFIRMATION_TEMPLATE_ID");
+  const msg91TemplateName = await getSetting("MSG91_ORDER_CONFIRMATION_TEMPLATE_ID");
   const variables = [
     order.customer_name,
     order.id.slice(0, 8).toUpperCase(),
@@ -91,10 +93,10 @@ export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp, ite
     console.error("Failed to generate order confirmation card — sending without it", err);
   }
 
-  await sendTemplate(
+  return sendTemplateByName(
     order.customer_phone,
     "order_confirmation",
-    msg91TemplateId,
+    msg91TemplateName,
     variables,
     { orderId: order.id },
     cardUrl
