@@ -1,7 +1,10 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendLegacyWinbackWhatsApp } from "@/lib/whatsapp-notify";
 
-const LEGACY_WINBACK_LINK = "https://travaholic.in/?utm_source=whatsapp&utm_campaign=winback_legacy";
+// Not sent at runtime — this is the static URL to set on the template's own
+// URL button in the MSG91/Meta template editor, not a body variable.
+// Exported so it's easy to find when actually configuring that button.
+export const LEGACY_WINBACK_LINK = "https://travaholic.in/?utm_source=whatsapp&utm_campaign=winback_legacy";
 const LEGACY_WINBACK_COUPON = "LOYAL10";
 
 /**
@@ -27,7 +30,7 @@ export async function runLegacyWinbackSweep() {
   let sent = 0;
   let failed = 0;
   for (const customer of candidates ?? []) {
-    const delivered = await sendLegacyWinbackWhatsApp(customer.phone, customer.name, LEGACY_WINBACK_COUPON, LEGACY_WINBACK_LINK);
+    const delivered = await sendLegacyWinbackWhatsApp(customer.phone, customer.name, LEGACY_WINBACK_COUPON);
     if (delivered) {
       await supabase.from("legacy_customers").update({ winback_sent_at: new Date().toISOString() }).eq("id", customer.id);
       sent++;

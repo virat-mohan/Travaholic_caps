@@ -153,13 +153,15 @@ export async function sendShipNotificationWhatsApp(
  * orders, see legacy_customers) — distinct from sendWinbackWhatsApp, which
  * targets lapsed *current-site* accounts with a Miles reminder. This one
  * targets people who bought before the current site existed, so it leads
- * with a coupon instead. Uses the approved bulk-API template, three body
- * variables in order: name, coupon code, link — set its name as
- * MSG91_LEGACY_WINBACK_TEMPLATE_ID in /admin/settings.
+ * with a coupon instead. Uses the approved bulk-API template, two body
+ * variables in order: name, coupon code — the link is a static URL button
+ * on the template itself, not a body variable, so it needs no runtime
+ * value here. Set the template's name as MSG91_LEGACY_WINBACK_TEMPLATE_ID
+ * in /admin/settings.
  */
-export async function sendLegacyWinbackWhatsApp(phone: string, name: string | null, couponCode: string, link: string) {
+export async function sendLegacyWinbackWhatsApp(phone: string, name: string | null, couponCode: string) {
   const msg91TemplateName = await getSetting("MSG91_LEGACY_WINBACK_TEMPLATE_ID");
-  const variables = [name ?? "there", couponCode, link];
+  const variables = [name ?? "there", couponCode];
   return sendTemplateByName(phone, "legacy_winback", msg91TemplateName, variables, {});
 }
 
