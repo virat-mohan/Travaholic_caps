@@ -54,6 +54,20 @@ export default function ExplorerSubmissionsPage() {
   const pending = submissions.filter((s) => s.status === "pending");
   const reviewed = submissions.filter((s) => s.status !== "pending");
 
+  function formatDate(iso: string) {
+    return new Date(iso).toLocaleDateString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  function chapterNames(slugs: string[]) {
+    if (slugs.length === 0) return null;
+    return slugs.map((slug) => chapters.find((c) => c.slug === slug)?.name ?? slug).join(", ");
+  }
+
   return (
     <main className="mx-auto w-full max-w-[900px] px-6 pt-28 pb-24 md:px-12">
       <h1 className="mt-2 font-display text-heading-l uppercase text-ink">Explorer Submissions</h1>
@@ -119,13 +133,33 @@ export default function ExplorerSubmissionsPage() {
 
       {reviewed.length > 0 && (
         <div className="mt-16">
-          <h2 className="font-display text-heading-s uppercase text-ink">Reviewed</h2>
-          <div className="mt-4 space-y-2">
+          <h2 className="font-display text-heading-s uppercase text-ink">Reviewed ({reviewed.length})</h2>
+          <div className="mt-4 space-y-6">
             {reviewed.map((sub) => (
-              <p key={sub.id} className="text-body-s text-secondary-text">
-                {sub.status === "approved" ? "🟢" : "⚪"} {sub.testimonial.slice(0, 60)}...{" "}
-                {sub.status === "approved" && sub.instagram_posted && "· posted to Instagram"}
-              </p>
+              <div key={sub.id} className="grid gap-4 border-t border-divider pt-6 md:grid-cols-[100px_1fr]">
+                <div className="relative aspect-square overflow-hidden bg-surface-alt">
+                  <Image src={sub.photo_url} alt="" fill sizes="100px" className="object-cover" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`text-micro uppercase tracking-[0.03em] ${
+                        sub.status === "approved" ? "text-tan-gold" : "text-secondary-text"
+                      }`}
+                    >
+                      {sub.status === "approved" ? "🟢 Approved" : "⚪ Rejected"}
+                    </span>
+                    <span className="text-micro text-secondary-text">{formatDate(sub.created_at)}</span>
+                    {sub.status === "approved" && sub.instagram_posted && (
+                      <span className="text-micro text-secondary-text">· posted to Instagram</span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-body-s text-ink">{sub.testimonial}</p>
+                  <p className="mt-1 text-caption text-secondary-text">
+                    {chapterNames(sub.chapter_slugs) ?? "No cap tagged"}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
