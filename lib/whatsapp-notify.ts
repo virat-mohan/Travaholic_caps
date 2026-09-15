@@ -58,7 +58,7 @@ async function sendTemplateByName(
   msg91TemplateName: string | null,
   variables: string[],
   logAgainst: { cartSessionId?: string; orderId?: string },
-  header?: { type: "image" | "document"; url: string }
+  header?: { type: "image" | "document"; url: string; filename?: string }
 ) {
   if (!msg91TemplateName) return false;
   const result = await sendMsg91Template(msg91TemplateName, phone, variables, header);
@@ -107,10 +107,12 @@ export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp, ite
  * Internal "ready to ship" WhatsApp notification — sent to the warehouse
  * team's own numbers (WAREHOUSE_WHATSAPP_NUMBERS, comma-separated) right
  * alongside the warehouse email, with the same duplicated (2-copy) label
- * sheet as the template's document header. Needs an approved template with
- * a document header and six body variables in order: order number,
- * customer name, customer phone, items summary, total amount, courier name
- * — set its name as MSG91_SHIP_NOTIFICATION_TEMPLATE_ID in /admin/settings.
+ * sheet as the template's document header. The approved "shipnotification"
+ * template only has 4 body variables — order number, customer name,
+ * customer phone, items — so the total amount is folded into the items
+ * string rather than getting its own slot. Courier name isn't in the body
+ * at all (it's already on the label itself). Set the approved name as
+ * MSG91_SHIP_NOTIFICATION_TEMPLATE_ID in /admin/settings.
  */
 export async function sendShipNotificationWhatsApp(
   orderId: string,
@@ -118,7 +120,6 @@ export async function sendShipNotificationWhatsApp(
   customerPhone: string,
   itemsLine: string,
   totalRupees: number,
-  courierName: string,
   labelUrl: string
 ) {
   const msg91TemplateName = await getSetting("MSG91_SHIP_NOTIFICATION_TEMPLATE_ID");
@@ -132,15 +133,15 @@ export async function sendShipNotificationWhatsApp(
     orderId.slice(0, 8).toUpperCase(),
     customerName,
     customerPhone,
-    itemsLine,
-    `₹${totalRupees.toLocaleString("en-IN")}`,
-    courierName,
+    `${itemsLine} — Total ₹${totalRupees.toLocaleString("en-IN")}`,
   ];
+  const orderNumber = orderId.slice(0, 8).toUpperCase();
   const results = await Promise.all(
     numbers.map((phone) =>
       sendTemplateByName(phone, "ship_notification", msg91TemplateName, variables, { orderId }, {
         type: "document",
         url: labelUrl,
+        filename: `label-${orderNumber}.pdf`,
       })
     )
   );

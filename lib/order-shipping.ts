@@ -128,7 +128,6 @@ export async function shipOrder(orderId: string) {
             order.customer_phone,
             itemsLine,
             order.total,
-            courierName ?? "Courier",
             (duplicatedLabelUrl ?? labelUrl) as string
           );
         }
