@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { sendExplorerSubmissionNotificationEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -34,6 +35,12 @@ export async function POST(request: Request) {
       email: email || null,
     });
     if (error) throw error;
+
+    try {
+      await sendExplorerSubmissionNotificationEmail(publicUrlData.publicUrl, testimonial, location);
+    } catch (notifyErr) {
+      console.error("Failed to send explorer submission notification email", notifyErr);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

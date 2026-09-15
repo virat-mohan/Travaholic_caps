@@ -104,6 +104,22 @@ export async function sendLowStockAlertEmail(chapterName: string, stockRemaining
   );
 }
 
+/** Internal heads-up the moment a customer submits a photo via /community/add-your-chapter — nudges the team to review it in /admin/explorer-submissions. */
+export async function sendExplorerSubmissionNotificationEmail(photoUrl: string, testimonial: string, location: string | null) {
+  const html = `
+    <div style="max-width:480px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;">
+      <p style="font-size:13px;color:#666;">New Explorer submission awaiting review</p>
+      <img src="${photoUrl}" alt="" style="max-width:100%;margin:8px 0;" />
+      <p style="font-size:15px;white-space:pre-wrap;">${testimonial}</p>
+      ${location ? `<p style="font-size:13px;color:#666;">${location}</p>` : ""}
+      <p style="font-size:13px;"><a href="https://travaholic.in/admin/explorer-submissions">Review in admin</a></p>
+    </div>
+  `;
+  await Promise.all(
+    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "New Explorer submission to review", html))
+  );
+}
+
 /** Contact-us form submission — forwarded to the team as-is, replies go straight to the customer. */
 export async function sendContactFormEmail(name: string, email: string, message: string) {
   const html = `

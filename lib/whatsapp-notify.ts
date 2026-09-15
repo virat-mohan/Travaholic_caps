@@ -149,6 +149,21 @@ export async function sendShipNotificationWhatsApp(
 }
 
 /**
+ * Win-back nudge for the imported past-customer list (pre-migration-platform
+ * orders, see legacy_customers) — distinct from sendWinbackWhatsApp, which
+ * targets lapsed *current-site* accounts with a Miles reminder. This one
+ * targets people who bought before the current site existed, so it leads
+ * with a coupon instead. Uses the approved bulk-API template, three body
+ * variables in order: name, coupon code, link — set its name as
+ * MSG91_LEGACY_WINBACK_TEMPLATE_ID in /admin/settings.
+ */
+export async function sendLegacyWinbackWhatsApp(phone: string, name: string | null, couponCode: string, link: string) {
+  const msg91TemplateName = await getSetting("MSG91_LEGACY_WINBACK_TEMPLATE_ID");
+  const variables = [name ?? "there", couponCode, link];
+  return sendTemplateByName(phone, "legacy_winback", msg91TemplateName, variables, {});
+}
+
+/**
  * Sends an abandoned-cart nudge via MSG91. MSG91_ABANDONED_CART_TEMPLATE_ID
  * holds the approved template's actual name (e.g. "abandoned_cart_nudge"),
  * not a Flow slug — set in /admin/settings. Called from the abandon-sweep

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { postToInstagramStory } from "@/lib/instagram";
 
@@ -46,6 +47,16 @@ export async function PATCH(request: Request) {
       if (posted) {
         await supabase.from("explorer_submissions").update({ instagram_posted: true }).eq("id", body.id);
       }
+    }
+
+    // The community page and homepage carousel are both statically
+    // prerendered (the homepage additionally on a 1hr ISR clock) — without
+    // this, an approval sits invisible in the DB until the next deploy or
+    // the hour elapses, even though the Instagram story already went out.
+    revalidatePath("/community");
+    revalidatePath("/");
+    for (const slug of (body.chapterSlugs ?? submission.chapter_slugs ?? []) as string[]) {
+      revalidatePath(`/chapter/${slug}`);
     }
 
     return NextResponse.json({ ok: true });
