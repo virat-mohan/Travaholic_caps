@@ -8,24 +8,24 @@ const A4_HEIGHT = 595.28;
 
 function drawDuplicatedPage(outDoc: PDFDocument, embedded: PDFEmbeddedPage) {
   const page = outDoc.addPage([A4_WIDTH, A4_HEIGHT]);
-  const halfWidth = A4_WIDTH / 2;
+  const halfHeight = A4_HEIGHT / 2;
   const margin = 24;
-  const maxWidth = halfWidth - margin * 2;
-  const maxHeight = A4_HEIGHT - margin * 2;
+  const maxWidth = A4_WIDTH - margin * 2;
+  const maxHeight = halfHeight - margin * 2;
   const scale = Math.min(maxWidth / embedded.width, maxHeight / embedded.height);
   const drawWidth = embedded.width * scale;
   const drawHeight = embedded.height * scale;
-  const y = (A4_HEIGHT - drawHeight) / 2;
+  const x = (A4_WIDTH - drawWidth) / 2;
 
-  for (const slotLeft of [0, halfWidth]) {
-    const x = slotLeft + (halfWidth - drawWidth) / 2;
+  for (const slotBottom of [0, halfHeight]) {
+    const y = slotBottom + (halfHeight - drawHeight) / 2;
     page.drawPage(embedded, { x, y, width: drawWidth, height: drawHeight });
   }
 
-  // A faint cut line down the middle, between the two identical copies.
+  // A faint cut line across the middle, between the two identical copies.
   page.drawLine({
-    start: { x: halfWidth, y: 0 },
-    end: { x: halfWidth, y: A4_HEIGHT },
+    start: { x: 0, y: halfHeight },
+    end: { x: A4_WIDTH, y: halfHeight },
     thickness: 0.5,
     dashArray: [4, 4],
     opacity: 0.4,
@@ -37,8 +37,8 @@ function drawDuplicatedPage(outDoc: PDFDocument, embedded: PDFEmbeddedPage) {
  * for all of them together (see generateShiprocketLabelsBatch: calling it
  * once per order separately can return the same cached label_url for each,
  * which is a real trap here) — and builds one landscape A4 page PER
- * shipment, with that shipment's own label printed TWICE side by side (two
- * copies to cut apart: one for the parcel, one to keep). A single-shipment
+ * shipment, with that shipment's own label printed TWICE stacked top/bottom
+ * (two copies to cut apart: one for the parcel, one to keep). A single-shipment
  * call (the normal ship-time case) returns a one-page PDF with two copies
  * of that one label.
  */
