@@ -40,6 +40,16 @@ export default function AdminCouponsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [loadingRedemptions, setLoadingRedemptions] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({
+    code: "",
+    discountType: "flat" as "flat" | "percent",
+    discountValue: "",
+    expiresAt: "",
+    usageLimit: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function loadCoupons() {
     fetch("/api/admin/coupons")
@@ -87,6 +97,61 @@ export default function AdminCouponsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !coupon.active }),
     });
+  }
+
+  function startEdit(coupon: Coupon) {
+    setEditingId(coupon.id);
+    setEditDraft({
+      code: coupon.code,
+      discountType: coupon.discount_type,
+      discountValue: String(coupon.discount_value),
+      expiresAt: coupon.expires_at ? coupon.expires_at.slice(0, 10) : "",
+      usageLimit: coupon.usage_limit != null ? String(coupon.usage_limit) : "",
+    });
+  }
+
+  async function saveEdit(id: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/coupons/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: editDraft.code,
+          discountType: editDraft.discountType,
+          discountValue: Number(editDraft.discountValue),
+          expiresAt: editDraft.expiresAt || null,
+          usageLimit: editDraft.usageLimit || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not save changes");
+      setEditingId(null);
+      loadCoupons();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save changes");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteCoupon(coupon: Coupon) {
+    if (!confirm(`Delete coupon ${coupon.code}? This can't be undone.`)) return;
+    setDeletingId(coupon.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/coupons/${coupon.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Could not delete coupon");
+      }
+      setCoupons((prev) => prev.filter((c) => c.id !== coupon.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete coupon");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function toggleRedemptions(couponId: string) {
@@ -188,56 +253,151 @@ export default function AdminCouponsPage() {
               <th className="py-2 pr-4">Used</th>
               <th className="py-2 pr-4">Active</th>
               <th className="py-2 pr-4"></th>
+              <th className="py-2 pr-4">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-body-s text-secondary-text">
+                <td colSpan={7} className="py-8 text-center text-body-s text-secondary-text">
                   Loading...
                 </td>
               </tr>
             ) : coupons.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-body-s text-secondary-text">
+                <td colSpan={7} className="py-8 text-center text-body-s text-secondary-text">
                   No coupons yet.
                 </td>
               </tr>
             ) : (
               coupons.map((c) => (
                 <Fragment key={c.id}>
-                  <tr className="border-b border-divider">
-                    <td className="py-3 font-sans text-body-s text-ink">{c.code}</td>
-                    <td className="py-3 text-caption text-secondary-text">
-                      {c.discount_type === "percent" ? `${c.discount_value}%` : `₹${c.discount_value}`}
-                    </td>
-                    <td className="py-3 text-caption text-secondary-text">
-                      {c.expires_at ? formatDate(c.expires_at) : "Never"}
-                    </td>
-                    <td className="py-3 text-caption text-secondary-text">
-                      {c.times_used}
-                      {c.usage_limit ? ` / ${c.usage_limit}` : ""}
-                    </td>
-                    <td className="py-3">
-                      <button
-                        onClick={() => toggleActive(c)}
-                        className={`text-micro uppercase tracking-[0.05em] ${c.active ? "text-tan-gold" : "text-secondary-text"}`}
-                      >
-                        {c.active ? "Active" : "Disabled"}
-                      </button>
-                    </td>
-                    <td className="py-3">
-                      <button
-                        onClick={() => toggleRedemptions(c.id)}
-                        className="text-micro text-secondary-text underline"
-                      >
-                        {expandedId === c.id ? "Hide" : "View"} redemptions
-                      </button>
-                    </td>
-                  </tr>
+                  {editingId === c.id ? (
+                    <tr className="border-b border-divider bg-surface-alt/40">
+                      <td className="py-3 pr-4">
+                        <input
+                          value={editDraft.code}
+                          onChange={(e) => setEditDraft((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                          className="w-32 border border-divider bg-surface px-2 py-1 font-sans text-body-s text-ink"
+                        />
+                      </td>
+                      <td className="py-3 pr-4">
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={editDraft.discountType}
+                            onChange={(e) =>
+                              setEditDraft((prev) => ({ ...prev, discountType: e.target.value as "flat" | "percent" }))
+                            }
+                            className="border border-divider bg-surface px-1.5 py-1 font-sans text-caption text-ink"
+                          >
+                            <option value="flat">₹</option>
+                            <option value="percent">%</option>
+                          </select>
+                          <input
+                            type="number"
+                            min={1}
+                            value={editDraft.discountValue}
+                            onChange={(e) => setEditDraft((prev) => ({ ...prev, discountValue: e.target.value }))}
+                            className="w-16 border border-divider bg-surface px-2 py-1 font-sans text-body-s text-ink"
+                          />
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <input
+                          type="date"
+                          value={editDraft.expiresAt}
+                          onChange={(e) => setEditDraft((prev) => ({ ...prev, expiresAt: e.target.value }))}
+                          className="border border-divider bg-surface px-2 py-1 font-sans text-caption text-ink"
+                        />
+                      </td>
+                      <td className="py-3 pr-4">
+                        <input
+                          type="number"
+                          min={1}
+                          placeholder="Unlimited"
+                          value={editDraft.usageLimit}
+                          onChange={(e) => setEditDraft((prev) => ({ ...prev, usageLimit: e.target.value }))}
+                          className="w-20 border border-divider bg-surface px-2 py-1 font-sans text-caption text-ink"
+                        />
+                      </td>
+                      <td className="py-3" colSpan={2}>
+                        <button
+                          onClick={() => toggleActive(c)}
+                          className={`text-micro uppercase tracking-[0.05em] ${c.active ? "text-tan-gold" : "text-secondary-text"}`}
+                        >
+                          {c.active ? "Active" : "Disabled"}
+                        </button>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEdit(c.id)}
+                            disabled={saving}
+                            className="border border-ink bg-ink px-3 py-1 text-micro uppercase tracking-[0.05em] text-cream disabled:opacity-50"
+                          >
+                            {saving ? "Saving..." : "Save"}
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            disabled={saving}
+                            className="border border-divider px-3 py-1 text-micro uppercase tracking-[0.05em] text-ink hover:border-ink"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr className="border-b border-divider">
+                      <td className="py-3 font-sans text-body-s text-ink">{c.code}</td>
+                      <td className="py-3 text-caption text-secondary-text">
+                        {c.discount_type === "percent" ? `${c.discount_value}%` : `₹${c.discount_value}`}
+                      </td>
+                      <td className="py-3 text-caption text-secondary-text">
+                        {c.expires_at ? formatDate(c.expires_at) : "Never"}
+                      </td>
+                      <td className="py-3 text-caption text-secondary-text">
+                        {c.times_used}
+                        {c.usage_limit ? ` / ${c.usage_limit}` : ""}
+                      </td>
+                      <td className="py-3">
+                        <button
+                          onClick={() => toggleActive(c)}
+                          className={`text-micro uppercase tracking-[0.05em] ${c.active ? "text-tan-gold" : "text-secondary-text"}`}
+                        >
+                          {c.active ? "Active" : "Disabled"}
+                        </button>
+                      </td>
+                      <td className="py-3">
+                        <button
+                          onClick={() => toggleRedemptions(c.id)}
+                          className="text-micro text-secondary-text underline"
+                        >
+                          {expandedId === c.id ? "Hide" : "View"} redemptions
+                        </button>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => startEdit(c)}
+                            className="text-micro uppercase tracking-[0.05em] text-secondary-text underline hover:text-ink"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteCoupon(c)}
+                            disabled={deletingId === c.id}
+                            className="text-micro uppercase tracking-[0.05em] text-secondary-text underline hover:text-paint-orange disabled:opacity-50"
+                          >
+                            {deletingId === c.id ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {expandedId === c.id && (
                     <tr>
-                      <td colSpan={6} className="bg-surface-alt/40 px-4 py-4">
+                      <td colSpan={7} className="bg-surface-alt/40 px-4 py-4">
                         {loadingRedemptions ? (
                           <p className="text-caption text-secondary-text">Loading...</p>
                         ) : redemptions.length === 0 ? (
