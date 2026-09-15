@@ -108,14 +108,16 @@ export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp, ite
  * team's own numbers (WAREHOUSE_WHATSAPP_NUMBERS, comma-separated) right
  * alongside the warehouse email, with the same duplicated (2-copy) label
  * sheet as the template's document header. Needs an approved template with
- * a document header and four body variables in order: order number,
- * customer name, items summary, courier name — set its name as
- * MSG91_SHIP_NOTIFICATION_TEMPLATE_ID in /admin/settings.
+ * a document header and six body variables in order: order number,
+ * customer name, customer phone, items summary, total amount, courier name
+ * — set its name as MSG91_SHIP_NOTIFICATION_TEMPLATE_ID in /admin/settings.
  */
 export async function sendShipNotificationWhatsApp(
   orderId: string,
   customerName: string,
+  customerPhone: string,
   itemsLine: string,
+  totalRupees: number,
   courierName: string,
   labelUrl: string
 ) {
@@ -126,7 +128,14 @@ export async function sendShipNotificationWhatsApp(
     .filter(Boolean);
   if (!numbers || numbers.length === 0) return false;
 
-  const variables = [orderId.slice(0, 8).toUpperCase(), customerName, itemsLine, courierName];
+  const variables = [
+    orderId.slice(0, 8).toUpperCase(),
+    customerName,
+    customerPhone,
+    itemsLine,
+    `₹${totalRupees.toLocaleString("en-IN")}`,
+    courierName,
+  ];
   const results = await Promise.all(
     numbers.map((phone) =>
       sendTemplateByName(phone, "ship_notification", msg91TemplateName, variables, { orderId }, {

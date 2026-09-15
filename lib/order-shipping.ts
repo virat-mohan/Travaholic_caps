@@ -125,7 +125,9 @@ export async function shipOrder(orderId: string) {
           await sendShipNotificationWhatsApp(
             orderId,
             order.customer_name,
+            order.customer_phone,
             itemsLine,
+            order.total,
             courierName ?? "Courier",
             (duplicatedLabelUrl ?? labelUrl) as string
           );
