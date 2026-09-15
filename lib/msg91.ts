@@ -213,7 +213,7 @@ export async function sendMsg91Template(
   templateName: string,
   phone: string,
   bodyValues: string[],
-  headerImageUrl?: string
+  header?: { type: "image" | "document"; url: string }
 ) {
   const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
   if (enabled !== "true") {
@@ -230,8 +230,8 @@ export async function sendMsg91Template(
   const components: Record<string, { type: string; value: string }> = Object.fromEntries(
     bodyValues.map((v, i) => [`body_${i + 1}`, { type: "text", value: v }])
   );
-  if (headerImageUrl) {
-    components.header_1 = { type: "image", value: headerImageUrl };
+  if (header) {
+    components.header_1 = { type: header.type, value: header.url };
   }
 
   try {

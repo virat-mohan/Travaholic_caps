@@ -7,6 +7,7 @@ import {
 } from "@/lib/shiprocket";
 import { sendWarehouseNotificationEmail } from "@/lib/email";
 import { buildAndUploadDuplicatedLabel } from "@/lib/label-print";
+import { sendShipNotificationWhatsApp } from "@/lib/whatsapp-notify";
 
 /**
  * Creates the Shiprocket shipment for an order — courier assignment, pickup
@@ -114,8 +115,23 @@ export async function shipOrder(orderId: string) {
           items ?? [],
           duplicatedLabelUrl ?? labelUrl
         );
+
+        // Same duplicated label, sent as a WhatsApp document to the
+        // warehouse team's own numbers alongside the email — best-effort,
+        // and only fires if there's an actual label to attach (a document-
+        // header template needs a real file).
+        if (duplicatedLabelUrl ?? labelUrl) {
+          const itemsLine = (items ?? []).map((item) => `${item.quantity}x ${item.chapter_name}`).join(", ");
+          await sendShipNotificationWhatsApp(
+            orderId,
+            order.customer_name,
+            itemsLine,
+            courierName ?? "Courier",
+            (duplicatedLabelUrl ?? labelUrl) as string
+          );
+        }
       } catch (notifyErr) {
-        console.error("Warehouse notification email failed", orderId, notifyErr);
+        console.error("Warehouse notification failed", orderId, notifyErr);
       }
     } else {
       courierWarning = "Order created, but no courier could be auto-assigned — assign one from Shiprocket's dashboard.";

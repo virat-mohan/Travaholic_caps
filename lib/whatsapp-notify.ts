@@ -58,10 +58,10 @@ async function sendTemplateByName(
   msg91TemplateName: string | null,
   variables: string[],
   logAgainst: { cartSessionId?: string; orderId?: string },
-  headerImageUrl?: string
+  header?: { type: "image" | "document"; url: string }
 ) {
   if (!msg91TemplateName) return false;
-  const result = await sendMsg91Template(msg91TemplateName, phone, variables, headerImageUrl);
+  const result = await sendMsg91Template(msg91TemplateName, phone, variables, header);
   if (result.sent) {
     await logSend(result.messageId, templateName, logAgainst);
     return true;
@@ -99,8 +99,43 @@ export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp, ite
     msg91TemplateName,
     variables,
     { orderId: order.id },
-    cardUrl
+    cardUrl ? { type: "image", url: cardUrl } : undefined
   );
+}
+
+/**
+ * Internal "ready to ship" WhatsApp notification — sent to the warehouse
+ * team's own numbers (WAREHOUSE_WHATSAPP_NUMBERS, comma-separated) right
+ * alongside the warehouse email, with the same duplicated (2-copy) label
+ * sheet as the template's document header. Needs an approved template with
+ * a document header and four body variables in order: order number,
+ * customer name, items summary, courier name — set its name as
+ * MSG91_SHIP_NOTIFICATION_TEMPLATE_ID in /admin/settings.
+ */
+export async function sendShipNotificationWhatsApp(
+  orderId: string,
+  customerName: string,
+  itemsLine: string,
+  courierName: string,
+  labelUrl: string
+) {
+  const msg91TemplateName = await getSetting("MSG91_SHIP_NOTIFICATION_TEMPLATE_ID");
+  const numbers = (await getSetting("WAREHOUSE_WHATSAPP_NUMBERS"))
+    ?.split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  if (!numbers || numbers.length === 0) return false;
+
+  const variables = [orderId.slice(0, 8).toUpperCase(), customerName, itemsLine, courierName];
+  const results = await Promise.all(
+    numbers.map((phone) =>
+      sendTemplateByName(phone, "ship_notification", msg91TemplateName, variables, { orderId }, {
+        type: "document",
+        url: labelUrl,
+      })
+    )
+  );
+  return results.some(Boolean);
 }
 
 /**
