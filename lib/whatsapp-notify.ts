@@ -254,9 +254,10 @@ export async function sendRtoRefundedWhatsApp(order: OrderForWhatsApp, refundRup
 
 /**
  * Sends a referral invite by WhatsApp — best-effort alongside the email,
- * which always sends regardless since it needs no template approval. Needs
- * a Flow with three variables: friend name, referrer name, referral link —
- * set its ID as MSG91_REFERRAL_INVITE_TEMPLATE_ID in /admin/settings.
+ * which always sends regardless since it needs no template approval. Uses
+ * the approved "referralinvite" bulk-API template, three body variables in
+ * order: friend name, referrer name, referral link — set its name as
+ * MSG91_REFERRAL_INVITE_TEMPLATE_ID in /admin/settings.
  */
 export async function sendReferralInviteWhatsApp(
   friendPhone: string,
@@ -264,14 +265,18 @@ export async function sendReferralInviteWhatsApp(
   referrerName: string,
   referralUrl: string
 ) {
-  const msg91TemplateId = await getSetting("MSG91_REFERRAL_INVITE_TEMPLATE_ID");
+  const msg91TemplateName = await getSetting("MSG91_REFERRAL_INVITE_TEMPLATE_ID");
   const variables = [friendName, referrerName, referralUrl];
-  return sendTemplate(friendPhone, "referral_invite", msg91TemplateId, variables, {});
+  return sendTemplateByName(friendPhone, "referral_invite", msg91TemplateName, variables, {});
 }
 
-/** Retention nudge by WhatsApp — best-effort alongside the email, which always sends regardless. */
+/**
+ * Retention nudge by WhatsApp — best-effort alongside the email, which
+ * always sends regardless. Uses the approved "winback" bulk-API template,
+ * two body variables in order: name, miles balance.
+ */
 export async function sendWinbackWhatsApp(phone: string, name: string, milesBalance: number) {
-  const msg91TemplateId = await getSetting("MSG91_WINBACK_TEMPLATE_ID");
+  const msg91TemplateName = await getSetting("MSG91_WINBACK_TEMPLATE_ID");
   const variables = [name, String(milesBalance)];
-  return sendTemplate(phone, "winback", msg91TemplateId, variables, {});
+  return sendTemplateByName(phone, "winback", msg91TemplateName, variables, {});
 }
