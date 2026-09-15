@@ -253,7 +253,7 @@ export default function CustomersPage() {
                   <td className="py-3 text-micro uppercase tracking-[0.03em] text-secondary-text">
                     {c.importedRecords > 0
                       ? c.importedRecords === c.orderCount
-                        ? "Imported"
+                        ? "Data Import"
                         : "Mixed"
                       : "Site"}
                   </td>

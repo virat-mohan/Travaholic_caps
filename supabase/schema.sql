@@ -951,3 +951,50 @@ create table if not exists discount_rule_redemptions (
   redeemed_at timestamptz not null default now()
 );
 create index if not exists discount_rule_redemptions_rule_idx on discount_rule_redemptions (discount_rule_id);
+
+-- Historical customer data imported from the pre-migration platform's xlsx
+-- export (2023-2025 orders) — deliberately a separate table from `customers`,
+-- since these people never signed up on the current site and most have no
+-- matching `orders` row. One row per unique phone number (the xlsx is one
+-- row per line item, deduped on import). last_order_status/last_order_at
+-- drive win-back eligibility; total_delivered_orders is used to exclude
+-- people whose only history is cancelled/failed/RTO'd orders.
+create table if not exists legacy_customers (
+  id uuid primary key default gen_random_uuid(),
+  phone text unique not null,
+  name text,
+  email text,
+  city text,
+  state text,
+  pincode text,
+  first_order_at timestamptz,
+  last_order_at timestamptz,
+  last_order_status text,
+  total_orders int not null default 0,
+  total_delivered_orders int not null default 0,
+  lifetime_value numeric not null default 0,
+  winback_sent_at timestamptz,
+  winback_link_token text unique,
+  converted_order_id uuid references orders(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists legacy_customers_last_order_idx on legacy_customers (last_order_at);
+create index if not exists legacy_customers_winback_token_idx on legacy_customers (winback_link_token);
+
+-- One row per product line item per legacy customer — the actual purchase
+-- history, kept separate from the aggregate legacy_customers row so
+-- product-based targeting ("who has never bought the Ocean chapter") is a
+-- straightforward join/anti-join instead of parsing a packed field.
+create table if not exists legacy_customer_purchases (
+  id uuid primary key default gen_random_uuid(),
+  legacy_customer_id uuid not null references legacy_customers(id) on delete cascade,
+  source_order_id text not null,
+  product_name text not null,
+  quantity int not null default 1,
+  line_item_value numeric,
+  status text,
+  ordered_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists legacy_customer_purchases_customer_idx on legacy_customer_purchases (legacy_customer_id);
+create index if not exists legacy_customer_purchases_product_idx on legacy_customer_purchases (product_name);

@@ -213,7 +213,7 @@ export async function sendMsg91Template(
   templateName: string,
   phone: string,
   bodyValues: string[],
-  header?: { type: "image" | "document"; url: string }
+  header?: { type: "image" | "document"; url: string; filename?: string }
 ) {
   const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
   if (enabled !== "true") {
@@ -227,11 +227,15 @@ export async function sendMsg91Template(
     return { sent: false as const };
   }
 
-  const components: Record<string, { type: string; value: string }> = Object.fromEntries(
+  const components: Record<string, { type: string; value: string; filename?: string }> = Object.fromEntries(
     bodyValues.map((v, i) => [`body_${i + 1}`, { type: "text", value: v }])
   );
   if (header) {
-    components.header_1 = { type: header.type, value: header.url };
+    components.header_1 = {
+      type: header.type,
+      value: header.url,
+      ...(header.type === "document" ? { filename: header.filename ?? "label.pdf" } : {}),
+    };
   }
 
   try {
