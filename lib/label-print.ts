@@ -1,4 +1,4 @@
-import { PDFDocument, type PDFEmbeddedPage } from "pdf-lib";
+import { PDFDocument, degrees, type PDFEmbeddedPage } from "pdf-lib";
 import { generateShiprocketLabelsBatch } from "@/lib/shiprocket";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
@@ -6,20 +6,39 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 const A4_WIDTH = 841.89;
 const A4_HEIGHT = 595.28;
 
+/**
+ * Rotates the label 90° into each half-page slot and scales it to fill that
+ * slot edge to edge (no margin) — the label itself is portrait-shaped, so
+ * rotating it 90° lets it fill a short, wide landscape slot far more fully
+ * than laying it out unrotated ever could.
+ *
+ * pdf-lib's drawPage rotates the content around the (x, y) anchor rather
+ * than the box center, so with rotate=90° a box drawn with local
+ * {width, height} actually lands on the page spanning
+ * x: [x - height, x], y: [y, y + width] — i.e. the on-page footprint has
+ * width = local height and height = local width. The math below picks a
+ * scale/local-size pair so that on-page footprint exactly fills the slot,
+ * then solves x/y backwards from that footprint's top-left corner.
+ */
 function drawDuplicatedPage(outDoc: PDFDocument, embedded: PDFEmbeddedPage) {
   const page = outDoc.addPage([A4_WIDTH, A4_HEIGHT]);
   const halfHeight = A4_HEIGHT / 2;
-  const margin = 24;
-  const maxWidth = A4_WIDTH - margin * 2;
-  const maxHeight = halfHeight - margin * 2;
-  const scale = Math.min(maxWidth / embedded.width, maxHeight / embedded.height);
+  const slotWidth = A4_WIDTH;
+  const slotHeight = halfHeight;
+
+  // Swapped vs. an unrotated fit, since the rendered footprint is transposed.
+  const scale = Math.min(slotWidth / embedded.height, slotHeight / embedded.width);
   const drawWidth = embedded.width * scale;
   const drawHeight = embedded.height * scale;
-  const x = (A4_WIDTH - drawWidth) / 2;
+  const footprintWidth = drawHeight;
+  const footprintHeight = drawWidth;
 
   for (const slotBottom of [0, halfHeight]) {
-    const y = slotBottom + (halfHeight - drawHeight) / 2;
-    page.drawPage(embedded, { x, y, width: drawWidth, height: drawHeight });
+    const footprintX = (slotWidth - footprintWidth) / 2;
+    const footprintY = slotBottom + (slotHeight - footprintHeight) / 2;
+    const x = footprintX + footprintWidth;
+    const y = footprintY;
+    page.drawPage(embedded, { x, y, width: drawWidth, height: drawHeight, rotate: degrees(90) });
   }
 
   // A faint cut line across the middle, between the two identical copies.
