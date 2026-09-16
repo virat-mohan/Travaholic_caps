@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { applyShipmentStatusUpdate } from "@/lib/shiprocket-status";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,28 +12,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // money actually moved.
   const patch: Record<string, string> = {};
   if (body.status) patch.status = body.status;
+  // shipmentStatus is a plain label overwrite, not routed through
+  // applyShipmentStatusUpdate — Shiprocket's own webhook/tracking sweep is
+  // the sole trigger for review-request nudges, refunds, and restocking.
+  // This dropdown is for record-keeping on orders shipped outside that flow
+  // (or while tracking lags), and must never double-fire those side effects
+  // if the real webhook later reports the same transition.
+  if (body.shipmentStatus) patch.shipment_status = body.shipmentStatus;
 
-  if (Object.keys(patch).length === 0 && !body.shipmentStatus) {
+  if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
   try {
     const supabase = getSupabaseServerClient();
-    if (Object.keys(patch).length > 0) {
-      const { error } = await supabase.from("orders").update(patch).eq("id", id);
-      if (error) throw error;
-    }
-
-    if (body.shipmentStatus) {
-      // Manual override for orders shipped outside the normal Shiprocket
-      // flow, or when tracking hasn't caught up yet — goes through the same
-      // function the real webhook uses, so "Delivered" still fires the
-      // review-request nudge exactly once and "Cancelled" triggers no
-      // refund/restock (that keyword matches none of the RTO/NDR/delivered
-      // regexes there), consistent with a forfeited COD advance.
-      await applyShipmentStatusUpdate({ orderId: id, status: body.shipmentStatus });
-    }
-
+    const { error } = await supabase.from("orders").update(patch).eq("id", id);
+    if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Failed to update order", err);

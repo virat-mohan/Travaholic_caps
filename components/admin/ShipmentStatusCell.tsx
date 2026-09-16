@@ -5,15 +5,15 @@ import { useState } from "react";
 const MANUAL_OPTIONS = ["Shipped", "Delivered", "Cancelled"];
 
 /**
- * Manual override for orders shipped outside the normal Shiprocket flow (or
- * whenever the automatic webhook/tracking sweep hasn't caught up yet) —
- * routes through the same applyShipmentStatusUpdate() the real Shiprocket
- * webhook uses (see lib/shiprocket-status.ts), so picking "Delivered" here
- * still fires the review-request nudge exactly once, same transition guard
- * as a real courier update. "Cancelled" deliberately triggers no refund/
- * restock logic — that keyword doesn't match the RTO/NDR/delivered regexes,
- * so it's purely a label; any COD advance already collected is forfeited,
- * per policy, not auto-refunded from here.
+ * Manual, record-keeping-only override of the shipment status label — for
+ * orders shipped outside the normal Shiprocket flow, or while tracking
+ * lags. Deliberately does NOT route through applyShipmentStatusUpdate()
+ * (lib/shiprocket-status.ts): Shiprocket's own webhook/tracking sweep stays
+ * the sole trigger for the review-request nudge, refunds, and restocking,
+ * so picking "Delivered" or "Cancelled" here can never double-fire any of
+ * that if the real webhook later reports the same transition. Any COD
+ * advance already collected is forfeited on cancellation per policy, not
+ * auto-refunded from here either way.
  */
 export function ShipmentStatusCell({ orderId, currentLabel }: { orderId: string; currentLabel: string }) {
   const [saving, setSaving] = useState(false);
