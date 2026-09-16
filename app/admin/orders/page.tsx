@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { OrderStatusCell } from "@/components/admin/OrderStatusCell";
+import { ShipmentStatusCell } from "@/components/admin/ShipmentStatusCell";
 import { ShipmentCell } from "@/components/admin/ShipmentCell";
 import { RefundActions } from "@/components/admin/RefundActions";
 import { OpsDigestCard } from "@/components/admin/OpsDigestCard";
@@ -177,7 +178,7 @@ export default async function AdminOrdersPage() {
                   <OrderStatusCell orderId={o.id} field="status" value={o.status} />
                 </td>
                 <td className="py-3 text-caption text-secondary-text">
-                  {formatShipmentStatus(o.shipment_status ?? "not_shipped")}
+                  <ShipmentStatusCell orderId={o.id} currentLabel={formatShipmentStatus(o.shipment_status ?? "not_shipped")} />
                 </td>
                 <td className="py-3">
                   <ShipmentCell

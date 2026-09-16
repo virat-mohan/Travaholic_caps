@@ -10,7 +10,7 @@ export default function RefundPolicyPage() {
         <h1 className="mt-2 font-display text-heading-xl uppercase text-ink">
           Refund &amp; Cancellation Policy
         </h1>
-        <p className="mt-4 text-caption text-secondary-text">Last updated 15 August 2026</p>
+        <p className="mt-4 text-caption text-secondary-text">Last updated 16 September 2026</p>
 
         <div className="mt-10 space-y-8 font-sans text-body-s leading-relaxed text-ink">
           <p>
@@ -25,6 +25,10 @@ export default function RefundPolicyPage() {
               shipped, it can no longer be cancelled — you&apos;re welcome to return it instead (see below).
               To cancel, message us on WhatsApp at +91 88003 39125 or email travaholiccaps@gmail.com with
               your order number.
+            </p>
+            <p className="mt-3">
+              For Cash on Delivery orders, the advance amount paid at checkout to confirm the order is
+              non-refundable on cancellation, as it covers courier charges already incurred.
             </p>
           </section>
 
