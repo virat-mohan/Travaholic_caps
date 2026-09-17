@@ -630,7 +630,7 @@ export default function CheckoutPage() {
                       value={identifyEmail}
                       onChange={(e) => setIdentifyEmail(e.target.value)}
                       placeholder="you@email.com"
-                      className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+                      className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                     />
                     <p className="mt-1.5 text-caption text-secondary-text">
                       Use this to redeem your Travaholic Miles and have your address filled in automatically.
@@ -656,7 +656,7 @@ export default function CheckoutPage() {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
                   maxLength={6}
-                  className="w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-heading-s tracking-[0.3em] text-ink outline-none focus:border-ink"
+                  className="w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-heading-s tracking-[0.3em] text-ink outline-none focus:border-ink"
                 />
                 {identityError && <p className="text-body-s text-paint-orange">{identityError}</p>}
                 <button
@@ -769,8 +769,8 @@ export default function CheckoutPage() {
               <input
                 value={referralCodeInput}
                 onChange={(e) => updateReferralCode(e.target.value)}
-                placeholder="Got a code from a friend? Enter it here"
-                className="mt-1.5 w-full max-w-[280px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
+                placeholder="From a friend?"
+                className="mt-1.5 w-full max-w-[280px] border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-caption placeholder:text-secondary-text focus:border-ink"
               />
               {normalizedReferralCode && (
                 <p className="mt-2 text-caption">
@@ -795,8 +795,8 @@ export default function CheckoutPage() {
                 <input
                   value={couponCodeInput}
                   onChange={(e) => setCouponCodeInput(e.target.value)}
-                  placeholder="Have a code? Enter it here"
-                  className="min-w-0 flex-1 border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-secondary-text focus:border-ink"
+                  placeholder="Enter code"
+                  className="min-w-0 flex-1 border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-caption placeholder:text-secondary-text focus:border-ink"
                 />
                 <button
                   type="button"
@@ -828,7 +828,7 @@ export default function CheckoutPage() {
                   autoComplete="name"
                   value={form.name}
                   onChange={update("name")}
-                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -842,7 +842,7 @@ export default function CheckoutPage() {
                   autoComplete="tel"
                   value={form.phone}
                   onChange={update("phone")}
-                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -855,7 +855,22 @@ export default function CheckoutPage() {
                   autoComplete="email"
                   value={form.email}
                   onChange={update("email")}
-                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
+                />
+              </div>
+
+              <div>
+                <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                  Delivery Address
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  autoComplete="address-line1"
+                  placeholder="House/flat, street, area"
+                  value={form.address}
+                  onChange={update("address")}
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                 />
               </div>
 
@@ -870,24 +885,9 @@ export default function CheckoutPage() {
                   maxLength={6}
                   value={form.pincode}
                   onChange={update("pincode")}
-                  className="mt-1.5 w-full max-w-[200px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full max-w-[120px] border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
                 <p className="mt-1.5 text-caption text-secondary-text">We&apos;ll fill in your city and state automatically.</p>
-              </div>
-
-              <div>
-                <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                  Delivery Address
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  autoComplete="address-line1"
-                  placeholder="House/flat, street, area"
-                  value={form.address}
-                  onChange={update("address")}
-                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
-                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -900,7 +900,7 @@ export default function CheckoutPage() {
                     autoComplete="address-level2"
                     value={form.city}
                     onChange={update("city")}
-                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
                   />
                 </div>
                 <div>
@@ -912,7 +912,7 @@ export default function CheckoutPage() {
                     autoComplete="address-level1"
                     value={form.state}
                     onChange={update("state")}
-                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
+                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
                   />
                 </div>
               </div>
@@ -936,7 +936,7 @@ export default function CheckoutPage() {
                     placeholder="Add a personal note to include with the order..."
                     value={giftNote}
                     onChange={(e) => setGiftNote(e.target.value)}
-                    className="mt-4 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+                    className="mt-4 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                   />
                 )}
 
