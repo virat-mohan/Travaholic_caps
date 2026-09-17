@@ -16,9 +16,9 @@ function chapterName(slug: string) {
 
 // Without this, "/" is fully static — baked once at build/deploy time — so
 // the Trending strip below would never actually update day to day the way
-// it's meant to. An hour is fresh enough to track daily traffic shifts
-// without regenerating the page on every single request.
-export const revalidate = 3600;
+// it's meant to. Revalidated daily since the strip itself is now a
+// once-a-day snapshot (yesterday's most-viewed), not a rolling window.
+export const revalidate = 86400;
 
 const pillars = [
   { title: "Premium Materials", copy: "Chosen for how they age, not just how they photograph." },
@@ -57,16 +57,22 @@ export default async function Home() {
   // before ever reaching a product page.
   const explorerPosts = await getExplorerPosts();
 
-  // Trending Now — whichever chapters got the most product-page views over
-  // the last 7 days, first-party (tracking_events), refreshed by the
-  // revalidate above rather than anything manual. A rolling week instead of
-  // a single day, since daily view counts are still low enough that one bad
-  // (or one lucky) day would swing this around too much to be useful.
+  // Trending Now — whichever chapters got the most product-page views
+  // yesterday (previous full IST calendar day), first-party
+  // (tracking_events), refreshed once daily by the revalidate above so it
+  // reads as "yesterday's most viewed" rather than a stale rolling window.
   let trending: typeof collection = [];
   try {
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(Date.now() + IST_OFFSET_MS);
+    const istMidnightTodayUtc = new Date(
+      Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - IST_OFFSET_MS
+    );
+    const istMidnightYesterdayUtc = new Date(istMidnightTodayUtc.getTime() - 24 * 60 * 60 * 1000);
+
     const analytics = await computeWebsiteAnalytics(
-      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      new Date().toISOString()
+      istMidnightYesterdayUtc.toISOString(),
+      istMidnightTodayUtc.toISOString()
     );
     trending = analytics.topViewedChapters
       .map((v) => collection.find((c) => c.slug === v.slug))
@@ -89,7 +95,7 @@ export default async function Home() {
               Trending Now
             </p>
             <h2 className="mb-8 font-display text-heading-l uppercase leading-[0.95] text-ink">
-              Most Viewed This Week.
+              The Most Viewed.
             </h2>
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
               {trending.map((chapter) => (
