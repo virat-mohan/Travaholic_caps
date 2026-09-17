@@ -2,8 +2,16 @@ const WHATSAPP_NUMBER = "918800339125";
 
 export function WhatsAppFloatButton() {
   return (
-    <div className="group fixed bottom-6 right-6 z-40">
-      <span className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded bg-ink px-3 py-1.5 font-sans text-micro uppercase tracking-[0.05em] text-cream opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+    // Vertically centered on the right edge rather than anchored to the
+    // bottom-right corner — that corner is also where every primary CTA
+    // lives (Proceed to Checkout, Buy Now, Pay Now), and a fixed-position
+    // button there was overlapping and actually intercepting taps meant for
+    // those buttons (confirmed: tapping the bottom-right ~56x46px of the
+    // cart page's Proceed to Checkout button opened WhatsApp instead of
+    // navigating to /checkout). Centering vertically keeps it permanently
+    // clear of any bottom-anchored CTA.
+    <div className="group fixed right-4 top-1/2 z-40 -translate-y-1/2">
+      <span className="pointer-events-none absolute right-full top-1/2 mr-2 -translate-y-1/2 whitespace-nowrap rounded bg-ink px-3 py-1.5 font-sans text-micro uppercase tracking-[0.05em] text-cream opacity-0 transition-opacity duration-200 group-hover:opacity-100">
         Chat on WhatsApp
       </span>
       <a
