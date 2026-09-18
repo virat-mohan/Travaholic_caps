@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingBag, Menu, X, User } from "lucide-react";
+import { ShoppingBag, Menu, X } from "lucide-react";
 import { WhatsAppIcon } from "@/components/contact/WhatsAppIcon";
 import { seriesOrder } from "@/lib/series";
 import { useCart } from "@/lib/cart";
@@ -20,7 +20,7 @@ const rightLinks = [
   { label: "My Story", href: "/about" },
 ];
 
-const links = [...leftLinks, ...rightLinks];
+const links = [...leftLinks, ...rightLinks, { label: "My Account", href: "/account" }];
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -29,16 +29,25 @@ export function Navbar() {
   return (
     <header className="sticky inset-x-0 top-0 z-50 border-b border-[var(--color-divider)] bg-near-black">
       <nav className="relative mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-6 md:h-28 md:px-12">
-        <div className="hidden items-center gap-8 md:flex">
-          {leftLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="font-sans text-micro uppercase tracking-[0.15em] text-cream/80 transition-colors hover:text-cream"
-            >
-              {link.label}
-            </Link>
-          ))}
+        <div className="flex items-center gap-8">
+          <button
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="text-cream md:hidden"
+          >
+            {menuOpen ? <X size={20} strokeWidth={1.5} /> : <Menu size={20} strokeWidth={1.5} />}
+          </button>
+          <div className="hidden items-center gap-8 md:flex">
+            {leftLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="font-sans text-micro uppercase tracking-[0.15em] text-cream/80 transition-colors hover:text-cream"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         <Link
@@ -73,7 +82,7 @@ export function Navbar() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Contact us on WhatsApp"
-            className="hidden items-center gap-1.5 text-cream/80 transition-colors hover:text-cream sm:flex"
+            className="hidden items-center gap-1.5 text-cream/80 transition-colors hover:text-cream md:flex"
           >
             <WhatsAppIcon size={16} />
             <span className="font-sans text-micro uppercase tracking-[0.1em]">Contact</span>
@@ -83,20 +92,17 @@ export function Navbar() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Contact us on WhatsApp"
-            className="text-cream sm:hidden"
+            className="text-cream md:hidden"
           >
             <WhatsAppIcon size={18} />
           </a>
           <button
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             onClick={() => setMenuOpen((v) => !v)}
-            className="text-cream"
+            className="hidden text-cream md:block"
           >
             {menuOpen ? <X size={20} strokeWidth={1.5} /> : <Menu size={20} strokeWidth={1.5} />}
           </button>
-          <Link aria-label="Account" href="/account" className="text-cream">
-            <User size={18} strokeWidth={1.5} />
-          </Link>
           <Link aria-label="Cart" href="/cart" className="relative text-cream">
             <ShoppingBag size={18} strokeWidth={1.5} />
             {count > 0 && (
