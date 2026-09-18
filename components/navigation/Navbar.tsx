@@ -20,7 +20,7 @@ const rightLinks = [
   { label: "My Story", href: "/about" },
 ];
 
-const links = [...leftLinks, ...rightLinks, { label: "My Account", href: "/account" }];
+const links = [...leftLinks, ...rightLinks];
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
