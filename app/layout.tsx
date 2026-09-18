@@ -4,7 +4,6 @@ import { Navbar } from "@/components/navigation/Navbar";
 import { ScrollToTop } from "@/components/navigation/ScrollToTop";
 import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
 import { ClarityTracker } from "@/components/tracking/ClarityTracker";
-import { WhatsAppFloatButton } from "@/components/contact/WhatsAppFloatButton";
 import { CartProvider } from "@/lib/cart";
 import { getSetting } from "@/lib/settings";
 import { Analytics } from "@vercel/analytics/next";
@@ -97,7 +96,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <ScrollToTop />
           <Navbar />
           {children}
-          <WhatsAppFloatButton />
         </CartProvider>
         <Analytics />
       </body>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingBag, Menu, X, User } from "lucide-react";
+import { WhatsAppIcon } from "@/components/contact/WhatsAppIcon";
 import { seriesOrder } from "@/lib/series";
 import { useCart } from "@/lib/cart";
 
@@ -67,6 +68,25 @@ export function Navbar() {
               </Link>
             ))}
           </div>
+          <a
+            href="https://wa.me/918800339125"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Contact us on WhatsApp"
+            className="hidden items-center gap-1.5 text-cream/80 transition-colors hover:text-cream sm:flex"
+          >
+            <WhatsAppIcon size={16} />
+            <span className="font-sans text-micro uppercase tracking-[0.1em]">Contact</span>
+          </a>
+          <a
+            href="https://wa.me/918800339125"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Contact us on WhatsApp"
+            className="text-cream sm:hidden"
+          >
+            <WhatsAppIcon size={18} />
+          </a>
           <button
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             onClick={() => setMenuOpen((v) => !v)}

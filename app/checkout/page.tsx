@@ -35,7 +35,7 @@ type Account = {
   loyalty: { balance: number; maxRedeemableRupees: number; threshold: number } | null;
 };
 
-type IdentityStep = "checking" | "identify" | "otp" | "guest" | "verified";
+type IdentityStep = "checking" | "guest" | "verified";
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
@@ -95,18 +95,13 @@ export default function CheckoutPage() {
   // transient API hiccup) never blocks — see getShippingRate's doc comment.
   const [shippingBlocking, setShippingBlocking] = useState(false);
 
-  // Identity-first flow: verify who's checking out before showing the full
-  // order form, so a returning customer's address and Miles are pulled in
-  // automatically instead of retyping everything. "Continue as guest" skips
-  // straight to the manual form for anyone who'd rather not verify.
+  // Straight-to-the-form flow: a returning customer's saved address/Miles
+  // still get pulled in automatically if they're logged in (applyAccount
+  // below), but there's no longer a forced "guest or log in" choice screen
+  // in between — checkout goes directly to guest by default. Removed the
+  // email/OTP login entry point for now; git history has it if it's needed
+  // back.
   const [identityStep, setIdentityStep] = useState<IdentityStep>("checking");
-  // Temporarily email-based rather than phone — WhatsApp OTP delivery isn't
-  // reliable yet (see lib/msg91.ts), switch this back to phone once that's
-  // confirmed working end to end.
-  const [identifyEmail, setIdentifyEmail] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [identityLoading, setIdentityLoading] = useState(false);
-  const [identityError, setIdentityError] = useState<string | null>(null);
 
   const loyaltyDiscount = redeemMiles ? account?.loyalty?.maxRedeemableRupees ?? 0 : 0;
   const normalizedReferralCode = referralCodeInput.trim().toUpperCase();
@@ -265,7 +260,7 @@ export default function CheckoutPage() {
       }));
       setIdentityStep("verified");
     } else {
-      setIdentityStep("identify");
+      setIdentityStep("guest");
     }
   }
 
@@ -273,7 +268,7 @@ export default function CheckoutPage() {
     fetch("/api/account/me")
       .then((res) => res.json())
       .then(applyAccount)
-      .catch(() => setIdentityStep("identify"));
+      .catch(() => setIdentityStep("guest"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -315,55 +310,7 @@ export default function CheckoutPage() {
     await fetch("/api/auth/logout", { method: "POST" });
     setAccount(null);
     setRedeemMiles(false);
-    setIdentityStep("identify");
-  }
-
-  async function sendIdentifyCode(e: React.FormEvent) {
-    e.preventDefault();
-    if (!identifyEmail.trim()) {
-      setIdentityError("Enter an email address.");
-      return;
-    }
-    setIdentityLoading(true);
-    setIdentityError(null);
-    try {
-      const res = await fetch("/api/auth/request-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: identifyEmail.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not send code");
-      setIdentityStep("otp");
-    } catch (err) {
-      setIdentityError(err instanceof Error ? err.message : "Could not send code");
-    } finally {
-      setIdentityLoading(false);
-    }
-  }
-
-  async function verifyIdentifyCode(e: React.FormEvent) {
-    e.preventDefault();
-    setIdentityLoading(true);
-    setIdentityError(null);
-    try {
-      const res = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: identifyEmail.trim(),
-          code: otpCode,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not verify code");
-      const me = await fetch("/api/account/me").then((r) => r.json());
-      applyAccount(me);
-    } catch (err) {
-      setIdentityError(err instanceof Error ? err.message : "Could not verify code");
-    } finally {
-      setIdentityLoading(false);
-    }
+    setIdentityStep("guest");
   }
 
   async function handleRazorpayPayment() {
@@ -609,85 +556,6 @@ export default function CheckoutPage() {
         </h1>
         <CheckoutSteps current="checkout" />
 
-        {(identityStep === "identify" || identityStep === "otp") && (
-          <>
-            {orderSummary}
-
-            {identityStep === "identify" ? (
-              <div className="mt-8 space-y-4">
-                <button
-                  type="button"
-                  onClick={() => setIdentityStep("guest")}
-                  className="w-full border border-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
-                >
-                  Continue As Guest
-                </button>
-
-                <div className="flex items-center gap-3 text-caption text-secondary-text">
-                  <span className="h-px flex-1 bg-divider" />
-                  or
-                  <span className="h-px flex-1 bg-divider" />
-                </div>
-
-                <form onSubmit={sendIdentifyCode} className="space-y-4">
-                  <div>
-                    <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      autoComplete="email"
-                      value={identifyEmail}
-                      onChange={(e) => setIdentifyEmail(e.target.value)}
-                      placeholder="you@email.com"
-                      className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
-                    />
-                    <p className="mt-1.5 text-caption text-secondary-text">
-                      Use this to redeem your Travaholic Miles and have your address filled in automatically.
-                    </p>
-                  </div>
-                  {identityError && <p className="text-body-s text-paint-orange">{identityError}</p>}
-                  <button
-                    type="submit"
-                    disabled={identityLoading}
-                    className="w-full border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
-                  >
-                    {identityLoading ? "Sending..." : "Continue"}
-                  </button>
-                </form>
-              </div>
-            ) : (
-              <form onSubmit={verifyIdentifyCode} className="mt-8 space-y-4">
-                <p className="text-body-s text-secondary-text">
-                  Enter the 6-digit code sent to {identifyEmail.trim()}.
-                </p>
-                <input
-                  required
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  maxLength={6}
-                  className="w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-heading-s tracking-[0.3em] text-ink outline-none focus:border-ink"
-                />
-                {identityError && <p className="text-body-s text-paint-orange">{identityError}</p>}
-                <button
-                  type="submit"
-                  disabled={identityLoading}
-                  className="w-full border border-ink bg-ink px-8 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
-                >
-                  {identityLoading ? "Verifying..." : "Verify & Continue"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIdentityStep("identify")}
-                  className="w-full text-center text-caption text-secondary-text underline"
-                >
-                  Start Over
-                </button>
-              </form>
-            )}
-          </>
-        )}
-
         {(identityStep === "verified" || identityStep === "guest") && (
           <>
             <p className="mt-4 max-w-md text-body-s text-secondary-text">
@@ -696,30 +564,20 @@ export default function CheckoutPage() {
                 : "We don't run this through a payment gateway yet — placing an order sends your details and cart straight to us on WhatsApp, and we'll confirm payment and delivery with you directly."}
             </p>
 
-            <div className="mt-6 flex items-center justify-between border-t border-divider pt-4 text-body-s">
-              {identityStep === "verified" && account?.customer ? (
-                <>
-                  <span className="text-secondary-text">
-                    Logged in as{" "}
-                    <span className="text-ink">{account.customer.phone || account.customer.email}</span>
-                    {account.loyalty && account.loyalty.balance > 0 && (
-                      <> · {account.loyalty.balance.toLocaleString("en-IN")} Travaholic Miles</>
-                    )}
-                  </span>
-                  <button type="button" onClick={logOut} className="text-caption text-secondary-text underline">
-                    Log Out
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setIdentityStep("identify")}
-                  className="text-caption text-ink underline"
-                >
-                  Have an account? Verify for faster checkout &amp; Miles
+            {identityStep === "verified" && account?.customer && (
+              <div className="mt-6 flex items-center justify-between border-t border-divider pt-4 text-body-s">
+                <span className="text-secondary-text">
+                  Logged in as{" "}
+                  <span className="text-ink">{account.customer.phone || account.customer.email}</span>
+                  {account.loyalty && account.loyalty.balance > 0 && (
+                    <> · {account.loyalty.balance.toLocaleString("en-IN")} Travaholic Miles</>
+                  )}
+                </span>
+                <button type="button" onClick={logOut} className="text-caption text-secondary-text underline">
+                  Log Out
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
             {razorpay.enabled && (
               <div className="mt-6 border-2 border-ink bg-tan-gold/20 p-4">
@@ -772,62 +630,6 @@ export default function CheckoutPage() {
               </label>
             )}
 
-            <div className="mt-4">
-              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                Referral Code (Optional)
-              </label>
-              <input
-                value={referralCodeInput}
-                onChange={(e) => updateReferralCode(e.target.value)}
-                placeholder="From a friend?"
-                className="mt-1.5 w-full max-w-[280px] border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-caption placeholder:text-secondary-text focus:border-ink"
-              />
-              {normalizedReferralCode && (
-                <p className="mt-2 text-caption">
-                  {referralChecking ? (
-                    <span className="text-secondary-text">Checking code...</span>
-                  ) : referralPreview?.checked === normalizedReferralCode && referralPreview.valid ? (
-                    <span className="text-tan-gold">
-                      Code applied — ₹{referralDiscount.toLocaleString("en-IN")} off
-                    </span>
-                  ) : referralPreview?.checked === normalizedReferralCode ? (
-                    <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
-                  ) : null}
-                </p>
-              )}
-            </div>
-
-            <div className="mt-4">
-              <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                Coupon Code (Optional)
-              </label>
-              <div className="mt-1.5 flex max-w-[280px] items-center gap-1.5">
-                <input
-                  value={couponCodeInput}
-                  onChange={(e) => setCouponCodeInput(e.target.value)}
-                  placeholder="Enter code"
-                  className="min-w-0 flex-1 border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-caption placeholder:text-secondary-text focus:border-ink"
-                />
-                <button
-                  type="button"
-                  onClick={applyCoupon}
-                  disabled={!normalizedCouponCode || couponChecking}
-                  className="shrink-0 border border-ink/30 px-3 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
-                >
-                  {couponChecking ? "..." : "Apply"}
-                </button>
-              </div>
-              {normalizedCouponCode && couponPreview?.checked === normalizedCouponCode && (
-                <p className="mt-2 text-caption">
-                  {couponPreview.valid ? (
-                    <span className="text-tan-gold">Code applied — ₹{couponDiscount.toLocaleString("en-IN")} off</span>
-                  ) : (
-                    <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
-                  )}
-                </p>
-              )}
-            </div>
-
             <form onSubmit={handleSubmit} className="mt-10 space-y-4">
               <div>
                 <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
@@ -838,7 +640,7 @@ export default function CheckoutPage() {
                   autoComplete="name"
                   value={form.name}
                   onChange={update("name")}
-                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -852,7 +654,7 @@ export default function CheckoutPage() {
                   autoComplete="tel"
                   value={form.phone}
                   onChange={update("phone")}
-                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -865,7 +667,7 @@ export default function CheckoutPage() {
                   autoComplete="email"
                   value={form.email}
                   onChange={update("email")}
-                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
               </div>
 
@@ -880,7 +682,7 @@ export default function CheckoutPage() {
                   placeholder="House/flat, street, area"
                   value={form.address}
                   onChange={update("address")}
-                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+                  className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                 />
               </div>
 
@@ -895,7 +697,7 @@ export default function CheckoutPage() {
                   maxLength={6}
                   value={form.pincode}
                   onChange={update("pincode")}
-                  className="mt-1.5 w-full max-w-[120px] border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
+                  className="mt-1.5 w-full max-w-[120px] border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                 />
                 <p className="mt-1.5 text-caption text-secondary-text">We&apos;ll fill in your city and state automatically.</p>
               </div>
@@ -910,7 +712,7 @@ export default function CheckoutPage() {
                     autoComplete="address-level2"
                     value={form.city}
                     onChange={update("city")}
-                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
+                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                   />
                 </div>
                 <div>
@@ -922,7 +724,7 @@ export default function CheckoutPage() {
                     autoComplete="address-level1"
                     value={form.state}
                     onChange={update("state")}
-                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none focus:border-ink"
+                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none focus:border-ink"
                   />
                 </div>
               </div>
@@ -946,7 +748,7 @@ export default function CheckoutPage() {
                     placeholder="Add a personal note to include with the order..."
                     value={giftNote}
                     onChange={(e) => setGiftNote(e.target.value)}
-                    className="mt-4 w-full border border-ink/30 bg-surface px-4 py-1.5 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+                    className="mt-4 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
                   />
                 )}
 
@@ -983,6 +785,64 @@ export default function CheckoutPage() {
                           : `Pay ₹${total.toLocaleString("en-IN")}`
                       : "Place Order via WhatsApp"}
               </button>
+
+              <div className="grid grid-cols-1 gap-4 border-t border-divider pt-6 sm:grid-cols-2">
+                <div>
+                  <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                    Referral Code (Optional)
+                  </label>
+                  <input
+                    value={referralCodeInput}
+                    onChange={(e) => updateReferralCode(e.target.value)}
+                    placeholder="From a friend?"
+                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-caption placeholder:text-secondary-text focus:border-ink"
+                  />
+                  {normalizedReferralCode && (
+                    <p className="mt-2 text-caption">
+                      {referralChecking ? (
+                        <span className="text-secondary-text">Checking code...</span>
+                      ) : referralPreview?.checked === normalizedReferralCode && referralPreview.valid ? (
+                        <span className="text-tan-gold">
+                          Code applied — ₹{referralDiscount.toLocaleString("en-IN")} off
+                        </span>
+                      ) : referralPreview?.checked === normalizedReferralCode ? (
+                        <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
+                      ) : null}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                    Coupon Code (Optional)
+                  </label>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <input
+                      value={couponCodeInput}
+                      onChange={(e) => setCouponCodeInput(e.target.value)}
+                      placeholder="Enter code"
+                      className="min-w-0 flex-1 border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-caption placeholder:text-secondary-text focus:border-ink"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      disabled={!normalizedCouponCode || couponChecking}
+                      className="shrink-0 border border-ink/30 px-3 py-2 font-sans text-caption uppercase tracking-[0.05em] text-ink hover:border-ink disabled:opacity-40"
+                    >
+                      {couponChecking ? "..." : "Apply"}
+                    </button>
+                  </div>
+                  {normalizedCouponCode && couponPreview?.checked === normalizedCouponCode && (
+                    <p className="mt-2 text-caption">
+                      {couponPreview.valid ? (
+                        <span className="text-tan-gold">Code applied — ₹{couponDiscount.toLocaleString("en-IN")} off</span>
+                      ) : (
+                        <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
             </form>
           </>
         )}
