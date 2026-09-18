@@ -150,7 +150,8 @@ export default function CartPage() {
               <p className="font-display text-heading-m text-ink">₹{total.toLocaleString("en-IN")}</p>
             </div>
             <p className="mt-2 text-caption text-secondary-text">
-              Shipping and any taxes are calculated at checkout.
+              Free shipping when you pay online. Cash on Delivery orders show the exact courier charge
+              at checkout, based on your pincode.
             </p>
 
             <Link

@@ -113,7 +113,13 @@ export function getSessionKey() {
   return key;
 }
 
-type TrackParams = { chapterSlug?: string; value?: number; currency?: string; eventId?: string };
+type TrackParams = {
+  chapterSlug?: string;
+  contentIds?: string[];
+  value?: number;
+  currency?: string;
+  eventId?: string;
+};
 
 /**
  * Fires an event to both the Meta pixel (if loaded) and our own first-party
@@ -126,6 +132,12 @@ type TrackParams = { chapterSlug?: string; value?: number; currency?: string; ev
  * without a shared event ID on both sides, Meta has no way to know they're
  * the same purchase and counts it twice, silently inflating reported
  * conversions/ROAS in Ads Manager.
+ *
+ * `chapterSlug`/`contentIds` carry product identity through to Meta as
+ * content_ids — without this, every event only ever told Meta a rupee
+ * value moved, never which product, which both weakens purchase-prediction
+ * learning (no per-product signal) and makes catalog-based/dynamic ads
+ * impossible (they require content_ids matching a product catalog).
  */
 export function trackEvent(
   eventName: "PageView" | "ViewContent" | "AddToCart" | "InitiateCheckout" | "Purchase",
@@ -133,13 +145,20 @@ export function trackEvent(
 ) {
   if (typeof window === "undefined") return;
 
+  const contentIds = params.contentIds ?? (params.chapterSlug ? [params.chapterSlug] : undefined);
+
   if (window.fbq) {
     const eventOptions = params.eventId ? { eventID: params.eventId } : undefined;
+    const customData: Record<string, unknown> = {};
     if (params.value != null) {
-      window.fbq("track", eventName, { value: params.value, currency: params.currency ?? "INR" }, eventOptions);
-    } else {
-      window.fbq("track", eventName, {}, eventOptions);
+      customData.value = params.value;
+      customData.currency = params.currency ?? "INR";
     }
+    if (contentIds) {
+      customData.content_ids = contentIds;
+      customData.content_type = "product";
+    }
+    window.fbq("track", eventName, customData, eventOptions);
   }
 
   // Referrer only matters as an entry signal — capture it on the PageView
