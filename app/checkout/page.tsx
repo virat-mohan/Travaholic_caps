@@ -8,7 +8,6 @@ import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
 import { trackEvent, getSessionKey, getAttribution, getReferralCode } from "@/lib/client-tracking";
-import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
 
@@ -35,7 +34,7 @@ type Account = {
   loyalty: { balance: number; maxRedeemableRupees: number; threshold: number } | null;
 };
 
-type IdentityStep = "checking" | "guest" | "verified";
+type IdentityStep = "guest" | "verified";
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
@@ -95,13 +94,15 @@ export default function CheckoutPage() {
   // transient API hiccup) never blocks — see getShippingRate's doc comment.
   const [shippingBlocking, setShippingBlocking] = useState(false);
 
-  // Straight-to-the-form flow: a returning customer's saved address/Miles
-  // still get pulled in automatically if they're logged in (applyAccount
-  // below), but there's no longer a forced "guest or log in" choice screen
-  // in between — checkout goes directly to guest by default. Removed the
-  // email/OTP login entry point for now; git history has it if it's needed
-  // back.
-  const [identityStep, setIdentityStep] = useState<IdentityStep>("checking");
+  // Straight-to-the-form flow: starts as "guest" so the form renders
+  // immediately instead of waiting on the account-check network round trip
+  // (that used to gate the whole page behind a blank "checking" state — a
+  // real pause on a slow connection). A returning logged-in customer's
+  // saved address/Miles still get pulled in a moment later once
+  // applyAccount resolves, upgrading in place to "verified" without ever
+  // blocking the initial render. Removed the email/OTP login entry point
+  // for now; git history has it if it's needed back.
+  const [identityStep, setIdentityStep] = useState<IdentityStep>("guest");
 
   const loyaltyDiscount = redeemMiles ? account?.loyalty?.maxRedeemableRupees ?? 0 : 0;
   const normalizedReferralCode = referralCodeInput.trim().toUpperCase();
@@ -560,7 +561,7 @@ export default function CheckoutPage() {
           <>
             <p className="mt-4 max-w-md text-body-s text-secondary-text">
               {razorpay.enabled
-                ? "Pay securely below and we'll email your invoice and confirm right after."
+                ? "Pay securely below and we'll email your invoice."
                 : "We don't run this through a payment gateway yet — placing an order sends your details and cart straight to us on WhatsApp, and we'll confirm payment and delivery with you directly."}
             </p>
 
@@ -850,7 +851,6 @@ export default function CheckoutPage() {
 
       {razorpay.enabled && <Script src="https://checkout.razorpay.com/v1/checkout.js" />}
 
-      <NewsletterBlock />
       <FooterEditorial />
     </>
   );

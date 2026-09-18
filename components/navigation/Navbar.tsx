@@ -94,7 +94,7 @@ export function Navbar() {
             aria-label="Contact us on WhatsApp"
             className="text-cream md:hidden"
           >
-            <WhatsAppIcon size={18} />
+            <WhatsAppIcon size={22} />
           </a>
           <button
             aria-label={menuOpen ? "Close menu" : "Open menu"}
