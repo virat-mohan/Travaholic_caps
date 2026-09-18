@@ -426,7 +426,7 @@ export default function CheckoutPage() {
             });
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok) throw new Error(verifyData.error ?? "Payment verification failed");
-            trackEvent("Purchase", { value: createData.total });
+            trackEvent("Purchase", { value: createData.total, eventId: verifyData.orderId });
             clear();
             router.push(`/checkout/confirmed?order=${verifyData.orderId}&paid=1`);
           } catch (err) {
@@ -483,7 +483,7 @@ export default function CheckoutPage() {
       });
       const data = await res.json().catch(() => null);
       createdOrderId = data?.orderId ?? null;
-      trackEvent("Purchase", { value: total });
+      trackEvent("Purchase", { value: total, eventId: createdOrderId ?? undefined });
     } catch (err) {
       // Best-effort logging — WhatsApp remains the real order channel either way.
       console.error("Order logging failed", err);

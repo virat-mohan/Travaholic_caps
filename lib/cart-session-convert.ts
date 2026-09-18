@@ -19,6 +19,7 @@ export async function markCartSessionConverted(
       email: order.customer_email,
       phone: order.customer_phone,
       value: order.total,
+      eventId: order.id,
     });
     return;
   }
@@ -46,5 +47,6 @@ export async function markCartSessionConverted(
     email: order.customer_email,
     phone: order.customer_phone,
     value: order.total,
+    eventId: order.id,
   });
 }

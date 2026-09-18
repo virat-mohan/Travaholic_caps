@@ -1,6 +1,10 @@
 import { getSetting } from "@/lib/settings";
 import { getBrandProfile } from "@/lib/brand";
 
+async function getPixelId() {
+  return getSetting("META_PIXEL_ID");
+}
+
 const GRAPH_VERSION = "v21.0";
 
 async function getMetaCredentials() {
@@ -74,12 +78,18 @@ export async function createPausedMetaCampaign(brief: {
       "Meta is not fully configured yet — add META_ACCESS_TOKEN, META_AD_ACCOUNT_ID and META_PAGE_ID in /admin/settings"
     );
   }
+  const pixelId = await getPixelId();
   const brand = await getBrandProfile();
   const account = `act_${creds.adAccountId.replace(/^act_/, "")}`;
 
   const campaign = await graphPost(`${account}/campaigns`, creds.accessToken, {
     name: `${brand.brandName} — ${brief.headline}`,
-    objective: "OUTCOME_TRAFFIC",
+    // Was OUTCOME_TRAFFIC/LINK_CLICKS with no promoted_object — Meta had
+    // zero pixel signal to optimize toward and was just bidding for the
+    // cheapest possible clicks, regardless of purchase intent. That's a
+    // direct, plausible cause of high spend paired with near-total cart
+    // abandonment: the algorithm was never told who a "good" visitor is.
+    objective: pixelId ? "OUTCOME_SALES" : "OUTCOME_TRAFFIC",
     status: "PAUSED",
     special_ad_categories: [],
   });
@@ -89,7 +99,11 @@ export async function createPausedMetaCampaign(brief: {
     campaign_id: campaign.id,
     daily_budget: Math.round(brief.dailyBudgetRupees * 100),
     billing_event: "IMPRESSIONS",
-    optimization_goal: "LINK_CLICKS",
+    // Falls back to LINK_CLICKS only if no pixel is configured at all —
+    // otherwise this must optimize toward actual Purchase events so spend
+    // buys buyers, not just cheap clicks.
+    optimization_goal: pixelId ? "OFFSITE_CONVERSIONS" : "LINK_CLICKS",
+    ...(pixelId ? { promoted_object: { pixel_id: pixelId, custom_event_type: "PURCHASE" } } : {}),
     targeting: buildTargeting(brief.targeting),
     status: "PAUSED",
   });
@@ -159,12 +173,13 @@ export async function createPausedMetaCarouselCampaign(brief: {
   if (brief.imageUrls.length < 2) {
     throw new Error("A carousel needs at least 2 images");
   }
+  const pixelId = await getPixelId();
   const brand = await getBrandProfile();
   const account = `act_${creds.adAccountId.replace(/^act_/, "")}`;
 
   const campaign = await graphPost(`${account}/campaigns`, creds.accessToken, {
     name: `${brand.brandName} — ${brief.headline} (Carousel)`,
-    objective: "OUTCOME_TRAFFIC",
+    objective: pixelId ? "OUTCOME_SALES" : "OUTCOME_TRAFFIC",
     status: "PAUSED",
     special_ad_categories: [],
   });
@@ -174,7 +189,8 @@ export async function createPausedMetaCarouselCampaign(brief: {
     campaign_id: campaign.id,
     daily_budget: Math.round(brief.dailyBudgetRupees * 100),
     billing_event: "IMPRESSIONS",
-    optimization_goal: "LINK_CLICKS",
+    optimization_goal: pixelId ? "OFFSITE_CONVERSIONS" : "LINK_CLICKS",
+    ...(pixelId ? { promoted_object: { pixel_id: pixelId, custom_event_type: "PURCHASE" } } : {}),
     targeting: buildTargeting(brief.targeting),
     status: "PAUSED",
   });

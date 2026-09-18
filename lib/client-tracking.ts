@@ -113,12 +113,19 @@ export function getSessionKey() {
   return key;
 }
 
-type TrackParams = { chapterSlug?: string; value?: number; currency?: string };
+type TrackParams = { chapterSlug?: string; value?: number; currency?: string; eventId?: string };
 
 /**
  * Fires an event to both the Meta pixel (if loaded) and our own first-party
  * log — the first-party log is the one /admin/reports actually trusts, since
  * it isn't affected by ad blockers or cookie consent state.
+ *
+ * `eventId` (pass the order id for Purchase) lets Meta deduplicate this
+ * browser-pixel event against the server-side Conversions API mirror of the
+ * same event (see sendMetaConversionEvent in lib/meta-conversions.ts) —
+ * without a shared event ID on both sides, Meta has no way to know they're
+ * the same purchase and counts it twice, silently inflating reported
+ * conversions/ROAS in Ads Manager.
  */
 export function trackEvent(
   eventName: "PageView" | "ViewContent" | "AddToCart" | "InitiateCheckout" | "Purchase",
@@ -127,10 +134,11 @@ export function trackEvent(
   if (typeof window === "undefined") return;
 
   if (window.fbq) {
+    const eventOptions = params.eventId ? { eventID: params.eventId } : undefined;
     if (params.value != null) {
-      window.fbq("track", eventName, { value: params.value, currency: params.currency ?? "INR" });
+      window.fbq("track", eventName, { value: params.value, currency: params.currency ?? "INR" }, eventOptions);
     } else {
-      window.fbq("track", eventName);
+      window.fbq("track", eventName, {}, eventOptions);
     }
   }
 
