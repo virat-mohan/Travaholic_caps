@@ -3,6 +3,7 @@ import { Archivo_Black, Manrope } from "next/font/google";
 import { Navbar } from "@/components/navigation/Navbar";
 import { ScrollToTop } from "@/components/navigation/ScrollToTop";
 import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
+import { ClarityTracker } from "@/components/tracking/ClarityTracker";
 import { WhatsAppFloatButton } from "@/components/contact/WhatsAppFloatButton";
 import { CartProvider } from "@/lib/cart";
 import { getSetting } from "@/lib/settings";
@@ -75,7 +76,10 @@ const organizationJsonLd = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const pixelId = await getSetting("META_PIXEL_ID");
+  const [pixelId, clarityProjectId] = await Promise.all([
+    getSetting("META_PIXEL_ID"),
+    getSetting("CLARITY_PROJECT_ID"),
+  ]);
 
   return (
     <html
@@ -88,6 +92,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
         <MetaPixelTracker pixelId={pixelId} />
+        <ClarityTracker projectId={clarityProjectId} />
         <CartProvider>
           <ScrollToTop />
           <Navbar />

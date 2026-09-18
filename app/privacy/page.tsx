@@ -8,7 +8,7 @@ export default function PrivacyPolicyPage() {
       <main className="mx-auto w-full max-w-[760px] px-6 pt-32 pb-24 md:px-12 md:pt-40">
         <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">Legal</p>
         <h1 className="mt-2 font-display text-heading-xl uppercase text-ink">Privacy Policy</h1>
-        <p className="mt-4 text-caption text-secondary-text">Last updated 15 August 2026</p>
+        <p className="mt-4 text-caption text-secondary-text">Last updated 18 September 2026</p>
 
         <div className="mt-10 space-y-8 font-sans text-body-s leading-relaxed text-ink">
           <p>
@@ -27,6 +27,11 @@ export default function PrivacyPolicyPage() {
               <li>
                 Usage data: pages viewed, products browsed, and cart activity, collected via first-party
                 tracking and the Meta Pixel for ad measurement.
+              </li>
+              <li>
+                Session behaviour: mouse movement, taps, and scrolling on the site, collected via
+                Microsoft Clarity to help us understand and fix points of friction in the checkout
+                experience. Text you type into form fields is masked and never captured.
               </li>
               <li>
                 If you message us on Instagram or Facebook, we may collect your name and whatever
@@ -55,17 +60,17 @@ export default function PrivacyPolicyPage() {
               We share the minimum necessary data with the service providers that keep the site running:
               our payment processor (Razorpay) to process payments, our shipping partner (Shiprocket) to
               deliver orders, our email/SMS/WhatsApp providers (Brevo, MSG91) to send order and account
-              communications, and our database/hosting providers (Supabase, Vercel). We never sell your
-              personal information to third parties.
+              communications, our database/hosting providers (Supabase, Vercel), and Microsoft Clarity for
+              session behaviour analysis. We never sell your personal information to third parties.
             </p>
           </section>
 
           <section>
             <h2 className="font-display text-heading-s uppercase text-ink">Cookies &amp; Tracking</h2>
             <p className="mt-3">
-              We use cookies and similar technology to keep you signed in, remember your cart, and measure
-              how our ads perform (via the Meta Pixel). You can control cookies through your browser
-              settings.
+              We use cookies and similar technology to keep you signed in, remember your cart, measure how
+              our ads perform (via the Meta Pixel), and understand how visitors use the site (via
+              Microsoft Clarity). You can control cookies through your browser settings.
             </p>
           </section>
 
