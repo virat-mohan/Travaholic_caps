@@ -116,21 +116,11 @@ export async function shipOrder(orderId: string) {
           duplicatedLabelUrl ?? labelUrl
         );
 
-        // Same duplicated label, sent as a WhatsApp document to the
-        // warehouse team's own numbers alongside the email — best-effort,
-        // and only fires if there's an actual label to attach (a document-
-        // header template needs a real file).
-        if (duplicatedLabelUrl ?? labelUrl) {
-          const itemsLine = (items ?? []).map((item) => `${item.quantity}x ${item.chapter_name}`).join(", ");
-          await sendShipNotificationWhatsApp(
-            orderId,
-            order.customer_name,
-            order.customer_phone,
-            itemsLine,
-            order.total,
-            (duplicatedLabelUrl ?? labelUrl) as string
-          );
-        }
+        // Plain-text heads-up to the warehouse team's own numbers — the
+        // label/invoice itself already went out via the email above, so
+        // this doesn't need a label to exist first.
+        const itemsLine = (items ?? []).map((item) => `${item.quantity}x ${item.chapter_name}`).join(", ");
+        await sendShipNotificationWhatsApp(orderId, order.customer_name, order.customer_phone, itemsLine, order.total);
       } catch (notifyErr) {
         console.error("Warehouse notification failed", orderId, notifyErr);
       }
