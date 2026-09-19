@@ -1254,7 +1254,12 @@ export default function AdBriefsPage() {
                 <div>
                   {brief.auto_generated && (
                     <span className="mb-2 inline-block border border-tan-gold px-2 py-1 text-micro uppercase tracking-[0.05em] text-tan-gold">
-                      Auto-drafted — {brief.sales_signal === "selling_fast" ? "Selling Fast" : "Cooling Off"}
+                      Auto-drafted —{" "}
+                      {brief.sales_signal === "selling_fast"
+                        ? "Selling Fast"
+                        : brief.sales_signal === "trending_views"
+                          ? "Trending — Most Viewed"
+                          : "Cooling Off"}
                     </span>
                   )}
                   {editingCopyFor === brief.id ? (

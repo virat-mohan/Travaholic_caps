@@ -864,12 +864,13 @@ create index if not exists expenses_date_idx on expenses (expense_date desc);
 
 -- ============================================================
 -- Sales-signal ad briefs — auto-drafted (never auto-launched) when a
--- chapter is selling fast or has visibly cooled off week-over-week.
+-- chapter is selling fast, has visibly cooled off week-over-week, or is
+-- among the most-viewed products even without a sales spike yet.
 -- sales_signal + the guard query in lib/sales-signal-briefs.ts prevent
 -- re-drafting the same chapter/signal every single day.
 -- ============================================================
 alter table ad_briefs add column if not exists auto_generated boolean not null default false;
-alter table ad_briefs add column if not exists sales_signal text; -- selling_fast | cooling_off
+alter table ad_briefs add column if not exists sales_signal text; -- selling_fast | cooling_off | trending_views
 
 -- ============================================================
 -- Snapshot of a checkout's full payload, keyed by the Razorpay order it
