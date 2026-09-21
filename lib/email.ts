@@ -158,15 +158,31 @@ export async function sendOtpEmail(email: string, code: string) {
 type CartSessionForEmail = {
   customer_name: string | null;
   customer_email: string | null;
-  items: { name: string; quantity: number }[];
+  items: { slug?: string; name: string; quantity: number }[];
 };
+
+/**
+ * Builds a /cart?items=slug:qty,slug:qty link (see lib/cart-deep-link.ts)
+ * that reconstructs the customer's actual abandoned cart when clicked,
+ * instead of dropping them on a generic (likely empty, on whatever device
+ * they're reading email on) cart page. Falls back to the plain /cart page
+ * if every line item is somehow missing its slug.
+ */
+function buildCartRecoveryUrl(siteUrl: string, items: { slug?: string; quantity: number }[]) {
+  const base = `${siteUrl.replace(/\/$/, "")}/cart`;
+  const suffix = items
+    .filter((i) => i.slug)
+    .map((i) => `${i.slug}:${i.quantity}`)
+    .join(",");
+  return suffix ? `${base}?items=${encodeURIComponent(suffix)}` : base;
+}
 
 /** Abandoned-cart nudge by email — mirrors sendAbandonedCartWhatsApp for customers without/before WhatsApp delivery. */
 export async function sendAbandonedCartEmail(session: CartSessionForEmail) {
   if (!session.customer_email) return false;
   const brand = await getBrandProfile();
   const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email-v2.png`;
-  const cartUrl = `${brand.siteUrl.replace(/\/$/, "")}/cart`;
+  const cartUrl = buildCartRecoveryUrl(brand.siteUrl, session.items);
   const itemLines = session.items
     .map((i) => `<li style="margin-bottom:4px;">${i.quantity} × ${i.name}</li>`)
     .join("");
@@ -201,7 +217,7 @@ export async function sendBuyNow10Email(
   if (!session.customer_email) return false;
   const brand = await getBrandProfile();
   const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email-v2.png`;
-  const cartUrl = `${brand.siteUrl.replace(/\/$/, "")}/cart`;
+  const cartUrl = buildCartRecoveryUrl(brand.siteUrl, session.items);
   const feedbackUrl = `${brand.siteUrl.replace(/\/$/, "")}/api/cart-feedback?session=${cartSessionId}`;
   const itemLines = session.items
     .map((i) => `<li style="margin-bottom:4px;">${i.quantity} × ${i.name}</li>`)

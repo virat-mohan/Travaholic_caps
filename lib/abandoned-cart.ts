@@ -10,7 +10,7 @@ type CartSession = {
   customer_name: string | null;
   customer_phone: string | null;
   customer_email: string | null;
-  items: { name: string; quantity: number }[] | null;
+  items: { slug?: string; name: string; quantity: number }[] | null;
   retargeted_at: string | null;
   second_nudge_sent_at?: string | null;
 };

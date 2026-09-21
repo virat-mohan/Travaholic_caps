@@ -213,7 +213,13 @@ export async function sendMsg91Template(
   templateName: string,
   phone: string,
   bodyValues: string[],
-  header?: { type: "image" | "document"; url: string; filename?: string }
+  header?: { type: "image" | "document"; url: string; filename?: string },
+  // For a template whose "Visit Website" button is a *dynamic* URL (a base
+  // URL with a variable suffix, configured at template-approval time in
+  // MSG91/Meta) — this is just the suffix text appended to that base URL,
+  // not a full URL. A static-URL button (fixed for every send) needs
+  // nothing here at all.
+  buttonUrlValue?: string
 ) {
   const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
   if (enabled !== "true") {
@@ -227,15 +233,17 @@ export async function sendMsg91Template(
     return { sent: false as const };
   }
 
-  const components: Record<string, { type: string; value: string; filename?: string }> = Object.fromEntries(
-    bodyValues.map((v, i) => [`body_${i + 1}`, { type: "text", value: v }])
-  );
+  const components: Record<string, { type: string; value: string; filename?: string; subtype?: string }> =
+    Object.fromEntries(bodyValues.map((v, i) => [`body_${i + 1}`, { type: "text", value: v }]));
   if (header) {
     components.header_1 = {
       type: header.type,
       value: header.url,
       ...(header.type === "document" ? { filename: header.filename ?? "label.pdf" } : {}),
     };
+  }
+  if (buttonUrlValue) {
+    components.button_1 = { subtype: "url", type: "text", value: buttonUrlValue };
   }
 
   try {

@@ -9,8 +9,23 @@ type CartSessionForWhatsApp = {
   id: string;
   customer_name: string | null;
   customer_phone: string | null;
-  items: { name: string; quantity: number }[];
+  items: { slug?: string; name: string; quantity: number }[];
 };
+
+/**
+ * Builds the `?items=slug:qty,slug:qty` suffix (see lib/cart-deep-link.ts)
+ * for a dynamic "Visit Website" button — /cart parses this back into the
+ * customer's actual abandoned cart, not just a generic empty cart page.
+ * Any line item missing a slug (shouldn't happen for a real cart_sessions
+ * row, but the type/data is coming from a JSONB column with no schema
+ * enforcement) is dropped rather than breaking the whole link.
+ */
+function buildCartDeepLinkSuffix(items: { slug?: string; quantity: number }[]) {
+  return items
+    .filter((i) => i.slug)
+    .map((i) => `${i.slug}:${i.quantity}`)
+    .join(",");
+}
 
 async function logSend(
   messageId: string | null | undefined,
@@ -58,10 +73,11 @@ async function sendTemplateByName(
   msg91TemplateName: string | null,
   variables: string[],
   logAgainst: { cartSessionId?: string; orderId?: string },
-  header?: { type: "image" | "document"; url: string; filename?: string }
+  header?: { type: "image" | "document"; url: string; filename?: string },
+  buttonUrlValue?: string
 ) {
   if (!msg91TemplateName) return false;
-  const result = await sendMsg91Template(msg91TemplateName, phone, variables, header);
+  const result = await sendMsg91Template(msg91TemplateName, phone, variables, header, buttonUrlValue);
   if (result.sent) {
     await logSend(result.messageId, templateName, logAgainst);
     return true;
@@ -171,9 +187,15 @@ export async function sendAbandonedCartWhatsApp(session: CartSessionForWhatsApp)
   const itemSummary = session.items.map((i) => `${i.quantity}x ${i.name}`).join(", ") || "your cart";
   const msg91TemplateName = await getSetting("MSG91_ABANDONED_CART_TEMPLATE_ID");
   const variables = [session.customer_name ?? "there", itemSummary];
-  return sendTemplateByName(session.customer_phone, "abandoned_cart", msg91TemplateName, variables, {
-    cartSessionId: session.id,
-  });
+  return sendTemplateByName(
+    session.customer_phone,
+    "abandoned_cart",
+    msg91TemplateName,
+    variables,
+    { cartSessionId: session.id },
+    undefined,
+    buildCartDeepLinkSuffix(session.items)
+  );
 }
 
 /**
