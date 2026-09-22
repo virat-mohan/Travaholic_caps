@@ -19,7 +19,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This brief has no overlay text set" }, { status: 400 });
     }
 
-    const imageUrl = await generateAndUploadTextOverlayImage(body.id, body.baseImageUrl, brief.overlay_text);
+    // Marketing assets are stored as site-relative paths (e.g.
+    // "/images/chapters/..."), not absolute URLs — the overlay compositor
+    // fetches this server-side, where a relative path isn't a valid fetch
+    // target at all ("Failed to parse URL from /images/..."), unlike in a
+    // browser where it'd resolve against the page origin automatically.
+    const baseImageUrl = body.baseImageUrl.startsWith("/")
+      ? new URL(body.baseImageUrl, request.url).toString()
+      : body.baseImageUrl;
+
+    const imageUrl = await generateAndUploadTextOverlayImage(body.id, baseImageUrl, brief.overlay_text);
 
     const { error } = await supabase
       .from("ad_briefs")

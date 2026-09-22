@@ -63,6 +63,7 @@ export default function AdBriefsPage() {
   const [stageFormat, setStageFormat] = useState<Record<string, "static" | "carousel" | "story">>({});
   const [settingFormat, setSettingFormat] = useState<Record<string, boolean>>({});
   const [generating, setGenerating] = useState(false);
+  const [batchGenerating, setBatchGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [pickerForId, setPickerForId] = useState<string | null>(null);
@@ -174,6 +175,33 @@ export default function AdBriefsPage() {
       setError(err instanceof Error ? err.message : "Could not generate brief");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function batchGenerate() {
+    const raw = window.prompt("How many posts should I generate this week, based on current sales/traffic signals?", "4");
+    if (raw == null) return;
+    const count = Math.min(10, Math.max(1, parseInt(raw, 10) || 0));
+    if (!count) return;
+    setBatchGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/ad-briefs/batch-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not generate batch");
+      if (data.failed?.length) {
+        setError(`Generated ${data.created?.length ?? 0} of ${count} — ${data.failed.length} failed (see console).`);
+        console.error("Batch-generate failures", data.failed);
+      }
+      loadBriefs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not generate batch");
+    } finally {
+      setBatchGenerating(false);
     }
   }
 
@@ -526,9 +554,16 @@ export default function AdBriefsPage() {
     }
   }
 
-  async function attachAsset(brief: Brief, url: string) {
+  async function attachAsset(brief: Brief, rawUrl: string) {
     setError(null);
     setPickerForId(null);
+    // Marketing assets are stored as site-relative paths (e.g.
+    // "/images/chapters/..."). That's fine for rendering in this browser
+    // tab, but every downstream consumer of image_url (compositing,
+    // Instagram posting, video generation) fetches it server-side, where a
+    // relative path fails outright — resolve to absolute once, here, so
+    // nothing stored from this point on can hit that failure again.
+    const url = rawUrl.startsWith("/") ? new URL(rawUrl, window.location.origin).toString() : rawUrl;
     // The brief itself decided whether this ad wants a real photo with
     // bold on-image text or a plain attached photo — the picker just
     // supplies which real photo to use either way.
@@ -818,6 +853,25 @@ export default function AdBriefsPage() {
           {generating ? "Generating..." : "Generate Ad Brief"}
         </button>
         {error && <p className="mt-3 text-body-s text-paint-orange">{error}</p>}
+
+        <div className="mt-8 border-t border-divider pt-6">
+          <p className="font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+            Or Generate A Week&apos;s Worth At Once
+          </p>
+          <p className="mt-1 text-micro text-secondary-text/70">
+            Picks products automatically from real sales and traffic data — what&apos;s selling fast, what&apos;s
+            trending in page views (including from paid ad clicks), and what&apos;s cooled off and needs a fresh
+            angle. Mixes static and carousel formats. Every result lands below as a normal draft — review, edit,
+            schedule, post right away, or delete each one just like any other brief.
+          </p>
+          <button
+            onClick={batchGenerate}
+            disabled={batchGenerating}
+            className="mt-3 border border-tan-gold px-5 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-tan-gold transition-colors duration-300 hover:bg-tan-gold hover:text-ink disabled:opacity-50"
+          >
+            {batchGenerating ? "Generating Batch..." : "Generate Batch From Marketing Intelligence"}
+          </button>
+        </div>
       </div>
 
       <div className="mt-12 space-y-10">
