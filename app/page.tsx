@@ -166,10 +166,7 @@ export default async function Home() {
                     key={post.file}
                     className="w-[45vw] flex-none snap-start sm:w-[30vw] md:w-[22vw] lg:w-[240px]"
                   >
-                    <Link
-                      href={primarySlug ? `/chapter/${primarySlug}` : "/community"}
-                      className="group block"
-                    >
+                    <Link href="/community" className="group block">
                       <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
                         <Image
                           src={post.src}
