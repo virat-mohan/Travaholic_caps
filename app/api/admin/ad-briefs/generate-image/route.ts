@@ -11,9 +11,19 @@ export async function POST(request: Request) {
 
   try {
     const supabase = getSupabaseServerClient();
+    // Split from the reference_image_url read below — a missing column
+    // there (migration not yet run) must never take down chapter_slug/
+    // chapter_slugs too, since PostgREST fails a select entirely if any one
+    // requested column doesn't exist, and this base data is what the
+    // fallback path below needs to work at all.
     const { data: brief } = await supabase
       .from("ad_briefs")
-      .select("chapter_slug, chapter_slugs, image_urls, reference_image_url, creative_format")
+      .select("chapter_slug, chapter_slugs, image_urls, creative_format")
+      .eq("id", body.id)
+      .maybeSingle();
+    const { data: refRow } = await supabase
+      .from("ad_briefs")
+      .select("reference_image_url")
       .eq("id", body.id)
       .maybeSingle();
 
@@ -28,11 +38,26 @@ export async function POST(request: Request) {
         : brief?.chapter_slug;
     const chapter = chapters.find((c) => c.slug === slugForSlot);
     const chapterProductPhoto = chapter ? chapterImageSrc(chapter.folder, chapter.primary) : undefined;
-    const referenceImageUrl = brief?.reference_image_url ?? chapterProductPhoto;
-    const absoluteReference =
-      referenceImageUrl && referenceImageUrl.startsWith("/")
-        ? new URL(referenceImageUrl, request.url).toString()
-        : referenceImageUrl;
+    const referenceImageUrl = refRow?.reference_image_url ?? chapterProductPhoto;
+
+    // Hard rule: never generate a product image with nothing real to anchor
+    // it to — that's exactly how a fictional, wrong cap gets generated
+    // instead of an actual Travaholic product. A genuinely product-less
+    // brand/lifestyle post should use a real asset directly (no AI
+    // generation involved) rather than this endpoint with no reference.
+    if (!referenceImageUrl) {
+      return NextResponse.json(
+        {
+          error:
+            "No real product photo to anchor this generation to — pick a specific product for this post, or attach a real photo via \"Use Real Photo\" first, before generating.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const absoluteReference = referenceImageUrl.startsWith("/")
+      ? new URL(referenceImageUrl, request.url).toString()
+      : referenceImageUrl;
 
     const imageUrl = await generateAdImage({
       prompt: body.imagePrompt,

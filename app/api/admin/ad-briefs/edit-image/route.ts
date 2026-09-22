@@ -27,12 +27,21 @@ export async function POST(request: Request) {
 
   try {
     const supabase = getSupabaseServerClient();
+    // Split from the reference_image_url read below — a missing column
+    // there (migration not yet run) must never take down chapter_slug/
+    // chapter_slugs too, since PostgREST fails a select entirely if any one
+    // requested column doesn't exist.
     const { data: brief } = await supabase
       .from("ad_briefs")
-      .select("chapter_slug, chapter_slugs, image_url, image_urls, reference_image_url, creative_format")
+      .select("chapter_slug, chapter_slugs, image_url, image_urls, creative_format")
       .eq("id", body.id)
       .maybeSingle();
     if (!brief) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
+    const { data: refRow } = await supabase
+      .from("ad_briefs")
+      .select("reference_image_url")
+      .eq("id", body.id)
+      .maybeSingle();
 
     const currentImageUrl =
       typeof body.slotIndex === "number" ? brief.image_urls?.[body.slotIndex] : brief.image_url;
@@ -47,9 +56,19 @@ export async function POST(request: Request) {
     const chapter = chapters.find((c) => c.slug === slugForSlot);
     const chapterProductPhoto = chapter ? chapterImageSrc(chapter.folder, chapter.primary) : undefined;
     // Priority: an explicitly-set real-photo reference > the chapter's real
-    // product photo > (no known ground truth at all, e.g. a from-scratch AI
-    // brief with no chapter and no attached real photo) the current image.
-    const groundTruth = brief.reference_image_url ?? chapterProductPhoto ?? currentImageUrl;
+    // product photo. Deliberately no fallback to currentImageUrl anymore —
+    // editing off the previous AI output with no real ground truth is
+    // exactly how this drifted to a wrong product in the first place.
+    const groundTruth = refRow?.reference_image_url ?? chapterProductPhoto;
+    if (!groundTruth) {
+      return NextResponse.json(
+        {
+          error:
+            "No real product photo to anchor this edit to — pick a specific product for this post, or attach a real photo via \"Use Real Photo\" first, before editing.",
+        },
+        { status: 400 }
+      );
+    }
     const referenceImageUrl = groundTruth.startsWith("/") ? new URL(groundTruth, request.url).toString() : groundTruth;
 
     const imageUrl = await generateAdImage({
