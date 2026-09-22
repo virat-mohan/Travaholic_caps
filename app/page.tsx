@@ -1,14 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CollectionItem } from "@/components/collection/CollectionItem";
+import { CollectionGrid } from "@/components/collection/CollectionGrid";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { DiscountPromoBanner } from "@/components/ui/DiscountPromoBanner";
 import { getAllChapters } from "@/lib/chapters-dynamic";
-import { getInventoryMap, stockLabelFor } from "@/lib/inventory";
+import { getInventoryMap, stockLabelFor, type StockLabel } from "@/lib/inventory";
 import { computeWebsiteAnalytics } from "@/lib/website-analytics";
 import { getExplorerPosts } from "@/lib/community";
 import { chapters } from "@/lib/chapters";
+import { seriesOrder } from "@/lib/series";
+import type { StorySeries } from "@/types/chapter";
 
 function chapterName(slug: string) {
   return chapters.find((c) => c.slug === slug)?.name ?? slug;
@@ -50,6 +53,17 @@ export default async function Home() {
     .filter((c): c is (typeof grouped)[number] => !!c);
   const collection = [...featured, ...grouped.filter((c) => !featuredSlugs.includes(c.slug))];
   const inventory = await getInventoryMap();
+  const stockLabels: Record<string, StockLabel> = Object.fromEntries(
+    collection.map((c) => [c.slug, stockLabelFor(inventory[c.slug])])
+  );
+  // Series filter pills only need to show series that actually have a
+  // product in the current collection, in the same order as seriesOrder —
+  // stable and predictable rather than re-sorting by whatever order chapters
+  // happen to appear in.
+  const seriesRank = new Map(seriesOrder.map((s, i) => [s.name, i]));
+  const seriesPresent = [...new Set(collection.map((c) => c.series))].sort(
+    (a, b) => (seriesRank.get(a) ?? 99) - (seriesRank.get(b) ?? 99)
+  ) as StorySeries[];
 
   // A curated slice of real Explorer photos — the same content that powers
   // /community and each chapter's "Explorers Wearing X" section, surfaced
@@ -122,21 +136,13 @@ export default async function Home() {
             {explorerPosts.length > 0 && (
               <a
                 href="#explorers"
-                className="whitespace-nowrap border border-ink px-6 py-3 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-ink transition-colors duration-300 hover:bg-ink hover:text-cream"
+                className="whitespace-nowrap font-sans text-body-s uppercase tracking-[0.1em] text-secondary-text underline underline-offset-4 transition-colors hover:text-ink"
               >
                 See Our Explorers
               </a>
             )}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-10 md:mt-0 md:grid-cols-4">
-            {collection.map((chapter) => (
-              <CollectionItem
-                key={chapter.slug}
-                chapter={chapter}
-                stockLabel={stockLabelFor(inventory[chapter.slug])}
-              />
-            ))}
-          </div>
+          <CollectionGrid collection={collection} seriesPresent={seriesPresent} stockLabels={stockLabels} />
         </section>
 
         {explorerPosts.length > 0 && (

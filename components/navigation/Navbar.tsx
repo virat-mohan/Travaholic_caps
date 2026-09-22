@@ -5,20 +5,27 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import { WhatsAppIcon } from "@/components/contact/WhatsAppIcon";
+import { SearchOverlay } from "@/components/navigation/SearchOverlay";
 import { useCart } from "@/lib/cart";
 
-const leftLinks = [
-  { label: "Story Series", href: "/series" },
-  { label: "Travel Inspiration", href: "/travel-inspiration" },
-];
+// Always visible on desktop — kept to shop-path links only. Journal and
+// Travel Inspiration are content, not a purchase path, so they moved to the
+// menu dropdown and the footer instead of competing for space in the bar.
+const leftLinks = [{ label: "Story Series", href: "/series" }];
 
 const rightLinks = [
   { label: "Explorers", href: "/community" },
-  { label: "Journal", href: "/journal" },
   { label: "My Story", href: "/about" },
 ];
 
-const links = [...leftLinks, ...rightLinks];
+// Full set shown in the menu dropdown (mobile always, desktop via the
+// hamburger) — includes the content links demoted out of the desktop bar.
+const links = [
+  ...leftLinks,
+  { label: "Travel Inspiration", href: "/travel-inspiration" },
+  ...rightLinks,
+  { label: "Journal", href: "/journal" },
+];
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -93,6 +100,7 @@ export function Navbar() {
               </Link>
             ))}
           </div>
+          <SearchOverlay />
           <a
             href="https://wa.me/918800339125"
             target="_blank"
