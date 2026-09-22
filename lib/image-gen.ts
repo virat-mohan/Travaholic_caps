@@ -82,7 +82,19 @@ async function generateWithGemini(
     aspectRatio === "portrait"
       ? " The image MUST be composed as a vertical 9:16 portrait frame (like a phone screen, 1080x1920) — full-bleed, with the main subject centered so nothing important sits in the top or bottom strip that a UI overlay might cover."
       : "";
-  const parts: Record<string, unknown>[] = [{ text: `${prompt}${orientationInstruction}` }];
+
+  // Every image-to-image call must keep the actual product exact — same
+  // cap, same patch/design/color/shape, pixel-for-pixel faithful to the
+  // attached reference photo. Only the scene/background/context around it
+  // may change. Without this, the model can quietly swap in a
+  // similar-but-wrong or entirely different cap, which is worse than no
+  // image at all for a real product ad.
+  const productFidelityInstruction = referenceImageUrl
+    ? " This is a real product photo, not a style reference — the cap in the output image must be the exact same cap shown in the attached photo: identical design, patch, color, and shape, pixel-faithful to the reference. Do not substitute, redesign, or generate a different cap. Only the background/scene/context around the product may change."
+    : "";
+  const parts: Record<string, unknown>[] = [
+    { text: `${prompt}${orientationInstruction}${productFidelityInstruction}` },
+  ];
 
   if (referenceImageUrl) {
     const refRes = await fetch(referenceImageUrl);
