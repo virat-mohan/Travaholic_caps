@@ -43,6 +43,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
     label: "Session Recording",
     fields: [
       { key: "CLARITY_PROJECT_ID", label: "Microsoft Clarity Project ID", hint: "Free at clarity.microsoft.com — Settings → Setup once a project exists. Enables session recordings + rage/dead-click heatmaps site-wide." },
+      { key: "CLARITY_API_TOKEN", label: "Microsoft Clarity API Token", hint: "Clarity → Settings → Data Export → Generate new API token. Powers /admin/ux-insights — Clarity caps this at 10 API calls/day project-wide, so it's only ever called by a daily cron sync or a manual Sync Now, never on page load." },
     ],
   },
   {

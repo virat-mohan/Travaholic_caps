@@ -15,6 +15,7 @@ const NAV_SECTIONS = [
     label: "Marketing",
     links: [
       { href: "/admin/analytics", label: "Website Analytics" },
+      { href: "/admin/ux-insights", label: "UX Insights (Clarity)" },
       { href: "/admin/ad-briefs", label: "Ad Brief Generator" },
       { href: "/admin/content-calendar", label: "Content Calendar" },
       { href: "/admin/reports", label: "Growth Reports" },
