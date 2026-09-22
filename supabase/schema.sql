@@ -999,3 +999,15 @@ create table if not exists legacy_customer_purchases (
 );
 create index if not exists legacy_customer_purchases_customer_idx on legacy_customer_purchases (legacy_customer_id);
 create index if not exists legacy_customer_purchases_product_idx on legacy_customer_purchases (product_name);
+
+-- ============================================================
+-- Anchors every subsequent AI image edit back to the real photo the admin
+-- actually attached, instead of chaining off whatever the previous edit
+-- produced. Set once when a real photo is picked via "Use Real Photo" (see
+-- app/admin/ad-briefs/page.tsx's attachAsset) and never overwritten by an
+-- AI edit — image_url/image_urls track the current display image and do
+-- get overwritten every edit, which is exactly the field that let one bad
+-- generation compound into every edit after it "faithfully" preserving a
+-- hallucinated product instead of the real one.
+-- ============================================================
+alter table ad_briefs add column if not exists reference_image_url text;

@@ -115,6 +115,7 @@ export async function PATCH(request: Request) {
   if (body.hashtags != null) patch.hashtags = body.hashtags;
   if (body.imageUrl != null) patch.image_url = body.imageUrl;
   if (body.imageUrls != null) patch.image_urls = body.imageUrls;
+  if (body.referenceImageUrl != null) patch.reference_image_url = body.referenceImageUrl;
   if (body.imageSource != null) patch.image_source = body.imageSource;
   if (body.status != null) patch.status = body.status;
   if (body.isCarousel != null) patch.is_carousel = body.isCarousel;

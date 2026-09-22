@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { generateAdImage } from "@/lib/image-gen";
+import { chapters, chapterImageSrc } from "@/lib/chapters";
 
 /**
- * Re-runs image generation using the CURRENT generated/attached image as the
- * reference plus a free-text edit instruction — i.e. an image-to-image edit
- * ("make the sky more orange", "remove the second person"), not a from-
- * scratch regeneration off the original ad-brief prompt.
+ * Re-runs image generation off a free-text edit instruction ("make the sky
+ * more orange", "put it against Atlas Mountains") — i.e. an image-to-image
+ * edit, not a from-scratch regeneration off the original ad-brief prompt.
+ *
+ * The reference image for product fidelity is always ground truth —
+ * reference_image_url if one was explicitly set (a real photo picked via
+ * "Use Real Photo", for a generic/brand brief with no chapter), else the
+ * chapter's real original product photo — deliberately NOT the current
+ * generated/attached image. Chaining edits off the previous AI output lets
+ * drift compound: if one edit ever wanders from the real product (a bad
+ * generation, a stale asset from before a fix), every edit after it
+ * "faithfully" preserves that wrong image instead of the actual cap.
+ * Anchoring every edit back to ground truth means an edit can only ever
+ * change the scene/background, never lock in a hallucinated product.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -18,7 +29,7 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServerClient();
     const { data: brief } = await supabase
       .from("ad_briefs")
-      .select("image_url, image_urls, creative_format")
+      .select("chapter_slug, chapter_slugs, image_url, image_urls, reference_image_url, creative_format")
       .eq("id", body.id)
       .maybeSingle();
     if (!brief) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
@@ -29,9 +40,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "There is no existing image to edit yet — generate one first" }, { status: 400 });
     }
 
+    const slugForSlot =
+      typeof body.slotIndex === "number" && brief.chapter_slugs
+        ? brief.chapter_slugs[body.slotIndex]
+        : brief.chapter_slug;
+    const chapter = chapters.find((c) => c.slug === slugForSlot);
+    const chapterProductPhoto = chapter ? chapterImageSrc(chapter.folder, chapter.primary) : undefined;
+    // Priority: an explicitly-set real-photo reference > the chapter's real
+    // product photo > (no known ground truth at all, e.g. a from-scratch AI
+    // brief with no chapter and no attached real photo) the current image.
+    const groundTruth = brief.reference_image_url ?? chapterProductPhoto ?? currentImageUrl;
+    const referenceImageUrl = groundTruth.startsWith("/") ? new URL(groundTruth, request.url).toString() : groundTruth;
+
     const imageUrl = await generateAdImage({
       prompt: body.editInstruction,
-      referenceImageUrl: currentImageUrl,
+      referenceImageUrl,
       storagePathPrefix: "generated",
       aspectRatio: brief.creative_format === "story" ? "portrait" : "square",
     });

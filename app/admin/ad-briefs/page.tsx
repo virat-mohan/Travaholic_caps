@@ -24,6 +24,7 @@ type Brief = {
   image_url: string | null;
   image_urls: (string | null)[] | null;
   image_source: string | null;
+  reference_image_url: string | null;
   video_status: string | null;
   video_url: string | null;
   status: string;
@@ -577,8 +578,21 @@ export default function AdBriefsPage() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Could not composite text overlay");
+        // reference_image_url is the real photo itself (url), not the
+        // composited result (data.imageUrl) — it's the ground truth every
+        // later AI edit anchors back to, so it must never point at
+        // something the AI already touched.
+        await fetch("/api/admin/ad-briefs", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: brief.id, referenceImageUrl: url }),
+        });
         setBriefs((prev) =>
-          prev.map((b) => (b.id === brief.id ? { ...b, image_url: data.imageUrl, image_source: "real_with_text" } : b))
+          prev.map((b) =>
+            b.id === brief.id
+              ? { ...b, image_url: data.imageUrl, image_source: "real_with_text", reference_image_url: url }
+              : b
+          )
         );
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not composite text overlay");
@@ -591,9 +605,11 @@ export default function AdBriefsPage() {
     await fetch("/api/admin/ad-briefs", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: brief.id, imageUrl: url, imageSource: "real" }),
+      body: JSON.stringify({ id: brief.id, imageUrl: url, imageSource: "real", referenceImageUrl: url }),
     });
-    setBriefs((prev) => prev.map((b) => (b.id === brief.id ? { ...b, image_url: url, image_source: "real" } : b)));
+    setBriefs((prev) =>
+      prev.map((b) => (b.id === brief.id ? { ...b, image_url: url, image_source: "real", reference_image_url: url } : b))
+    );
   }
 
   async function postNow(brief: Brief) {
