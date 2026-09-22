@@ -75,7 +75,9 @@ export function Navbar() {
 
         <Link
           href="/"
-          className="absolute left-1/2 top-full z-10 -translate-x-1/2 -translate-y-[54%]"
+          className={`absolute left-1/2 top-full z-10 -translate-x-1/2 transition-transform duration-300 ${
+            hidden && !menuOpen ? "-translate-y-[400%]" : "-translate-y-[54%]"
+          }`}
         >
           <Image
             src="/images/brand/travaholic-logo-color-v2.png"

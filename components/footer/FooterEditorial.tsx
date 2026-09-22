@@ -47,6 +47,18 @@ export function FooterEditorial() {
           <p className="mt-1 max-w-xs text-micro uppercase tracking-[0.05em] text-secondary-text">
             GSTIN 07BZNPS5735B2Z3
           </p>
+          <p className="mt-4 max-w-xs text-micro uppercase tracking-[0.05em] text-secondary-text">
+            Built by{" "}
+            <a
+              href="https://viratmohan.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              Virat Mohan
+            </a>
+            {" "}— Powering Businesses With AI
+          </p>
         </div>
         {columns.map((col) => (
           <div key={col.title}>
