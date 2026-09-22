@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { chapters as staticChapters, chapterImageSrc, SHARED_SPECS } from "@/lib/chapters";
 import { getAllChapters } from "@/lib/chapters-dynamic";
@@ -232,20 +233,20 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
             </p>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               {explorerPosts.map((post) => (
-                <div key={post.file}>
+                <Link key={post.file} href="/community" className="group block">
                   <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
                     <Image
                       src={post.src}
                       alt={post.testimonial}
                       fill
                       sizes="(min-width: 768px) 25vw, 50vw"
-                      className="object-cover"
+                      className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                   </div>
                   <p className="mt-3 text-caption text-secondary-text">
                     &ldquo;{post.testimonial}&rdquo;
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           </section>

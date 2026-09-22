@@ -3,8 +3,31 @@ import { getSetting, setSetting } from "@/lib/settings";
 const CLARITY_API_URL = "https://www.clarity.ms/export-data/api/v1/project-live-insights";
 const DAILY_CALL_LIMIT = 10; // Clarity's own hard cap per project per day
 
-type ClarityMetricRow = Record<string, string | number> & { URL?: string };
+type ClarityMetricRow = Record<string, string | number> & { Url?: string };
 type ClarityApiResponse = { metricName: string; information: ClarityMetricRow[] }[];
+
+const PRODUCTION_HOSTS = new Set(["travaholic.in", "www.travaholic.in"]);
+
+/**
+ * Confirmed empirically against a real response (Clarity's docs only fully
+ * document the Traffic/OS-dimension shape) — the per-row URL field is
+ * "Url", not "URL". Also strips query params: every ad click carries its
+ * own unique fbclid/utm_* string, so without this each click on the same
+ * page would fragment into its own "URL" row instead of rolling up into
+ * one meaningful per-page count. Returns null for anything not on the
+ * production domain (localhost dev/testing sessions show up in real
+ * Clarity data too, since the same project ID is live in every
+ * environment) or for a URL that fails to parse at all.
+ */
+function normalizeUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    if (!PRODUCTION_HOSTS.has(u.hostname)) return null;
+    return u.pathname || "/";
+  } catch {
+    return null;
+  }
+}
 
 export type UrlInsight = {
   url: string;
@@ -59,31 +82,37 @@ function summarize(raw: ClarityApiResponse, numOfDays: number): ClaritySnapshot 
 
   for (const block of raw) {
     for (const info of block.information ?? []) {
-      const url = info.URL;
-      if (!url || typeof url !== "string") continue;
+      if (!info.Url || typeof info.Url !== "string") continue;
+      const url = normalizeUrl(info.Url);
+      if (!url) continue;
       const r = row(url);
+      // subTotal is the confirmed value field for a per-dimension metric
+      // row (verified against a real DeadClickCount response) — sessions
+      // add across rows sharing a normalized URL, but every other metric
+      // is a per-click-type count that should sum the same way.
+      const value = toNumber(info.subTotal);
 
       switch (block.metricName) {
         case "Traffic":
-          r.sessions = Math.max(r.sessions, toNumber(info.totalSessionCount));
+          r.sessions += toNumber(info.totalSessionCount ?? info.sessionsCount);
           break;
         case "RageClickCount":
-          r.rageClicks = toNumber(info.RageClickCount ?? info.totalRageClickCount ?? info.subTotal);
+          r.rageClicks += value;
           break;
         case "DeadClickCount":
-          r.deadClicks = toNumber(info.DeadClickCount ?? info.totalDeadClickCount ?? info.subTotal);
+          r.deadClicks += value;
           break;
         case "ScriptErrorCount":
-          r.scriptErrors = toNumber(info.ScriptErrorCount ?? info.totalScriptErrorCount ?? info.subTotal);
+          r.scriptErrors += value;
           break;
         case "QuickbackClick":
-          r.quickbacks = toNumber(info.QuickbackClick ?? info.totalQuickbackCount ?? info.subTotal);
+          r.quickbacks += value;
           break;
         case "ScrollDepth":
-          r.avgScrollDepth = toNumber(info.averageScrollDepth ?? info.ScrollDepth ?? info.subTotal);
+          r.avgScrollDepth = value;
           break;
         case "EngagementTime":
-          r.avgEngagementTimeSeconds = toNumber(info.averageEngagementTime ?? info.EngagementTime ?? info.subTotal);
+          r.avgEngagementTimeSeconds = value;
           break;
         default:
           break;
