@@ -1,15 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import { WhatsAppIcon } from "@/components/contact/WhatsAppIcon";
-import { seriesOrder } from "@/lib/series";
 import { useCart } from "@/lib/cart";
 
 const leftLinks = [
-  { label: "Collection", href: "/" },
   { label: "Story Series", href: "/series" },
   { label: "Travel Inspiration", href: "/travel-inspiration" },
 ];
@@ -24,10 +22,28 @@ const links = [...leftLinks, ...rightLinks];
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const lastScrollY = useRef(0);
   const { count } = useCart();
 
+  useEffect(() => {
+    lastScrollY.current = window.scrollY;
+    function onScroll() {
+      const y = window.scrollY;
+      const scrollingDown = y > lastScrollY.current;
+      setHidden(scrollingDown && y > 120);
+      lastScrollY.current = y;
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="sticky inset-x-0 top-0 z-50 border-b border-[var(--color-divider)] bg-near-black">
+    <header
+      className={`sticky inset-x-0 top-0 z-50 border-b border-[var(--color-divider)] bg-near-black transition-transform duration-300 ${
+        hidden && !menuOpen ? "-translate-y-full" : "translate-y-0"
+      }`}
+    >
       <nav className="relative mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-6 md:h-28 md:px-12">
         <div className="flex items-center gap-8">
           <button
@@ -115,54 +131,21 @@ export function Navbar() {
       </nav>
 
       {menuOpen && (
-        <div className="absolute inset-x-0 top-full border-b border-[var(--color-divider)] bg-near-black">
-          <div className="mx-auto grid w-full max-w-[1440px] grid-cols-2 gap-10 px-6 py-10 md:grid-cols-4 md:px-12">
-            <div>
-              <p className="mb-4 text-caption uppercase tracking-[0.1em] text-cream/50">
-                Story Series
-              </p>
-              <ul className="space-y-3">
-                {seriesOrder.map((s) => (
-                  <li key={s.slug}>
-                    <Link
-                      href={`/series/${s.slug}`}
-                      onClick={() => setMenuOpen(false)}
-                      className="font-sans text-body-s text-cream/85 transition-colors hover:text-cream"
-                    >
-                      {s.name}
-                    </Link>
-                  </li>
-                ))}
-                <li>
+        <div className="absolute inset-x-0 top-full max-h-[calc(100vh-5rem)] overflow-y-auto border-b border-[var(--color-divider)] bg-near-black">
+          <div className="mx-auto w-full max-w-[1440px] px-6 py-10 md:px-12">
+            <ul className="space-y-4">
+              {links.map((link) => (
+                <li key={link.href}>
                   <Link
-                    href="/series"
+                    href={link.href}
                     onClick={() => setMenuOpen(false)}
-                    className="font-sans text-body-s text-cream/85 underline underline-offset-4 transition-colors hover:text-cream"
+                    className="font-sans text-body-s text-cream/85 transition-colors hover:text-cream"
                   >
-                    All Series
+                    {link.label}
                   </Link>
                 </li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="mb-4 text-caption uppercase tracking-[0.1em] text-cream/50">
-                Travaholic
-              </p>
-              <ul className="space-y-3">
-                {links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      onClick={() => setMenuOpen(false)}
-                      className="font-sans text-body-s text-cream/85 transition-colors hover:text-cream"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+              ))}
+            </ul>
           </div>
         </div>
       )}
