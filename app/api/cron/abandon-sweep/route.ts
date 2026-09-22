@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getSetting } from "@/lib/settings";
 import { retargetOneSession, sendSecondNudgeForSession } from "@/lib/abandoned-cart";
 
-const STAGE_1_AFTER_MINUTES = 5; // first plain reminder
+const STAGE_1_AFTER_MINUTES = 15; // first plain reminder
 const STAGE_2_AFTER_STAGE_1_MINUTES = 120; // BUYNOW10 coupon nudge, 2 hours after stage 1
 
 async function assertAuthorized(request: Request) {
@@ -15,13 +15,13 @@ async function assertAuthorized(request: Request) {
 
 /**
  * Two-stage abandoned-cart sequence:
- *  1. 5 minutes idle -> plain WhatsApp/email reminder (retargetOneSession).
+ *  1. 15 minutes idle -> plain WhatsApp/email reminder (retargetOneSession).
  *  2. 2 hours after stage 1, still not converted -> a BUYNOW10 coupon nudge
  *     (sendSecondNudgeForSession) to actually push the sale.
  *
  * IMPORTANT: this only fires as often as this route is actually hit.
  * Vercel's free/Hobby plan caps Cron at once a day, which can't deliver
- * 5-minute/2-hour precision — /admin/abandoned-carts' "Send Nudge" button
+ * 15-minute/2-hour precision — /admin/abandoned-carts' "Send Nudge" button
  * calls the same underlying functions for manual/immediate testing, but for
  * this to run on its intended schedule in production, either upgrade to
  * Vercel Pro (arbitrary cron frequency) or have an external scheduler
