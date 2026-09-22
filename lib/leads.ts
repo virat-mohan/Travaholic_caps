@@ -36,28 +36,3 @@ export async function createLead(input: {
   return data;
 }
 
-/**
- * Guest checkout (no account/OTP verification) never touches the
- * `customers` table, so without this the CRM never learns who these buyers
- * are — best-effort, a failed lead insert must never fail the order itself.
- */
-export async function recordGuestCheckoutLead(input: {
-  name: string;
-  phone: string | null;
-  email: string | null;
-  chapterName?: string | null;
-}) {
-  try {
-    await createLead({
-      name: input.name,
-      phone: input.phone,
-      email: input.email,
-      source: "website",
-      leadType: "buying",
-      note: input.chapterName ? `Purchased: ${input.chapterName}` : "Guest checkout purchase",
-      status: "converted",
-    });
-  } catch (err) {
-    console.error("Failed to record guest checkout lead", err);
-  }
-}

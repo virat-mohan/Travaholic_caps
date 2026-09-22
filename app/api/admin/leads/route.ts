@@ -4,9 +4,19 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 export async function GET() {
   try {
     const supabase = getSupabaseServerClient();
+    // "buying" leads were a completed-purchase record written on every
+    // guest checkout — fully redundant with /admin/orders and the merged
+    // customer view in /admin/customers (guest checkout creates/finds a
+    // real customers row too), so they're excluded here rather than mixed
+    // in with genuine pre-purchase leads (DM/comment inquiries, restock
+    // signups). Rows still exist in the table, just not shown.
     const { data, error } = await supabase
       .from("leads")
       .select("*")
+      // Plain .neq excludes NULL lead_type rows too (SQL's NULL <> 'x' is
+      // neither true nor false) — .or keeps those alongside everything
+      // that's explicitly some other type.
+      .or("lead_type.is.null,lead_type.neq.buying")
       .order("created_at", { ascending: false });
     if (error) throw error;
     return NextResponse.json({ leads: data ?? [] });

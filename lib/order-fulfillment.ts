@@ -5,7 +5,6 @@ import { markCartSessionConverted } from "@/lib/cart-session-convert";
 import { computeTrustedOrderTotal, getCodAdvanceRupees } from "@/lib/order-pricing";
 import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
-import { recordGuestCheckoutLead } from "@/lib/leads";
 import { rewardReferrer } from "@/lib/referrals";
 import { redeemCoupon } from "@/lib/coupons";
 import { findOrCreateCustomerForGuest } from "@/lib/auth";
@@ -190,15 +189,6 @@ export async function finalizeOrder(
       payload.customer.phone,
       pricing.referral.rewardMiles
     );
-  }
-
-  if (wasGuest) {
-    await recordGuestCheckoutLead({
-      name: payload.customer.name,
-      phone: payload.customer.phone,
-      email: payload.customer.email,
-      chapterName: pricing.items[0]?.name,
-    });
   }
 
   if (pricing.coupon) {

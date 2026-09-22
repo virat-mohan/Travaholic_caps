@@ -5,7 +5,6 @@ import { getCurrentCustomer, findOrCreateCustomerForGuest } from "@/lib/auth";
 import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { sendInvoiceEmail, sendOrderNotificationEmail } from "@/lib/email";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
-import { recordGuestCheckoutLead } from "@/lib/leads";
 import { getShippingRate } from "@/lib/shiprocket";
 import { resolveReferralDiscount, rewardReferrer } from "@/lib/referrals";
 import { resolveCouponDiscount, redeemCoupon } from "@/lib/coupons";
@@ -206,15 +205,6 @@ export async function POST(request: Request) {
         body.customer.phone,
         referral.rewardMiles
       );
-    }
-
-    if (wasGuest) {
-      await recordGuestCheckoutLead({
-        name: body.customer.name,
-        phone: body.customer.phone,
-        email: body.customer.email,
-        chapterName: body.items[0]?.name,
-      });
     }
 
     if (coupon) {
