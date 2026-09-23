@@ -1,0 +1,63 @@
+import Link from "next/link";
+import { PayWithAPostMark } from "@/components/ui/PayWithAPostMark";
+import { GiftFirstUrgencyBadge } from "@/components/checkout/GiftFirstUrgencyBadge";
+
+/**
+ * Homepage/chapter-page teaser for the Pay With A Post checkout mechanic.
+ * Mirrors the same two-tier framing used at checkout so a shopper who lands
+ * here already knows exactly what to expect once they get there. Only ever
+ * rendered when POST_BARTER_ENABLED is "true" — see the callers in
+ * app/layout.tsx and app/chapter/[slug]/page.tsx.
+ */
+export function PayWithAPostBanner() {
+  return (
+    <section id="pay-with-a-post" className="scroll-mt-24 border-t border-divider py-20">
+      <div className="mx-auto max-w-[720px] px-6 text-center">
+        <p className="font-sans text-micro uppercase tracking-[0.3em] text-tan-gold">New</p>
+        <h2 className="mt-4 text-display-m">
+          <PayWithAPostMark />
+        </h2>
+        <p className="mt-4 font-sans text-body-s text-secondary-text">
+          Skip the payment — post about us on Instagram instead. Choose it right at checkout, no
+          separate sign-up.
+        </p>
+
+        <div className="mt-10 grid gap-4 text-left sm:grid-cols-2">
+          <div className="border border-divider bg-surface-alt p-5">
+            <p className="font-sans text-body-s font-bold uppercase tracking-[0.02em] text-ink">
+              Under 5,000 Followers
+            </p>
+            <p className="mt-1.5 text-caption leading-relaxed text-secondary-text">
+              Post first. We ship after 3 sales.
+            </p>
+          </div>
+          <div className="border border-divider bg-surface-alt p-5">
+            <p className="font-sans text-body-s font-bold uppercase tracking-[0.02em] text-ink">
+              5,000+ Followers
+            </p>
+            <p className="mt-1.5 text-caption leading-relaxed text-secondary-text">
+              We ship first. You post after.
+            </p>
+          </div>
+        </div>
+
+        <GiftFirstUrgencyBadge className="mt-6" />
+
+        <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/#shop"
+            className="inline-block border border-ink bg-ink px-8 py-3.5 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink"
+          >
+            Shop &amp; <PayWithAPostMark />
+          </Link>
+          <Link
+            href="/"
+            className="font-sans text-body-s text-secondary-text underline underline-offset-4 transition-colors duration-200 hover:text-ink"
+          >
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}

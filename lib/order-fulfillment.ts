@@ -7,6 +7,7 @@ import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
 import { rewardReferrer } from "@/lib/referrals";
 import { redeemCoupon } from "@/lib/coupons";
+import { maybeQualifyBarterOrderForCoupon } from "@/lib/post-barter";
 import { findOrCreateCustomerForGuest } from "@/lib/auth";
 import { checkAndAlertLowStock } from "@/lib/inventory";
 import { shipOrder } from "@/lib/order-shipping";
@@ -199,6 +200,11 @@ export async function finalizeOrder(
       payload.customer.phone,
       payload.customer.email
     );
+    // A redemption here always represents an order created through this
+    // regular (payment-gateway-backed) path — the only kind that should ever
+    // count toward a "Pay With A Post" barterer's required-orders line. A
+    // no-op unless pricing.coupon.code happens to be a barter code.
+    await maybeQualifyBarterOrderForCoupon(pricing.coupon.code, payload.customer.phone, payload.customer.email);
   }
 
   // Best-effort — a failed email/WhatsApp send shouldn't fail the order.

@@ -9,6 +9,7 @@ import { getShippingRate } from "@/lib/shiprocket";
 import { resolveReferralDiscount, rewardReferrer } from "@/lib/referrals";
 import { resolveCouponDiscount, redeemCoupon } from "@/lib/coupons";
 import { checkAndAlertLowStock } from "@/lib/inventory";
+import { maybeQualifyBarterOrderForCoupon } from "@/lib/post-barter";
 
 type OrderPayload = {
   customer: {
@@ -209,6 +210,11 @@ export async function POST(request: Request) {
 
     if (coupon) {
       await redeemCoupon(coupon.couponId, order.id, couponDiscountAmount, body.customer.phone, body.customer.email);
+      // Only ever actually counts if this order later shows payment_status
+      // = 'paid' — see maybeQualifyBarterOrderForCoupon's own filter, which
+      // deliberately excludes this no-payment-gateway manual order path from
+      // faking progress toward a barterer's free shipment.
+      await maybeQualifyBarterOrderForCoupon(coupon.code, body.customer.phone, body.customer.email);
     }
 
     // Best-effort — a failed email must never fail the order itself.

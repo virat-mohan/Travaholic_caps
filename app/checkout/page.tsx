@@ -10,6 +10,7 @@ import { calculateDiscount } from "@/lib/discounts";
 import { trackEvent, getSessionKey, getAttribution, getReferralCode } from "@/lib/client-tracking";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
+import { PayWithAPostMark } from "@/components/ui/PayWithAPostMark";
 
 const WHATSAPP_NUMBER = "918800339125";
 
@@ -58,6 +59,20 @@ export default function CheckoutPage() {
     keyId: null,
     codAdvanceRupees: 99,
   });
+  const [postBarter, setPostBarter] = useState<{ enabled: boolean; minFollowers: number; requiredOrders: number }>({
+    enabled: false,
+    minFollowers: 5000,
+    requiredOrders: 3,
+  });
+  const [barterHandle, setBarterHandle] = useState("");
+  const [barterPreview, setBarterPreview] = useState<
+    { tier: "gift_first" | "sell_first"; followerCount: number | null; verificationCode: string | null } | null
+  >(null);
+  const [barterChecking, setBarterChecking] = useState(false);
+  const [barterSubmitting, setBarterSubmitting] = useState(false);
+  const [barterError, setBarterError] = useState<string | null>(null);
+  const [ownershipVerified, setOwnershipVerified] = useState(false);
+  const [giftFirstTermsAccepted, setGiftFirstTermsAccepted] = useState(false);
   // razorpay.enabled defaults to false until /api/checkout/config resolves —
   // without this separate flag, a customer submitting the form before that
   // fetch completes (a real risk: it's an async call fired on mount) would
@@ -85,7 +100,7 @@ export default function CheckoutPage() {
   // Prepaid ships free nationwide; COD charges the real Shiprocket rate
   // (collected by the courier alongside the balance due) plus a small
   // upfront advance to filter out fake/non-serious COD orders.
-  const [paymentType, setPaymentType] = useState<"prepaid" | "cod_advance">("prepaid");
+  const [paymentType, setPaymentType] = useState<"prepaid" | "cod_advance" | "post_barter">("prepaid");
   const [shippingCharge, setShippingCharge] = useState<number | null>(null);
   const [shippingUnavailable, setShippingUnavailable] = useState(false);
   // Distinct from shippingUnavailable: this specifically means Shiprocket
@@ -235,16 +250,104 @@ export default function CheckoutPage() {
   useEffect(() => {
     fetch("/api/checkout/config")
       .then((res) => res.json())
-      .then((data) =>
+      .then((data) => {
         setRazorpay({
           enabled: !!data.razorpayEnabled,
           keyId: data.razorpayKeyId,
           codAdvanceRupees: data.codAdvanceRupees ?? 99,
-        })
-      )
-      .catch(() => setRazorpay({ enabled: false, keyId: null, codAdvanceRupees: 99 }))
+        });
+        setPostBarter({
+          enabled: !!data.postBarterEnabled,
+          minFollowers: data.postBarterMinFollowers ?? 5000,
+          requiredOrders: data.postBarterRequiredOrders ?? 3,
+        });
+      })
+      .catch(() => {
+        setRazorpay({ enabled: false, keyId: null, codAdvanceRupees: 99 });
+        setPostBarter({ enabled: false, minFollowers: 5000, requiredOrders: 3 });
+      })
       .finally(() => setConfigLoaded(true));
   }, []);
+
+  async function checkBarterTier() {
+    if (!barterHandle.trim()) return;
+    setBarterChecking(true);
+    setBarterPreview(null);
+    setOwnershipVerified(false);
+    try {
+      const res = await fetch("/api/checkout/post-barter/check-eligibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instagramHandle: barterHandle.trim() }),
+      });
+      const data = await res.json();
+      setBarterPreview(res.ok ? data : null);
+    } catch {
+      setBarterPreview(null);
+    } finally {
+      setBarterChecking(false);
+    }
+  }
+
+  async function verifyBarterOwnership() {
+    if (!barterPreview?.verificationCode) return;
+    try {
+      const res = await fetch("/api/checkout/post-barter/verify-ownership", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instagramHandle: barterHandle.trim(), code: barterPreview.verificationCode }),
+      });
+      const data = await res.json();
+      setOwnershipVerified(!!data.verified);
+      if (!data.verified) setBarterError("Couldn't find that code in your bio yet — add it and try again.");
+      else setBarterError(null);
+    } catch {
+      setOwnershipVerified(false);
+    }
+  }
+
+  async function handlePostBarterSubmit() {
+    setBarterError(null);
+    if (!barterHandle.trim()) {
+      setBarterError("Enter your Instagram handle.");
+      return;
+    }
+    if (unitCount !== 1) {
+      setBarterError("Pay With A Post covers one item per order — adjust your cart to a single item.");
+      return;
+    }
+    if (barterPreview?.tier === "gift_first" && ownershipVerified && !giftFirstTermsAccepted) {
+      setBarterError("Please accept the terms above to ship now.");
+      return;
+    }
+    setBarterSubmitting(true);
+    try {
+      const res = await fetch("/api/checkout/post-barter/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: form,
+          items: items.map((i) => ({ slug: i.slug, quantity: i.quantity })),
+          instagramHandle: barterHandle.trim(),
+          ownershipCode: ownershipVerified ? barterPreview?.verificationCode : undefined,
+          termsAccepted: giftFirstTermsAccepted,
+          isGift,
+          giftNote: isGift ? giftNote : null,
+          sessionKey: getSessionKey(),
+          newsletterOptIn,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not create your order");
+      trackEvent("Purchase", { value: 0, eventId: data.orderId, contentIds: items.map((i) => i.slug) });
+      clear();
+      router.push(`/barter/${data.orderId}`);
+    } catch (err) {
+      setBarterError(err instanceof Error ? err.message : "Could not create your order");
+    } finally {
+      setBarterSubmitting(false);
+    }
+  }
 
   function applyAccount(data: Account) {
     setAccount(data);
@@ -270,7 +373,6 @@ export default function CheckoutPage() {
       .then((res) => res.json())
       .then(applyAccount)
       .catch(() => setIdentityStep("guest"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -404,6 +506,11 @@ export default function CheckoutPage() {
     e.preventDefault();
 
     if (!configLoaded) return; // guarded — see the disabled submit button below
+
+    if (paymentType === "post_barter") {
+      await handlePostBarterSubmit();
+      return;
+    }
 
     if (razorpay.enabled) {
       await handleRazorpayPayment();
@@ -543,7 +650,7 @@ export default function CheckoutPage() {
       )}
       <div className="flex items-center justify-between pt-3 font-display text-heading-s text-ink">
         <span>Total</span>
-        <span>₹{total.toLocaleString("en-IN")}</span>
+        <span>{paymentType === "post_barter" ? "To Be Paid With A Post" : `₹${total.toLocaleString("en-IN")}`}</span>
       </div>
     </div>
   );
@@ -612,6 +719,114 @@ export default function CheckoutPage() {
                     </span>
                   </button>
                 </div>
+              </div>
+            )}
+
+            {postBarter.enabled && (
+              <div className="mt-6 border border-divider p-4">
+                <button
+                  type="button"
+                  onClick={() => setPaymentType(paymentType === "post_barter" ? "prepaid" : "post_barter")}
+                  className={`w-full border px-4 py-2.5 text-left font-sans text-body-s transition-colors duration-200 ${
+                    paymentType === "post_barter" ? "border-ink bg-ink text-cream" : "border-ink/30 text-ink"
+                  }`}
+                >
+                  <span className="block font-bold uppercase tracking-[0.03em]">
+                    Skip Payment — <PayWithAPostMark />
+                  </span>
+                  <span className="block text-caption opacity-80">
+                    Post about us on Instagram instead of paying — one item per order.
+                  </span>
+                </button>
+
+                {paymentType === "post_barter" && (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        value={barterHandle}
+                        onChange={(e) => {
+                          setBarterHandle(e.target.value);
+                          setBarterPreview(null);
+                          setOwnershipVerified(false);
+                        }}
+                        placeholder="Your Instagram handle"
+                        className="min-w-0 flex-1 border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s text-ink outline-none placeholder:text-secondary-text focus:border-ink"
+                      />
+                      <button
+                        type="button"
+                        onClick={checkBarterTier}
+                        disabled={!barterHandle.trim() || barterChecking}
+                        className="shrink-0 border border-ink px-4 py-2 font-sans text-caption font-bold uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream disabled:opacity-40"
+                      >
+                        {barterChecking ? "Checking…" : "Check"}
+                      </button>
+                    </div>
+
+                    {!barterPreview && (
+                      <p className="text-caption text-secondary-text">
+                        {postBarter.minFollowers.toLocaleString("en-IN")}+ followers ships free right away; under
+                        that, we ship once your code drives {postBarter.requiredOrders} sales.
+                      </p>
+                    )}
+
+                    {barterPreview && (
+                      <div className="border border-divider bg-surface-alt p-3 text-caption text-ink">
+                        {barterPreview.tier === "gift_first" ? (
+                          <p>
+                            You&apos;re Gift First —{" "}
+                            {barterPreview.followerCount?.toLocaleString("en-IN")} followers. Confirm it&apos;s
+                            really you below and we ship right away.
+                          </p>
+                        ) : (
+                          <p>
+                            You&apos;re Post First —{" "}
+                            {barterPreview.followerCount != null
+                              ? `${barterPreview.followerCount.toLocaleString("en-IN")} followers — under ${postBarter.minFollowers.toLocaleString("en-IN")}.`
+                              : "we couldn't verify your follower count."}{" "}
+                            We ship once your code drives {postBarter.requiredOrders} sales.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {barterPreview?.tier === "gift_first" && barterPreview.verificationCode && !ownershipVerified && (
+                      <div className="border border-divider p-3 text-caption text-ink">
+                        <p>
+                          Add this code to your Instagram bio for a few minutes, then tap Verify:{" "}
+                          <code className="border border-ink/30 bg-surface px-2 py-0.5 font-sans tracking-[0.05em]">
+                            {barterPreview.verificationCode}
+                          </code>
+                        </p>
+                        <button
+                          type="button"
+                          onClick={verifyBarterOwnership}
+                          className="mt-2 border border-ink px-3 py-1.5 font-sans text-micro font-bold uppercase tracking-[0.05em] text-ink hover:bg-ink hover:text-cream"
+                        >
+                          Verify
+                        </button>
+                      </div>
+                    )}
+
+                    {barterPreview?.tier === "gift_first" && ownershipVerified && (
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={giftFirstTermsAccepted}
+                          onChange={(e) => setGiftFirstTermsAccepted(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 accent-ink"
+                        />
+                        <span className="text-caption text-ink">
+                          Verified — I&apos;ll post about it after it arrives.
+                        </span>
+                      </label>
+                    )}
+
+                    {barterError && <p className="text-caption text-paint-orange">{barterError}</p>}
+                    <p className="text-caption text-secondary-text">
+                      <PayWithAPostMark linked /> — One Item Only
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -771,20 +986,29 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={paying || shippingBlocking || !configLoaded}
+                disabled={
+                  paying ||
+                  (paymentType !== "post_barter" && shippingBlocking) ||
+                  !configLoaded ||
+                  (paymentType === "post_barter" && (!barterHandle.trim() || barterSubmitting))
+                }
                 className="w-full border border-ink bg-ink px-8 py-4 font-sans text-body-s font-bold uppercase tracking-[0.1em] text-cream transition-colors duration-300 hover:bg-cream hover:text-ink disabled:opacity-60"
               >
                 {!configLoaded
                   ? "Loading..."
-                  : shippingBlocking
-                    ? "Undeliverable Pincode"
-                    : razorpay.enabled
-                      ? paying
-                        ? "Processing..."
-                        : paymentType === "cod_advance"
-                          ? `Pay ₹${Math.min(razorpay.codAdvanceRupees, total).toLocaleString("en-IN")} Now`
-                          : `Pay ₹${total.toLocaleString("en-IN")}`
-                      : "Place Order via WhatsApp"}
+                  : paymentType === "post_barter"
+                    ? barterSubmitting
+                      ? "Confirming…"
+                      : "Confirm — Pay With A Post"
+                    : shippingBlocking
+                      ? "Undeliverable Pincode"
+                      : razorpay.enabled
+                        ? paying
+                          ? "Processing..."
+                          : paymentType === "cod_advance"
+                            ? `Pay ₹${Math.min(razorpay.codAdvanceRupees, total).toLocaleString("en-IN")} Now`
+                            : `Pay ₹${total.toLocaleString("en-IN")}`
+                        : "Place Order via WhatsApp"}
               </button>
 
               <div className="grid grid-cols-1 gap-4 border-t border-divider pt-6 sm:grid-cols-2">

@@ -12,6 +12,8 @@ import { getExplorerPosts } from "@/lib/community";
 import { chapters } from "@/lib/chapters";
 import { seriesOrder } from "@/lib/series";
 import type { StorySeries } from "@/types/chapter";
+import { PayWithAPostBanner } from "@/components/hero/PayWithAPostBanner";
+import { isPostBarterEnabled } from "@/lib/post-barter";
 
 function chapterName(slug: string) {
   return chapters.find((c) => c.slug === slug)?.name ?? slug;
@@ -32,6 +34,7 @@ const pillars = [
 
 export default async function Home() {
   const chapters = await getAllChapters();
+  const postBarterEnabled = await isPostBarterEnabled();
   // Newest-first, but grouped by series (e.g. every "Blue Horizon" cap
   // together) instead of interleaved — a stable group-by keeps each
   // series' own newest-first order intact within its block.
@@ -200,6 +203,8 @@ export default async function Home() {
             </div>
           </section>
         )}
+
+        {postBarterEnabled && <PayWithAPostBanner />}
 
         <section className="grid grid-cols-2 gap-8 border-t border-divider py-24 md:grid-cols-4 md:py-30">
           {pillars.map((p) => (

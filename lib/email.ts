@@ -533,3 +533,91 @@ export async function sendWarehouseNotificationEmail(
   );
   return results.every(Boolean);
 }
+
+/** Sent the moment a "Pay With A Post" order is placed — hands over the shareable code and explains what has to happen before it ships. See lib/post-barter.ts. */
+export async function sendPostBarterOrderConfirmationEmail(
+  toEmail: string,
+  name: string,
+  orderId: string,
+  couponCode: string,
+  requiredOrders: number,
+  tier: "gift_first" | "sell_first"
+) {
+  const brand = await getBrandProfile();
+  const logoUrl = `${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-email-v2.png`;
+  const instagramProfileUrl = `https://instagram.com/${brand.instagramHandle.replace(/^@/, "")}`;
+  const trackingUrl = `${brand.siteUrl.replace(/\/$/, "")}/barter/${orderId}`;
+
+  const steps =
+    tier === "gift_first"
+      ? `
+        <li>It's on its way — no need to wait for anything.</li>
+        <li>Once it arrives, wear it and take a photo or Reel.</li>
+        <li>Post it on Instagram and add <a href="${instagramProfileUrl}" style="color:#101820;">${brand.instagramHandle}</a> as a collaborator (or tag us if collaborator invites aren't available to you).</li>
+      `
+      : `
+        <li>Share it your way — feed post or Story, whichever you're confident can get you ${requiredOrders} buyers. Add <a href="${instagramProfileUrl}" style="color:#101820;">${brand.instagramHandle}</a> as a collaborator or tag us.</li>
+        <li>Share your code below with your followers — anyone who checks out with it counts toward your goal.</li>
+        <li>Once <strong>${requiredOrders}</strong> people check out with it, we ship your order automatically — free.</li>
+      `;
+  const intro =
+    tier === "gift_first"
+      ? "Your order is confirmed and shipping now — here's what happens next:"
+      : "Your order is confirmed. Here's what happens next:";
+
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <div style="background-color:#ffffff;padding:16px 0;text-align:center;">
+        <img src="${logoUrl}" alt="${brand.brandName}" width="100" style="display:inline-block;" />
+      </div>
+      <p style="font-size:16px;">Hi ${name},</p>
+      <p style="font-size:14px;color:#444;line-height:1.6;">${intro}</p>
+      <ol style="font-size:14px;color:#444;line-height:1.8;padding-left:20px;">${steps}</ol>
+      <p style="margin:16px 0;padding:12px 20px;background:#f0eee4;border:1px dashed #101820;display:inline-block;font-size:18px;font-weight:bold;letter-spacing:0.08em;">${couponCode}</p>
+      <a href="${trackingUrl}" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">${tier === "gift_first" ? "View Details" : "Track Your Progress"}</a>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `You're in — here's your ${brand.brandName} code`, html);
+}
+
+/** Sent the moment a "Pay With A Post" order clears its required-orders line and actually ships. See lib/post-barter.ts. */
+export async function sendPostBarterQualifiedEmail(toEmail: string, phone: string) {
+  const brand = await getBrandProfile();
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <p style="text-align:center;text-transform:uppercase;letter-spacing:0.15em;font-size:12px;color:#666;">${brand.brandName}</p>
+      <h1 style="font-size:22px;margin:24px 0 8px;">Your Good Vibes Came Through.</h1>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        Your network showed up for you — your order is shipping now, completely free. We'll follow up
+        on WhatsApp (${phone}) with tracking.
+      </p>
+      <a href="${brand.siteUrl}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#101820;color:#f0eee4;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;">Spread More Good Vibes — Shop Another Chapter</a>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `Good Vibes delivered — it's shipping`, html);
+}
+
+/** Sent to the barterer every time a NEW, real (non-self) redemption lands on their code, before they've hit the required-orders line — so the loop feels alive instead of silent until it's suddenly done. See lib/post-barter.ts. */
+export async function sendPostBarterProgressEmail(toEmail: string, ordersSoFar: number, required: number) {
+  const brand = await getBrandProfile();
+  const remaining = Math.max(0, required - ordersSoFar);
+  const html = `
+    <div style="max-width:480px;margin:0 auto;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#1a1a1a;padding:0 24px;">
+      <p style="text-align:center;text-transform:uppercase;letter-spacing:0.15em;font-size:12px;color:#666;">${brand.brandName}</p>
+      <h1 style="font-size:22px;margin:24px 0 8px;">Good Vibes Are Building.</h1>
+      <p style="font-size:14px;color:#444;line-height:1.6;">
+        Someone just shopped with your code — that's <strong>${ordersSoFar} of ${required}</strong>.
+        You're <strong>${remaining} Good Vibe${remaining === 1 ? "" : "s"} away</strong> from your free
+        Chapter shipping automatically.
+      </p>
+      <div style="margin:20px 0;height:8px;width:100%;max-width:280px;background:#f0eee4;border-radius:999px;overflow:hidden;">
+        <div style="height:8px;width:${Math.min(100, Math.round((ordersSoFar / required) * 100))}%;background:#101820;"></div>
+      </div>
+      <p style="font-size:14px;color:#444;line-height:1.6;">Keep sharing your code — the Good Vibes are almost there.</p>
+      <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
+    </div>
+  `;
+  return sendEmail(toEmail, `${ordersSoFar}/${required} — you're getting close`, html);
+}

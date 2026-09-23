@@ -19,6 +19,8 @@ import { DiscountPromoBanner } from "@/components/ui/DiscountPromoBanner";
 import { RestockNotifyForm } from "@/components/chapter/RestockNotifyForm";
 import { getApprovedReviews, getReviewSummary } from "@/lib/reviews";
 import { seriesOrder } from "@/lib/series";
+import { isPostBarterEnabled } from "@/lib/post-barter";
+import { PayWithAPostMark } from "@/components/ui/PayWithAPostMark";
 
 export function generateStaticParams() {
   return staticChapters.map((c) => ({ slug: c.slug }));
@@ -55,6 +57,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
   const inventory = await getInventoryMap();
   const stock = inventory[chapter.slug];
   const stockLabel = stockLabelFor(stock);
+  const postBarterEnabled = await isPostBarterEnabled();
   const series = seriesOrder.find((s) => s.name === chapter.series);
   const brand = await getBrandProfile();
   const siteUrl = brand.siteUrl.replace(/\/$/, "");
@@ -187,6 +190,12 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
             </div>
 
             {stockLabel === "out-of-stock" && <RestockNotifyForm chapterSlug={chapter.slug} />}
+
+            {postBarterEnabled && stockLabel !== "out-of-stock" && (
+              <p className="mt-4 text-caption text-secondary-text">
+                Or skip the payment — <PayWithAPostMark linked /> at checkout instead.
+              </p>
+            )}
 
             <div className="mt-10 border-t border-divider pt-6">
               <p className="font-display text-body-s uppercase tracking-[0.05em] text-ink">

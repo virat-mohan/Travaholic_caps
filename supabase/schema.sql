@@ -1011,3 +1011,46 @@ create index if not exists legacy_customer_purchases_product_idx on legacy_custo
 -- hallucinated product instead of the real one.
 -- ============================================================
 alter table ad_briefs add column if not exists reference_image_url text;
+
+-- ============================================================
+-- "Pay With A Post" — a checkout payment method that isn't currency: a
+-- shopper applies with their Instagram handle instead of paying. Server
+-- classifies them into a tier based on live follower count (via Instagram
+-- Business Discovery, see getPublicFollowerCount in lib/instagram.ts — never
+-- self-reported). gift_first (follower count >= POST_BARTER_MIN_FOLLOWERS,
+-- and today's POST_BARTER_GIFT_FIRST_DAILY_CAP not yet hit) ships
+-- immediately, on trust, only after ownership of the handle is verified —
+-- see verifyGiftFirstOwnership in lib/post-barter.ts. sell_first (below
+-- threshold, unverifiable, or the daily cap is full) is the safer default:
+-- nothing ships until their personal coupon code (barter_coupon_code, minted
+-- through the same coupon_codes/coupon_redemptions engine every other coupon
+-- uses, not a parallel system) has driven barter_required_orders real, paid,
+-- non-self redemptions. is_post_barter is a plain boolean flag (not a new
+-- order status) so these orders can be flagged/reported on without a
+-- parallel order table.
+-- ============================================================
+alter table orders add column if not exists is_post_barter boolean not null default false;
+-- Decided server-side in lib/post-barter.ts's classifyPostBarterApplicant,
+-- never client-supplied. Open to anyone — there is no eligibility gate here,
+-- only a tier that decides WHEN the product ships.
+alter table orders add column if not exists barter_tier text not null default 'sell_first';
+alter table orders add column if not exists barter_instagram_handle text;
+alter table orders add column if not exists barter_follower_count integer;
+alter table orders add column if not exists barter_coupon_code text;
+alter table orders add column if not exists barter_required_orders integer not null default 3;
+alter table orders add column if not exists barter_post_url text;
+alter table orders add column if not exists barter_qualified_at timestamptz;
+create index if not exists orders_is_post_barter_idx on orders (is_post_barter) where is_post_barter;
+
+-- barter_terms_accepted_at is the shopper's checkout-time acceptance of the
+-- post-after-delivery condition that comes with shipping gift_first on
+-- trust — captured only for gift_first, since sell_first never ships before
+-- a post-driven code has actually qualified. The remaining three columns
+-- (charge-deadline / link-sent / charged) mirror Moonglasses' schema for a
+-- possible future "charge on missed post deadline" dunning flow, but that
+-- flow itself (the /barter/[orderId]/pay page + a charge-sweep cron) was
+-- NOT ported in this pass — see the port's report for why.
+alter table orders add column if not exists barter_terms_accepted_at timestamptz;
+alter table orders add column if not exists barter_charge_deadline_at timestamptz;
+alter table orders add column if not exists barter_charge_link_sent_at timestamptz;
+alter table orders add column if not exists barter_charged_at timestamptz;

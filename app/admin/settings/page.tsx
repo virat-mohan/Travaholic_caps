@@ -101,6 +101,16 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "CRON_SECRET", label: "Cron Secret", hint: "Protects /api/cron/* routes — set this once you wire up Vercel Cron or another scheduler." },
     ],
   },
+  {
+    label: "Pay With A Post",
+    fields: [
+      { key: "POST_BARTER_ENABLED", label: "Enable Pay With A Post", hint: "Off by default — set to exactly \"true\" to turn the whole feature on: the homepage banner, the checkout option, order creation, and the /barter/* order pages. Everything stays invisible/inert until this is on. Requires Meta Access Token + Instagram Business Account ID above to actually classify applicants." },
+      { key: "POST_BARTER_MIN_FOLLOWERS", label: "Gift First Follower Threshold", hint: "Live Instagram follower count (via Business Discovery, never self-reported) at or above which an applicant is classified Gift First instead of Post First. Defaults to 5,000 if unset." },
+      { key: "POST_BARTER_REQUIRED_ORDERS", label: "Post First — Required Orders", hint: "How many real, paid, non-self orders a Post First applicant's code must drive before their own order ships automatically. Defaults to 3 if unset." },
+      { key: "POST_BARTER_FRIEND_DISCOUNT_RUPEES", label: "Friend Discount (₹)", hint: "Discount a friend gets for checking out with a barterer's code — 0 means it's attribution-only, full price. Defaults to 0 if unset." },
+      { key: "POST_BARTER_GIFT_FIRST_DAILY_CAP", label: "Gift First Daily Cap", hint: "Maximum number of Gift First orders (shipped on trust, before any post exists) accepted per calendar day (IST) — everyone past the cap is classified Post First instead, no matter their follower count. Defaults to 10 if unset." },
+    ],
+  },
 ];
 
 export default function AdminSettingsPage() {

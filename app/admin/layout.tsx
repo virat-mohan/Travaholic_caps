@@ -9,6 +9,7 @@ const NAV_SECTIONS = [
     links: [
       { href: "/admin/orders", label: "Orders" },
       { href: "/admin/orders/new", label: "Add Manual Order" },
+      { href: "/admin/post-barter", label: "Pay With A Post" },
     ],
   },
   {
@@ -58,6 +59,7 @@ const NAV_SECTIONS = [
       { href: "/admin/expenses", label: "Expenses" },
       { href: "/admin/discounts", label: "Discount Rules" },
       { href: "/admin/coupons", label: "Coupon Codes" },
+      { href: "/admin/post-barter", label: "Pay With A Post" },
     ],
   },
   {

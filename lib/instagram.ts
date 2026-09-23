@@ -191,6 +191,74 @@ export async function getRecentPostPerformance(limit = 12): Promise<InstagramPos
 }
 
 /**
+ * Accepts a bare handle ("@name" or "name") or a full profile URL (any of
+ * instagram.com/name, instagram.com/name/, https://www.instagram.com/name?hl=en)
+ * and returns the clean username. Used everywhere a shopper types or pastes
+ * their Instagram identity for "Pay With A Post" (see lib/post-barter.ts),
+ * since asking for exactly one format is a needless way to lose people.
+ */
+export function parseInstagramHandle(input: string): string {
+  return input
+    .trim()
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+    .replace(/^@/, "")
+    .split(/[/?#]/)[0]
+    .trim();
+}
+
+/**
+ * Looks up a creator's PUBLIC follower count via Instagram Graph API's
+ * Business Discovery — the brand's own connected Business/Creator account
+ * querying another public Business/Creator account's basic stats by
+ * username. Deliberately not a per-applicant OAuth/connect flow: the
+ * applicant never authenticates anything, and we never touch anything beyond
+ * public counts. Returns null (never throws) if the account can't be
+ * resolved — most commonly because it's a personal (not Business/Creator)
+ * account, which Business Discovery simply can't see, or Meta isn't
+ * configured. Callers must treat null as "couldn't verify," not zero — see
+ * classifyPostBarterApplicant in lib/post-barter.ts.
+ */
+export async function getPublicFollowerCount(instagramHandle: string): Promise<number | null> {
+  const profile = await getBusinessDiscoveryProfile(instagramHandle);
+  return profile?.followersCount ?? null;
+}
+
+/**
+ * Same Business Discovery lookup as getPublicFollowerCount, but also pulls
+ * `biography` — used ONLY for the "Pay With A Post" gift_first ownership
+ * check (see verifyGiftFirstOwnership in lib/post-barter.ts): asking someone
+ * to briefly drop a one-time code in their own bio proves they control the
+ * account before free product ships on trust, without a full OAuth connect
+ * flow.
+ */
+export async function getBusinessDiscoveryProfile(
+  instagramHandle: string
+): Promise<{ followersCount: number; biography: string } | null> {
+  try {
+    const { accessToken, igUserId } = await getInstagramAuth();
+    const username = parseInstagramHandle(instagramHandle);
+    if (!username) return null;
+
+    const res = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/${igUserId}?` +
+        new URLSearchParams({
+          fields: `business_discovery.username(${username}){followers_count,biography}`,
+          access_token: accessToken,
+        })
+    );
+    const data = await res.json();
+    if (!res.ok || typeof data?.business_discovery?.followers_count !== "number") return null;
+    return {
+      followersCount: data.business_discovery.followers_count as number,
+      biography: (data.business_discovery.biography as string) ?? "",
+    };
+  } catch (err) {
+    console.error("Instagram Business Discovery lookup failed", instagramHandle, err);
+    return null;
+  }
+}
+
+/**
  * Posts a photo to the connected Instagram Business account's Story feed.
  * Requires the Instagram account to be a Business/Creator account connected
  * to the same Meta app as META_ACCESS_TOKEN. Best-effort — a missing setting
