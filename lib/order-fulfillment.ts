@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendInvoiceEmail, sendOrderNotificationEmail } from "@/lib/email";
-import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-notify";
+import { sendOrderConfirmationWhatsApp, sendOrderReceivedWhatsApp } from "@/lib/whatsapp-notify";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
 import { computeTrustedOrderTotal, getCodAdvanceRupees } from "@/lib/order-pricing";
 import { earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
@@ -202,10 +202,16 @@ export async function finalizeOrder(
   }
 
   // Best-effort — a failed email/WhatsApp send shouldn't fail the order.
+  // sendOrderReceivedWhatsApp pings the warehouse team the moment the order
+  // lands, independent of shipOrder() below — previously the only warehouse
+  // notification was gated behind a successful courier assignment, so a
+  // remote pincode with no auto-serviceable courier (see shipOrder) produced
+  // total silence instead of at least flagging that an order came in.
   await Promise.allSettled([
     sendInvoiceEmail(savedOrder, orderItems),
     sendOrderNotificationEmail(savedOrder, orderItems),
     sendOrderConfirmationWhatsApp(savedOrder, orderItems),
+    sendOrderReceivedWhatsApp(savedOrder, orderItems),
   ]);
 
   await markCartSessionConverted(payload.sessionKey, {

@@ -120,6 +120,42 @@ export async function sendOrderConfirmationWhatsApp(order: OrderForWhatsApp, ite
 }
 
 /**
+ * Internal "order received" WhatsApp notification — sent to the warehouse
+ * team's own numbers (WAREHOUSE_WHATSAPP_NUMBERS) the moment an order is
+ * placed, independent of shipping. Distinct from sendShipNotificationWhatsApp
+ * below (which only fires once a courier is actually assigned) so the
+ * warehouse team hears about a new order immediately even if Shiprocket
+ * courier assignment later fails or is delayed (e.g. a remote pincode with
+ * no auto-serviceable courier) — that case previously produced no
+ * notification at all. 4 body variables — order number, customer name,
+ * customer phone, items (total amount folded into the items string). Set
+ * the approved template name as MSG91_ORDER_RECEIVED_TEMPLATE_ID in
+ * /admin/settings.
+ */
+export async function sendOrderReceivedWhatsApp(order: OrderForWhatsApp, items: OrderItemForCard[] = []) {
+  const msg91TemplateName = await getSetting("MSG91_ORDER_RECEIVED_TEMPLATE_ID");
+  const numbers = (await getSetting("WAREHOUSE_WHATSAPP_NUMBERS"))
+    ?.split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  if (!numbers || numbers.length === 0) return false;
+
+  const itemsLine = items.map((item) => `${item.quantity}x ${item.chapter_name}`).join(", ");
+  const variables = [
+    order.id.slice(0, 8).toUpperCase(),
+    order.customer_name,
+    order.customer_phone,
+    `${itemsLine} — Total ₹${order.total.toLocaleString("en-IN")}`,
+  ];
+  const results = await Promise.all(
+    numbers.map((phone) =>
+      sendTemplateByName(phone, "order_received", msg91TemplateName, variables, { orderId: order.id })
+    )
+  );
+  return results.some(Boolean);
+}
+
+/**
  * Internal "ready to ship" WhatsApp notification — sent to the warehouse
  * team's own numbers (WAREHOUSE_WHATSAPP_NUMBERS, comma-separated), plain
  * text only. The label/invoice PDF still goes out via the warehouse email
