@@ -47,6 +47,17 @@ const GROUPS: { label: string; fields: Field[] }[] = [
     ],
   },
   {
+    label: "Performance Marketing Manager",
+    fields: [
+      { key: "PM_ENABLED", label: "Enable Performance Manager", hint: "Set to exactly \"true\" to let /admin/performance run its daily sweep: pauses any managed ad set under the target ROAS for 3 consecutive days, scales winners within the budget cap, launches the next queued audience experiment, and sends the daily report. Anything else = off (reporting only)." },
+      { key: "PM_DAILY_BUDGET_CAP_RUPEES", label: "Daily Budget Cap (₹)", hint: "Hard ceiling on the managed campaign's daily budget. The manager never sets a budget above this. Default 500." },
+      { key: "PM_TARGET_ROAS", label: "Target ROAS (floor)", hint: "Ad sets below this for 3 consecutive days get paused; the whole managed campaign halts if blended ROAS is below it for 3 consecutive days. Default 4." },
+      { key: "PM_ALERT_WHATSAPP", label: "Alert WhatsApp Number", hint: "Owner's number with country code (e.g. 919999277240) for the daily performance report and halt alerts. Session messages only deliver if you've messaged the business number in the last 24h — the email report always goes out regardless." },
+      { key: "PM_ALERT_EMAIL", label: "Alert Email", hint: "Comma-separated emails for the daily performance report. Defaults to the Warehouse Email setting if blank." },
+      { key: "PM_COPY_RULES", label: "Ad Copy Rules", hint: "Plain-English rules every generated ad copy must obey (e.g. no discount percentages, no COD encouragement, always mention free shipping on prepaid). Fed to Claude when it proposes new experiments." },
+    ],
+  },
+  {
     label: "MSG91 (WhatsApp / SMS)",
     fields: [
       { key: "WHATSAPP_SMS_ENABLED", label: "Enable WhatsApp/SMS", hint: "Off by default at launch — every WhatsApp/SMS send in the app (OTP, order confirmation, NDR/RTO nudges, referral invites, abandoned cart, win-back) is silenced until this is set to exactly \"true\". Email keeps working regardless. Flip this on once MSG91 is actually configured below." },
