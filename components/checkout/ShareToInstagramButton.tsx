@@ -93,31 +93,38 @@ export async function buildShareCard(
   if (hero) drawCover(ctx, hero, 0, TOP_BAND, CANVAS_W, CANVAS_H - TOP_BAND);
 
   if (logo) {
-    const logoH = 100;
+    // Fill the band — the logo is the brand's presence on a post that
+    // travels on someone else's feed, so it can't read as a watermark.
+    const logoH = 200;
     const logoW = (logo.width / logo.height) * logoH;
-    ctx.drawImage(logo, 56, (TOP_BAND - logoH) / 2, logoW, logoH);
+    ctx.drawImage(logo, (CANVAS_W - logoW) / 2, (TOP_BAND - logoH) / 2, logoW, logoH);
   }
 
-  // Product name tag, lookbook-style — small pill over the top-left of the
-  // photo, quiet enough not to compete with the product itself.
+  // The Chapter's name, set big in the display face right above the cap —
+  // the product is the point of the post, so its name gets headline
+  // treatment rather than a small lookbook tag.
   if (productName) {
-    ctx.font = `700 22px ${BODY_FONT}`;
-    ctx.letterSpacing = "1px";
     const label = productName.toUpperCase();
-    const padX = 16;
-    const textW = ctx.measureText(label).width;
-    const pillW = textW + padX * 2;
-    const pillH = 42;
-    const pillX = 56;
-    const pillY = TOP_BAND + 24;
-    ctx.fillStyle = "rgba(16,24,32,0.6)";
-    ctx.beginPath();
-    ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
-    ctx.fill();
-    ctx.fillStyle = "#f0eee4";
-    ctx.textAlign = "left";
-    ctx.fillText(label, pillX + padX, pillY + pillH / 2 + 7);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#e6c68f";
+    ctx.font = `700 24px ${BODY_FONT}`;
+    ctx.letterSpacing = "6px";
+    ctx.fillText("THE CHAPTER", CANVAS_W / 2, TOP_BAND + 78);
     ctx.letterSpacing = "0px";
+
+    let size = 72;
+    ctx.font = `400 ${size}px ${HEADLINE_FONT}`;
+    while (ctx.measureText(label).width > CANVAS_W - 120 && size > 44) {
+      size -= 4;
+      ctx.font = `400 ${size}px ${HEADLINE_FONT}`;
+    }
+    ctx.shadowColor = "rgba(16,24,32,0.7)";
+    ctx.shadowBlur = 24;
+    ctx.fillStyle = "#f0eee4";
+    ctx.letterSpacing = "2px";
+    ctx.fillText(label, CANVAS_W / 2, TOP_BAND + 78 + size + 12);
+    ctx.letterSpacing = "0px";
+    ctx.shadowBlur = 0;
   }
 
   // Bottom gradient — the editorial-poster treatment that seats the tagline/code.

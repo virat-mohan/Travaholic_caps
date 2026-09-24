@@ -1038,32 +1038,7 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-1 gap-4 border-t border-divider pt-6 sm:grid-cols-2">
                 <div>
                   <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                    Referral Code (Optional)
-                  </label>
-                  <input
-                    value={referralCodeInput}
-                    onChange={(e) => updateReferralCode(e.target.value)}
-                    placeholder="From a friend?"
-                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-caption placeholder:text-secondary-text focus:border-ink"
-                  />
-                  {normalizedReferralCode && (
-                    <p className="mt-2 text-caption">
-                      {referralChecking ? (
-                        <span className="text-secondary-text">Checking code...</span>
-                      ) : referralPreview?.checked === normalizedReferralCode && referralPreview.valid ? (
-                        <span className="text-tan-gold">
-                          Code applied — ₹{referralDiscount.toLocaleString("en-IN")} off
-                        </span>
-                      ) : referralPreview?.checked === normalizedReferralCode ? (
-                        <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
-                      ) : null}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                    Coupon Code (Optional)
+                    Got A Code From A Friend&apos;s Post?
                   </label>
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <input
@@ -1088,6 +1063,31 @@ export default function CheckoutPage() {
                       ) : (
                         <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
                       )}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
+                    Referral Code (Optional)
+                  </label>
+                  <input
+                    value={referralCodeInput}
+                    onChange={(e) => updateReferralCode(e.target.value)}
+                    placeholder="From a friend?"
+                    className="mt-1.5 w-full border border-ink/30 bg-surface px-4 py-2 font-sans text-body-s uppercase text-ink outline-none placeholder:normal-case placeholder:text-caption placeholder:text-secondary-text focus:border-ink"
+                  />
+                  {normalizedReferralCode && (
+                    <p className="mt-2 text-caption">
+                      {referralChecking ? (
+                        <span className="text-secondary-text">Checking code...</span>
+                      ) : referralPreview?.checked === normalizedReferralCode && referralPreview.valid ? (
+                        <span className="text-tan-gold">
+                          Code applied — ₹{referralDiscount.toLocaleString("en-IN")} off
+                        </span>
+                      ) : referralPreview?.checked === normalizedReferralCode ? (
+                        <span className="text-paint-orange">That code isn&apos;t valid for this order.</span>
+                      ) : null}
                     </p>
                   )}
                 </div>
