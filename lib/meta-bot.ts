@@ -34,7 +34,7 @@ async function getPageToken() {
   return getSetting("META_ACCESS_TOKEN");
 }
 
-async function sendMessage(recipientId: string, text: string) {
+export async function sendMessage(recipientId: string, text: string) {
   const [accessToken, pageId] = await Promise.all([getPageToken(), getSetting("META_PAGE_ID")]);
   if (!accessToken || !pageId) {
     console.log("Meta not configured — would have sent:", text);

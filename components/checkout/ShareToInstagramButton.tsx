@@ -67,7 +67,7 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numb
  * Chapters — a stream of these, once tagged/collaborator-added, reads as a
  * varied lookbook rather than the same single cap shared by everyone.
  */
-async function buildShareCard(
+export async function buildShareCard(
   couponCode: string,
   siteDomain: string,
   heroImageUrl: string,

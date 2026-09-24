@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { handleIncomingMessage, handleIncomingComment } from "@/lib/meta-bot";
+import { handleStoryMention } from "@/lib/story-mentions";
 
 /**
  * Meta calls GET once, when you click "Verify and Save" on the webhook
@@ -41,9 +42,21 @@ export async function POST(request: Request) {
     for (const entry of body.entry) {
       for (const event of entry.messaging ?? []) {
         const senderId = event.sender?.id;
+        if (!senderId || event.message?.is_echo) continue;
+
+        // A Story that tags us arrives as a DM event with a story_mention
+        // attachment (no text) — route it to the reshare queue.
+        const storyMention = (event.message?.attachments ?? []).find(
+          (a: { type?: string; payload?: { url?: string } }) => a.type === "story_mention" && a.payload?.url
+        );
+        if (storyMention) {
+          await handleStoryMention(senderId, storyMention.payload.url as string);
+          continue;
+        }
+
         const text = event.message?.text;
-        // Ignore echoes of our own outbound sends and non-text events (attachments only, etc).
-        if (!senderId || !text || event.message?.is_echo) continue;
+        // Ignore other non-text events (attachments only, etc).
+        if (!text) continue;
         await handleIncomingMessage(platform, senderId, text);
       }
 
