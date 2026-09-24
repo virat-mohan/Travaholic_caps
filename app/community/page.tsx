@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { getExplorerPosts } from "@/lib/community";
+import { ExplorerGallery } from "@/components/community/ExplorerGallery";
 import { chapters } from "@/lib/chapters";
 import { NewsletterBlock } from "@/components/newsletter/NewsletterBlock";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
@@ -38,46 +38,14 @@ export default async function CommunityPage() {
         </div>
 
         {posts.length > 0 ? (
-          <div className="mt-16 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
-            {posts.map((post) => {
-              const primarySlug = post.chapterSlugs[0];
-
-              return (
-                <div key={post.file}>
-                  <Link
-                    href={primarySlug ? `/chapter/${primarySlug}` : "/series"}
-                    className="group block"
-                  >
-                    <div className="relative aspect-[4/5] overflow-hidden bg-surface-alt">
-                      <Image
-                        src={post.src}
-                        alt={post.testimonial}
-                        fill
-                        sizes="(min-width: 768px) 25vw, 50vw"
-                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                      />
-                    </div>
-                  </Link>
-                  <p className="mt-3 text-caption text-secondary-text">
-                    &ldquo;{post.testimonial}&rdquo;
-                  </p>
-                  {post.chapterSlugs.length > 0 && (
-                    <p className="mt-2 text-caption uppercase tracking-[0.05em] text-ink">
-                      Worn by Explorer —{" "}
-                      {post.chapterSlugs.map((slug, i) => (
-                        <span key={slug}>
-                          <Link href={`/chapter/${slug}`} className="underline underline-offset-4">
-                            {chapterName(slug)}
-                          </Link>
-                          {i < post.chapterSlugs.length - 1 ? " & " : ""}
-                        </span>
-                      ))}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <ExplorerGallery
+            posts={posts.map((post) => ({
+              file: post.file,
+              src: post.src,
+              testimonial: post.testimonial,
+              chapters: post.chapterSlugs.map((slug) => ({ slug, name: chapterName(slug) })),
+            }))}
+          />
         ) : (
           <div className="mt-16 border-t border-divider py-24 text-center">
             <p className="font-display text-heading-m uppercase text-ink">
