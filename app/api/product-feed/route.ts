@@ -4,6 +4,19 @@ import { chapterImageSrc } from "@/lib/chapters";
 import { getInventoryMap } from "@/lib/inventory";
 import { getBrandProfile } from "@/lib/brand";
 
+import { readdirSync } from "fs";
+import path from "path";
+
+const SCENE_SLUGS = new Set(
+  (() => {
+    try {
+      return readdirSync(path.join(process.cwd(), "public/images/catalog-scene")).map((f) => f.replace(/\.png$/, ""));
+    } catch {
+      return [];
+    }
+  })()
+);
+
 function csvField(value: string) {
   return `"${value.replace(/"/g, '""')}"`;
 }
@@ -38,8 +51,12 @@ export async function GET() {
   const rows = chapters.map((chapter) => {
     const stock = inventory[chapter.slug] ?? 0;
     const availability = stock > 0 ? "in stock" : "out of stock";
+    // Ad-only scene image (cap placed in the place it's inspired by, name
+    // baked in) when one exists; the site itself never uses these.
     const image = chapterImageSrc(chapter.folder, chapter.sideImage);
-    const imageUrl = image.startsWith("http") ? image : `${siteUrl}${image}`;
+    const imageUrl = SCENE_SLUGS.has(chapter.slug)
+      ? `${siteUrl}/api/og/catalog/${chapter.slug}`
+      : image.startsWith("http") ? image : `${siteUrl}${image}`;
 
     return [
       csvField(chapter.slug),
