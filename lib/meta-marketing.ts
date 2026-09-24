@@ -391,11 +391,13 @@ export type ManagedTargeting = {
   excludedCustomAudienceIds?: string[];
   /** Let Meta expand beyond the defined audience when it finds better buyers. */
   advantageAudience?: boolean;
+  /** Meta city keys (from searchCities). When set, targeting is these cities instead of all of India. */
+  cityKeys?: string[];
 };
 
 export function buildManagedTargeting(t: ManagedTargeting) {
   return {
-    geo_locations: { countries: ["IN"] },
+    geo_locations: t.cityKeys && t.cityKeys.length ? { cities: t.cityKeys.map((key) => ({ key, radius: 25, distance_unit: "kilometer" })) } : { countries: ["IN"] },
     age_min: t.ageMin,
     // Meta rejects an Advantage+ audience ad set with an age ceiling below 65 —
     // with expansion on, the age range is only a suggestion, not a control.
@@ -563,6 +565,20 @@ export async function getAdSetFlexibleSpec(adsetId: string) {
     fields: "targeting",
   });
   return data.targeting?.flexible_spec ?? [];
+}
+
+/** Resolves an Indian city name to Meta's geo key for city targeting. */
+export async function searchCityKey(cityName: string): Promise<{ key: string; name: string } | null> {
+  const auth = await getMetaMarketingAuth();
+  const data = await graphGet<{ data: { key: string; name: string; country_code: string; type: string }[] }>("search", auth.accessToken, {
+    type: "adgeolocation",
+    location_types: JSON.stringify(["city"]),
+    country_code: "IN",
+    q: cityName,
+    limit: "5",
+  });
+  const hit = (data.data ?? []).find((c) => c.country_code === "IN" && c.type === "city");
+  return hit ? { key: hit.key, name: hit.name } : null;
 }
 
 /** Searches Meta's interest graph — used when proposing new audiences by keyword. */

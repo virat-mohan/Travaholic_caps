@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   const result = await getShippingRate(pincode, unitCount || 1);
   if (result.status === "available") {
-    return NextResponse.json({ available: true, rate: result.rate });
+    return NextResponse.json({ available: true, rate: result.rate, codAvailable: result.codAvailable });
   }
   // "checked_unavailable" is a real can't-deliver-here result and should
   // read as blocking to the shopper; "not_configured"/"check_failed" are

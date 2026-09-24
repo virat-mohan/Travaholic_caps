@@ -76,8 +76,13 @@ export async function computeTrustedOrderTotal(
     // away a real customer, see getShippingRate's doc comment.
     if (shippingResult.status === "checked_unavailable") {
       throw new Error(
-        `We can't currently deliver to pincode ${deliveryPincode} — please double-check it or use a different address.`
+        `Sorry — pincode ${deliveryPincode} is not serviceable by our couriers yet. Please double-check it or use a different delivery address.`
       );
+    }
+    // Server-side twin of the checkout's COD hiding — a tampered client
+    // must not be able to place a COD order on a prepaid-only lane.
+    if (paymentType === "cod_advance" && shippingResult.status === "available" && !shippingResult.codAvailable) {
+      throw new Error(`Cash on Delivery isn't available for pincode ${deliveryPincode} — please pay online instead (shipping is free on prepaid).`);
     }
     const realRate = shippingResult.status === "available" ? shippingResult.rate : 0;
     shippingCharge = paymentType === "prepaid" ? 0 : realRate;

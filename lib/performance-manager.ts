@@ -26,6 +26,7 @@ import {
   createExistingInstagramPostAd,
   getAdSetFlexibleSpec,
   searchInterests,
+  searchCityKey,
   getMetaMarketingAuth,
 } from "@/lib/meta-marketing";
 
@@ -94,6 +95,8 @@ export type PmExperiment = {
   interestKeywords?: string[];
   audienceKeys?: string[];
   excludeAudienceKeys?: string[];
+  /** Restrict delivery to these Indian cities (resolved to Meta geo keys at launch). */
+  cityNames?: string[];
   ageMin: number;
   ageMax: number;
   genders?: (1 | 2)[];
@@ -442,11 +445,30 @@ async function launchExperiment(state: PmState, exp: PmExperiment, campaignId: s
     flexibleSpec = [{ interests }];
   }
 
+  let cityKeys: string[] | undefined;
+  if (exp.cityNames && exp.cityNames.length) {
+    cityKeys = [];
+    for (const name of exp.cityNames) {
+      try {
+        const hit = await searchCityKey(name);
+        if (hit) cityKeys.push(hit.key);
+      } catch {
+        // skip unresolvable city
+      }
+    }
+    if (cityKeys.length === 0) {
+      exp.status = "blocked";
+      exp.resultNote = "None of the city names resolved in Meta's geo search.";
+      return false;
+    }
+  }
+
   const targeting: ManagedTargeting = {
     ageMin: exp.ageMin,
     ageMax: exp.ageMax,
     genders: exp.genders,
     flexibleSpec,
+    cityKeys,
     customAudienceIds: includeIds.length ? includeIds : undefined,
     excludedCustomAudienceIds: excludeIds.length ? excludeIds : undefined,
     advantageAudience: exp.advantageAudience ?? false,

@@ -202,7 +202,7 @@ export type ShippingRateResult =
   | { status: "not_configured" }
   | { status: "checked_unavailable" }
   | { status: "check_failed" }
-  | { status: "available"; rate: number };
+  | { status: "available"; rate: number; codAvailable: boolean };
 
 /**
  * Live shipping cost for a delivery pincode, straight from Shiprocket's own
@@ -234,7 +234,23 @@ export async function getShippingRate(
     const couriers = data?.data?.available_courier_companies as { rate: number }[] | undefined;
     if (!couriers || couriers.length === 0) return { status: "checked_unavailable" };
     const cheapest = Math.min(...couriers.map((c) => c.rate));
-    return { status: "available", rate: Math.ceil(cheapest) };
+
+    // COD coverage is narrower than prepaid (remote lanes often have a
+    // prepaid courier but no COD one) — check it separately so checkout can
+    // hide COD for that pincode instead of creating an order no courier
+    // will accept. A failed COD check falls back to "available" so our own
+    // outage never hides a payment option.
+    let codAvailable = true;
+    try {
+      const codData = await shiprocketFetch(
+        `/courier/serviceability/?pickup_postcode=${pickupPincode}&delivery_postcode=${deliveryPincode}&weight=${weight}&cod=1`
+      );
+      const codCouriers = codData?.data?.available_courier_companies as { cod?: number }[] | undefined;
+      codAvailable = !!codCouriers && codCouriers.some((c) => c.cod === undefined || Number(c.cod) === 1);
+    } catch (err) {
+      console.error("Shiprocket COD serviceability check failed", err);
+    }
+    return { status: "available", rate: Math.ceil(cheapest), codAvailable };
   } catch (err) {
     console.error("Shiprocket rate check failed", err);
     return { status: "check_failed" };
