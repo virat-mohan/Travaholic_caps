@@ -72,6 +72,8 @@ export type AdSetInsightRow = {
   purchaseValue: number;
   addToCarts: number;
   roas: number | null;
+  frequency: number;
+  ctr: number;
 };
 
 type RawInsight = {
@@ -83,6 +85,8 @@ type RawInsight = {
   spend?: string;
   impressions?: string;
   inline_link_clicks?: string;
+  frequency?: string;
+  inline_link_click_ctr?: string;
   actions?: { action_type: string; value: string }[];
   action_values?: { action_type: string; value: string }[];
 };
@@ -113,6 +117,8 @@ function toRow(r: RawInsight): AdSetInsightRow {
     purchaseValue: Math.round(purchaseValue),
     addToCarts: actionValue(r, "add_to_cart"),
     roas: spend > 0 ? Number((purchaseValue / spend).toFixed(2)) : null,
+    frequency: Number(r.frequency ?? 0),
+    ctr: Number(r.inline_link_click_ctr ?? 0),
   };
 }
 
@@ -124,7 +130,7 @@ export async function getAdSetInsightsDaily(since: string, until: string): Promi
     `https://graph.facebook.com/${GRAPH_VERSION}/${auth.account}/insights?` +
     new URLSearchParams({
       level: "adset",
-      fields: "campaign_id,campaign_name,adset_id,adset_name,spend,impressions,inline_link_clicks,actions,action_values",
+      fields: "campaign_id,campaign_name,adset_id,adset_name,spend,impressions,inline_link_clicks,frequency,inline_link_click_ctr,actions,action_values",
       time_range: JSON.stringify({ since, until }),
       time_increment: "1",
       limit: "500",
@@ -197,6 +203,12 @@ export async function setCampaignStatus(campaignId: string, status: "ACTIVE" | "
 export async function setCampaignDailyBudgetRupees(campaignId: string, rupees: number) {
   const auth = await getMetaMarketingAuth();
   await graphPost(campaignId, auth.accessToken, { daily_budget: Math.round(rupees * 100) });
+}
+
+/** In a CBO campaign ad sets have no budget of their own — a daily spend cap is the lever for "give this one less" without pausing it. Pass null to remove the cap. */
+export async function setAdSetDailySpendCapRupees(adsetId: string, rupees: number | null) {
+  const auth = await getMetaMarketingAuth();
+  await graphPost(adsetId, auth.accessToken, { daily_spend_cap: rupees === null ? 0 : Math.round(rupees * 100) });
 }
 
 export async function getCampaignDailyBudgetRupees(campaignId: string): Promise<number | null> {

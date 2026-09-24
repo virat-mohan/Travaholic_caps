@@ -13,6 +13,7 @@ import {
   setCampaignStatus,
   setCampaignDailyBudgetRupees,
   getCampaignDailyBudgetRupees,
+  setAdSetDailySpendCapRupees,
   createCustomerListAudience,
   createWebsiteAudience,
   createInstagramEngagersAudience,
@@ -52,12 +53,25 @@ import {
 
 const DEFAULT_CAP_RUPEES = 500;
 const DEFAULT_TARGET_ROAS = 4;
-const KILL_CONSECUTIVE_DAYS = 3;
+// Alert-only: N consecutive complete days under target is worth telling the
+// owner about, but at ₹250/day per ad set a day with zero orders is ordinary
+// variance, so it never pauses anything on its own.
+const ALERT_CONSECUTIVE_DAYS = 3;
 const MIN_DAILY_SPEND_TO_JUDGE = 100;
-const ZERO_PURCHASE_KILL_SPEND_7D = 1000;
+// Verdicts are spend-based: an ad set is only judged once it has spent
+// enough for ~6 expected orders at target (≈ ₹2,000 at ₹1,399 AOV / 4x).
+const MIN_SPEND_FOR_VERDICT = 2000;
+const KILL_ROAS_7D = 2; // below this over 7d (≥ MIN_SPEND) → pause and replace
+const THROTTLE_ROAS_7D = 3; // 2–3x → cut its CBO share 30% and flag a creative swap
+const THROTTLE_FACTOR = 0.7;
+const SCALE_ROAS_7D_FACTOR = 1.25; // ≥ 1.25× target (5x at a 4x target) → +20%
+const SCALE_MIN_PURCHASES_7D = 6;
 const SCALE_MULTIPLIER = 1.2;
-const SCALE_TRIGGER_ROAS_FACTOR = 1.25;
-const SCALE_MIN_PURCHASES_3D = 3;
+const BUDGET_CHANGE_COOLDOWN_MS = 72 * 3600 * 1000; // >20% edits reset Meta's learning phase
+const HALT_MIN_SPEND_7D = 3000;
+const FATIGUE_FREQUENCY = 3;
+const FATIGUE_CTR_DROP = 0.3; // last-3-day CTR down 30% vs the ad set's first week
+const LAUNCH_COOLDOWN_MS = 7 * 86400000; // at most one new experiment a week at this budget
 const TARGET_ACTIVE_ADSETS = 3;
 const SNAPSHOT_RETENTION_DAYS = 120;
 
@@ -95,6 +109,9 @@ export type PmExperiment = {
   endedAt?: string;
   resultNote?: string;
   source: "bootstrap" | "claude" | "manual";
+  /** Daily spend cap set on the ad set (CBO "give it less" lever), if throttled. */
+  spendCapRupees?: number;
+  needsCreativeRefresh?: boolean;
 };
 
 export type PmState = {
@@ -106,6 +123,10 @@ export type PmState = {
   lastSweepAt?: string;
   lastDigestDate?: string;
   lastIdeasDate?: string;
+  lastBudgetChangeAt?: string;
+  lastLaunchAt?: string;
+  /** Rolling alert flags surfaced in the report (not actions). */
+  alerts?: string[];
   productSetId?: string;
   landingUrl?: string;
 };
@@ -459,13 +480,21 @@ async function launchExperiment(state: PmState, exp: PmExperiment, campaignId: s
   return true;
 }
 
-async function refillActiveSlots(state: PmState, campaignId: string, audiences: Record<string, string>, max = TARGET_ACTIVE_ADSETS) {
+async function refillActiveSlots(state: PmState, campaignId: string, audiences: Record<string, string>, max = TARGET_ACTIVE_ADSETS, opts?: { ignoreCooldown?: boolean }) {
   let running = state.experiments.filter((e) => e.status === "running").length;
+  // One new ad set a week at this budget — more and none of them ever
+  // reaches the spend needed for a verdict. Bootstrap/relaunch bypass this.
+  const cooldownActive = !opts?.ignoreCooldown && !!state.lastLaunchAt && Date.now() - new Date(state.lastLaunchAt).getTime() < LAUNCH_COOLDOWN_MS;
   for (const exp of state.experiments) {
     if (running >= max) break;
+    if (cooldownActive) break;
     if (exp.status !== "planned" && exp.status !== "blocked") continue;
     try {
-      if (await launchExperiment(state, exp, campaignId, audiences)) running += 1;
+      if (await launchExperiment(state, exp, campaignId, audiences)) {
+        running += 1;
+        state.lastLaunchAt = nowIso();
+        if (!opts?.ignoreCooldown) break;
+      }
     } catch (err) {
       exp.status = "blocked";
       exp.resultNote = err instanceof Error ? err.message.slice(0, 300) : "launch failed";
@@ -512,7 +541,7 @@ export async function bootstrapPerformanceProgram(input?: { productSetId?: strin
   }
 
   if (state.experiments.length === 0) state.experiments = bootstrapExperiments();
-  await refillActiveSlots(state, campaignId, audiences);
+  await refillActiveSlots(state, campaignId, audiences, TARGET_ACTIVE_ADSETS, { ignoreCooldown: true });
 
   state.halted = false;
   await savePmState(state);
@@ -521,17 +550,36 @@ export async function bootstrapPerformanceProgram(input?: { productSetId?: strin
 
 // ---------------- Daily sweep ----------------
 
-type AdSetDay = { date: string; spend: number; purchases: number; purchaseValue: number; roas: number | null };
+type AdSetDay = { date: string; spend: number; purchases: number; purchaseValue: number; roas: number | null; impressions: number; linkClicks: number; frequency: number };
 
 function byAdset(rows: AdSetInsightRow[]) {
   const map = new Map<string, { name: string; campaignId: string; campaignName: string; days: AdSetDay[] }>();
   for (const r of rows) {
     const e = map.get(r.adsetId) ?? { name: r.adsetName, campaignId: r.campaignId, campaignName: r.campaignName, days: [] };
-    e.days.push({ date: r.date, spend: r.spend, purchases: r.purchases, purchaseValue: r.purchaseValue, roas: r.roas });
+    e.days.push({ date: r.date, spend: r.spend, purchases: r.purchases, purchaseValue: r.purchaseValue, roas: r.roas, impressions: r.impressions ?? 0, linkClicks: r.linkClicks ?? 0, frequency: r.frequency ?? 0 });
     map.set(r.adsetId, e);
   }
   for (const e of map.values()) e.days.sort((a, b) => (a.date < b.date ? 1 : -1));
   return map;
+}
+
+function ctrOf(days: AdSetDay[]) {
+  const imp = days.reduce((s, d) => s + d.impressions, 0);
+  const clicks = days.reduce((s, d) => s + d.linkClicks, 0);
+  return imp > 0 ? clicks / imp : null;
+}
+
+/** Real revenue (our orders table, all channels) ÷ managed ad spend over the window — the number Meta's attribution can't undercount. */
+async function computeMer(managedDays: AdSetDay[], windowDays: number) {
+  const dates = [...new Set(managedDays.map((d) => d.date))].sort().slice(-windowDays);
+  if (dates.length === 0) return { spend: 0, revenue: 0, orders: 0, mer: null as number | null, dates };
+  const spend = managedDays.filter((d) => dates.includes(d.date)).reduce((s, d) => s + d.spend, 0);
+  const supabase = getSupabaseServerClient();
+  const since = new Date(`${dates[0]}T00:00:00+05:30`).toISOString();
+  const until = new Date(new Date(`${dates[dates.length - 1]}T00:00:00+05:30`).getTime() + 86400000).toISOString();
+  const { data } = await supabase.from("orders").select("total").gte("created_at", since).lt("created_at", until).neq("status", "cancelled");
+  const revenue = (data ?? []).reduce((s, o) => s + (o.total ?? 0), 0);
+  return { spend, revenue, orders: (data ?? []).length, mer: spend > 0 ? revenue / spend : null, dates };
 }
 
 function consecutiveDaysBelow(days: AdSetDay[], target: number) {
@@ -578,23 +626,40 @@ export async function runPerformanceSweep() {
     const groups = byAdset(state.snapshots.filter((s) => s.campaignId === campaignId));
     const liveAdSets = await listAdSets([campaignId]);
 
-    // 1. Ad-set kill rules
+    // 1. Ad-set verdict ladder — spend-based, rolling 7 days. Nothing is
+    //    judged before it has spent MIN_SPEND_FOR_VERDICT; short streaks
+    //    under target only raise an alert.
+    state.alerts = [];
     for (const [adsetId, g] of groups) {
       const live = liveAdSets.find((a) => a.id === adsetId);
       if (!live || live.effectiveStatus !== "ACTIVE") continue;
       const exp = state.experiments.find((e) => e.adsetId === adsetId);
-      const below = consecutiveDaysBelow(g.days, config.targetRoas);
       const w7 = sumWindow(g.days, 7);
-      let reason: string | null = null;
-      if (below >= KILL_CONSECUTIVE_DAYS) {
-        reason = `${below} consecutive days under ${config.targetRoas}x ROAS (last 3 days: ${g.days
-          .slice(0, 3)
-          .map((d) => `${d.date} ₹${d.spend} → ${d.roas ?? 0}x`)
-          .join(", ")}).`;
-      } else if (w7.spend >= ZERO_PURCHASE_KILL_SPEND_7D && w7.purchases === 0) {
-        reason = `₹${w7.spend} spent over 7 days with zero purchases.`;
+      const roas7 = w7.roas ?? 0;
+      const below = consecutiveDaysBelow(g.days, config.targetRoas);
+      if (below >= ALERT_CONSECUTIVE_DAYS) {
+        state.alerts.push(`"${g.name}" is ${below} days under ${config.targetRoas}x (7d ₹${w7.spend} → ${roas7.toFixed(2)}x)${w7.spend < MIN_SPEND_FOR_VERDICT ? " — still under the ₹2,000 verdict threshold, watching" : ""}.`);
       }
-      if (reason) {
+
+      // Creative fatigue: high frequency or CTR down sharply vs the ad set's first week.
+      const firstWeek = g.days.slice(-7);
+      const last3 = g.days.slice(0, 3);
+      const ctrBase = ctrOf(firstWeek);
+      const ctrNow = ctrOf(last3);
+      const freq7 = w7.spend > 0 ? Math.max(...g.days.slice(0, 7).map((d) => d.frequency)) : 0;
+      const ctrDropped = ctrBase !== null && ctrNow !== null && g.days.length >= 10 && ctrNow < ctrBase * (1 - FATIGUE_CTR_DROP);
+      if ((freq7 > FATIGUE_FREQUENCY || ctrDropped) && exp && !exp.needsCreativeRefresh) {
+        exp.needsCreativeRefresh = true;
+        const why = freq7 > FATIGUE_FREQUENCY ? `frequency ${freq7.toFixed(1)} (>${FATIGUE_FREQUENCY})` : `CTR ${((ctrNow ?? 0) * 100).toFixed(2)}% vs ${((ctrBase ?? 0) * 100).toFixed(2)}% in week one`;
+        log(state, { entityType: "adset", entityId: adsetId, entityName: g.name, action: "creative_fatigue", reason: `${why} — swap the creative before touching the audience.` });
+        state.suggestions.push({ at: nowIso(), text: `Creative refresh needed on "${g.name}": ${why}. Try a different real-customer photo/reel with the same audience.` });
+        decisions.push(`Flagged creative fatigue on "${g.name}" (${why}).`);
+      }
+
+      if (w7.spend < MIN_SPEND_FOR_VERDICT) continue;
+
+      if (roas7 < KILL_ROAS_7D) {
+        const reason = `7-day ROAS ${roas7.toFixed(2)}x on ₹${w7.spend} (${w7.purchases} orders) — below the ${KILL_ROAS_7D}x kill line.`;
         await setAdSetStatus(adsetId, "PAUSED");
         if (exp) {
           exp.status = "lost";
@@ -603,6 +668,23 @@ export async function runPerformanceSweep() {
         }
         log(state, { entityType: "adset", entityId: adsetId, entityName: g.name, action: "paused", reason, before: "ACTIVE", after: "PAUSED" });
         decisions.push(`Paused "${g.name}": ${reason}`);
+      } else if (roas7 < THROTTLE_ROAS_7D) {
+        const avgDaily = Math.max(50, Math.round(w7.spend / Math.min(7, g.days.length)));
+        const cap = Math.round(avgDaily * THROTTLE_FACTOR);
+        if (!exp?.spendCapRupees || exp.spendCapRupees > cap) {
+          await setAdSetDailySpendCapRupees(adsetId, cap);
+          if (exp) exp.spendCapRupees = cap;
+          const reason = `7-day ROAS ${roas7.toFixed(2)}x (₹${w7.spend}, ${w7.purchases} orders) — between ${KILL_ROAS_7D}x and ${THROTTLE_ROAS_7D}x, so its daily share is capped at ₹${cap} and a creative swap is queued instead of killing the audience.`;
+          if (exp) exp.needsCreativeRefresh = true;
+          log(state, { entityType: "adset", entityId: adsetId, entityName: g.name, action: "throttled", reason, before: `₹${avgDaily}/day avg`, after: `cap ₹${cap}/day` });
+          decisions.push(`Throttled "${g.name}" to ₹${cap}/day: ${reason}`);
+        }
+      } else if (exp?.spendCapRupees && roas7 >= config.targetRoas) {
+        // Recovered — release the throttle so CBO can feed it again.
+        await setAdSetDailySpendCapRupees(adsetId, null);
+        exp.spendCapRupees = undefined;
+        log(state, { entityType: "adset", entityId: adsetId, entityName: g.name, action: "throttle_released", reason: `Back to ${roas7.toFixed(2)}x over 7 days.` });
+        decisions.push(`Released throttle on "${g.name}" (${roas7.toFixed(2)}x).`);
       }
     }
 
@@ -610,48 +692,70 @@ export async function runPerformanceSweep() {
     const managedDays = new Map<string, AdSetDay>();
     for (const g of groups.values()) {
       for (const d of g.days) {
-        const m = managedDays.get(d.date) ?? { date: d.date, spend: 0, purchases: 0, purchaseValue: 0, roas: null };
+        const m = managedDays.get(d.date) ?? { date: d.date, spend: 0, purchases: 0, purchaseValue: 0, roas: null, impressions: 0, linkClicks: 0, frequency: 0 };
         m.spend += d.spend;
         m.purchases += d.purchases;
         m.purchaseValue += d.purchaseValue;
+        m.impressions += d.impressions;
+        m.linkClicks += d.linkClicks;
         m.roas = m.spend > 0 ? Number((m.purchaseValue / m.spend).toFixed(2)) : null;
         managedDays.set(d.date, m);
       }
     }
     const blendedDays = [...managedDays.values()].sort((a, b) => (a.date < b.date ? 1 : -1));
     const blendedBelow = consecutiveDaysBelow(blendedDays, config.targetRoas);
-    const w3 = sumWindow(blendedDays, 3);
+    const w7 = sumWindow(blendedDays, 7);
+    const mer7 = await computeMer(blendedDays, 7);
     const currentBudget = (await getCampaignDailyBudgetRupees(campaignId)) ?? config.capRupees;
+    const budgetCooldownOver = !state.lastBudgetChangeAt || Date.now() - new Date(state.lastBudgetChangeAt).getTime() > BUDGET_CHANGE_COOLDOWN_MS;
 
     if (currentBudget > config.capRupees) {
       await setCampaignDailyBudgetRupees(campaignId, config.capRupees);
+      state.lastBudgetChangeAt = nowIso();
       log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "budget_capped", reason: "Budget was above the configured cap.", before: `₹${currentBudget}`, after: `₹${config.capRupees}` });
       decisions.push(`Budget pulled back to the ₹${config.capRupees}/day cap.`);
     }
 
-    if (blendedBelow >= KILL_CONSECUTIVE_DAYS) {
+    if (blendedBelow >= ALERT_CONSECUTIVE_DAYS) {
+      state.alerts.push(`Blended managed ROAS has been under ${config.targetRoas}x for ${blendedBelow} consecutive days (7d Meta ${(w7.roas ?? 0).toFixed(2)}x, real MER ${mer7.mer ? mer7.mer.toFixed(2) : "0"}x on ₹${mer7.spend}).`);
+    }
+
+    // Halt on the number Meta can't undercount: real revenue ÷ managed spend
+    // over 7 days, once there's enough spend for it to mean something.
+    const merHalt = mer7.spend >= HALT_MIN_SPEND_7D && (mer7.mer ?? 0) < config.targetRoas && (w7.roas ?? 0) < config.targetRoas;
+    if (merHalt && !state.halted) {
       await setCampaignStatus(campaignId, "PAUSED");
       state.halted = true;
       for (const e of state.experiments) {
         if (e.status === "running") {
           e.status = "paused";
-          e.resultNote = "Campaign halted: blended ROAS under target 3 days running.";
+          e.resultNote = "Campaign halted: 7-day MER and Meta ROAS both under target.";
         }
       }
-      const reason = `Blended managed ROAS under ${config.targetRoas}x for ${blendedBelow} consecutive days — campaign paused. Next queued experiment will relaunch on the following sweep.`;
+      const reason = `7-day real MER ${(mer7.mer ?? 0).toFixed(2)}x (₹${mer7.revenue} revenue on ₹${mer7.spend} spend) and Meta ROAS ${(w7.roas ?? 0).toFixed(2)}x are both under ${config.targetRoas}x — campaign paused. Relaunches with the next queued experiment on the following sweep.`;
       log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "halted", reason, before: "ACTIVE", after: "PAUSED" });
       decisions.push(reason);
     } else if (state.halted) {
-      // Relaunch with the next idea rather than sitting idle.
       await setCampaignStatus(campaignId, "ACTIVE");
       state.halted = false;
+      state.lastLaunchAt = undefined; // a relaunch is allowed to bring in a fresh experiment immediately
       log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "resumed", reason: "Relaunching with the next queued experiments after a halt.", before: "PAUSED", after: "ACTIVE" });
       decisions.push("Campaign resumed with fresh experiments after halt.");
-    } else if (w3.purchases >= SCALE_MIN_PURCHASES_3D && (w3.roas ?? 0) >= config.targetRoas * SCALE_TRIGGER_ROAS_FACTOR && currentBudget < config.capRupees) {
-      const next = Math.min(Math.round(currentBudget * SCALE_MULTIPLIER), config.capRupees);
-      await setCampaignDailyBudgetRupees(campaignId, next);
-      log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "budget_increased", reason: `3-day ROAS ${(w3.roas ?? 0).toFixed(2)}x on ${w3.purchases} purchases.`, before: `₹${currentBudget}`, after: `₹${next}` });
-      decisions.push(`Budget scaled ₹${currentBudget} → ₹${next} (3-day ROAS ${(w3.roas ?? 0).toFixed(2)}x).`);
+    } else if (
+      w7.purchases >= SCALE_MIN_PURCHASES_7D &&
+      (w7.roas ?? 0) >= config.targetRoas * SCALE_ROAS_7D_FACTOR &&
+      (mer7.mer ?? 0) >= config.targetRoas &&
+      currentBudget < config.capRupees
+    ) {
+      if (!budgetCooldownOver) {
+        decisions.push(`Scale condition met (7d ${(w7.roas ?? 0).toFixed(2)}x, MER ${(mer7.mer ?? 0).toFixed(2)}x) but the last budget change was under 72h ago — holding to protect the learning phase.`);
+      } else {
+        const next = Math.min(Math.round(currentBudget * SCALE_MULTIPLIER), config.capRupees);
+        await setCampaignDailyBudgetRupees(campaignId, next);
+        state.lastBudgetChangeAt = nowIso();
+        log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "budget_increased", reason: `7-day ROAS ${(w7.roas ?? 0).toFixed(2)}x on ${w7.purchases} purchases, MER ${(mer7.mer ?? 0).toFixed(2)}x.`, before: `₹${currentBudget}`, after: `₹${next}` });
+        decisions.push(`Budget scaled ₹${currentBudget} → ₹${next} (7-day ROAS ${(w7.roas ?? 0).toFixed(2)}x, MER ${(mer7.mer ?? 0).toFixed(2)}x).`);
+      }
     }
 
     // 3. Keep testing: fill empty slots from the queue (generate new ideas when the queue runs dry or weekly).
@@ -665,7 +769,7 @@ export async function runPerformanceSweep() {
           log(state, { entityType: "system", entityId: null, entityName: "ideas", action: "ideas_failed", reason: err instanceof Error ? err.message.slice(0, 300) : "unknown" });
         }
       }
-      await refillActiveSlots(state, campaignId, audiences);
+      await refillActiveSlots(state, campaignId, audiences, TARGET_ACTIVE_ADSETS, { ignoreCooldown: decisions.some((d) => d.startsWith("Campaign resumed")) });
     }
   } else {
     decisions.push("No managed campaign yet — run Bootstrap from /admin/performance.");
@@ -831,21 +935,41 @@ async function sendDailyReport(state: PmState, config: Awaited<ReturnType<typeof
     999
   );
   const queued = state.experiments.filter((e) => e.status === "planned").slice(0, 3);
+  const managedDayList = [...managedAll.values()].flatMap((g) => g.days);
+  const mer7 = await computeMer(managedDayList, 7);
+  const cpa7 = blended7.purchases > 0 ? Math.round(blended7.spend / blended7.purchases) : null;
+  const isMonday = new Date().toLocaleDateString("en-US", { timeZone: "Asia/Kolkata", weekday: "short" }) === "Mon";
+
+  const weekly = isMonday
+    ? [
+        "\n📅 WEEKLY REVIEW (last 7 days)",
+        `• Real MER: ${mer7.mer ? mer7.mer.toFixed(2) : "0"}x — ₹${mer7.revenue} site revenue (${mer7.orders} orders, all channels) on ₹${mer7.spend} ad spend`,
+        `• Meta ROAS: ${blended7.roas ? blended7.roas.toFixed(2) : 0}x · CPA ₹${cpa7 ?? "—"} (needs ≤ ₹${Math.round(1399 / config.targetRoas)} for ${config.targetRoas}x)`,
+        `• Experiments: ${state.experiments.filter((e) => e.status === "running").length} running, ${state.experiments.filter((e) => e.status === "lost").length} lost, ${state.experiments.filter((e) => e.status === "planned").length} queued`,
+        state.experiments.some((e) => e.needsCreativeRefresh && e.status === "running") ? `• Needs new creative: ${state.experiments.filter((e) => e.needsCreativeRefresh && e.status === "running").map((e) => e.name).join("; ")}` : "",
+        "• Your call this week: approve a creative angle, push the Buy-3 bundle, or give a borderline experiment one more week.",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : "";
+
   const text = [
     `Travaholic Ads — ${yesterday}`,
-    `Managed (target ${config.targetRoas}x, cap ₹${config.capRupees}/day): ${managed.length ? `${blended7.purchases} orders on ₹${blended7.spend} = ${blended7.roas ? blended7.roas.toFixed(2) : 0}x over the window` : "no managed spend yet"}`,
+    `Managed (target ${config.targetRoas}x, cap ₹${config.capRupees}/day): ${managed.length ? `${blended7.purchases} orders on ₹${blended7.spend} = ${blended7.roas ? blended7.roas.toFixed(2) : 0}x Meta · real MER ${mer7.mer ? mer7.mer.toFixed(2) : "0"}x · CPA ₹${cpa7 ?? "—"}` : "no managed spend yet"}`,
     fmt(managed) || "• (no managed ad sets ran)",
     others.length ? `\nOther campaigns (not managed):\n${fmt(others)}` : "",
     decisions.length ? `\nActions today:\n${decisions.map((d) => `• ${d}`).join("\n")}` : "\nActions today: none",
+    state.alerts?.length ? `\n⚠️ Watch:\n${state.alerts.map((a) => `• ${a}`).join("\n")}` : "",
     queued.length ? `\nNext up:\n${queued.map((e) => `• ${e.name}`).join("\n")}` : "",
     state.suggestions.length ? `\nSuggestions:\n${state.suggestions.slice(-3).map((s) => `• ${s.text}`).join("\n")}` : "",
-    state.halted ? "\n⚠️ Managed campaign is HALTED (blended ROAS under target 3 days). Relaunches with the next experiment on the next sweep." : "",
+    weekly,
+    state.halted ? "\n🛑 Managed campaign is HALTED (7-day MER and Meta ROAS both under target). Relaunches with the next experiment on the next sweep." : "",
   ]
     .filter(Boolean)
     .join("\n");
 
   const html = `<pre style="font-family:ui-monospace,Menlo,monospace;font-size:13px;white-space:pre-wrap">${text.replace(/</g, "&lt;")}</pre>`;
-  for (const to of config.alertEmails) await sendEmail(to, `Ads daily report — ${yesterday}`, html);
+  for (const to of config.alertEmails) await sendEmail(to, `${isMonday ? "Weekly ads review" : "Ads daily report"} — ${yesterday}`, html);
   if (config.alertWhatsApp) {
     const r = await sendWhatsAppSessionMessage(config.alertWhatsApp, text.slice(0, 3900));
     if (!r.sent) log(state, { entityType: "system", entityId: null, entityName: "digest", action: "whatsapp_skipped", reason: r.error ?? "not sent" });
