@@ -134,23 +134,31 @@ export async function buildShareCard(
   ctx.fillStyle = "#e6c68f";
   ctx.font = `700 30px ${BODY_FONT}`;
   ctx.letterSpacing = "3px";
-  ctx.fillText(TAGLINE, CANVAS_W / 2, CANVAS_H - 356);
+  ctx.fillText(TAGLINE, CANVAS_W / 2, CANVAS_H - 388);
   ctx.letterSpacing = "0px";
 
   // The domain, set in the same display face as the brand wordmark.
   ctx.fillStyle = "#f0eee4";
   ctx.font = `400 44px ${HEADLINE_FONT}`;
   ctx.letterSpacing = "2px";
-  ctx.fillText(siteDomain.toUpperCase(), CANVAS_W / 2, CANVAS_H - 296);
+  ctx.fillText(siteDomain.toUpperCase(), CANVAS_W / 2, CANVAS_H - 328);
   ctx.letterSpacing = "0px";
 
   // Code — its own voucher-style panel (gold-bordered box + label) instead
   // of loose centered text, so it reads as a real redeemable code rather
-  // than another line of copy.
-  const boxW = 640;
+  // than another line of copy. The box is sized from the code itself: a
+  // long first name + theme word (e.g. VIRATTRAILBLAZER) at this size and
+  // tracking runs well past a fixed 640px, so measure first, then draw.
+  const codeFontSize = couponCode.length > 16 ? 46 : 56;
+  const codeTracking = couponCode.length > 16 ? 6 : 9;
+  ctx.font = `700 ${codeFontSize}px ${BODY_FONT}`;
+  ctx.letterSpacing = `${codeTracking}px`;
+  const codeTextW = ctx.measureText(couponCode).width + codeTracking; // trailing spacing isn't measured
+  ctx.letterSpacing = "0px";
+  const boxW = Math.min(CANVAS_W - 112, Math.max(640, Math.ceil(codeTextW) + 96));
   const boxH = 132;
   const boxX = (CANVAS_W - boxW) / 2;
-  const boxY = CANVAS_H - 218;
+  const boxY = CANVAS_H - 250;
   ctx.strokeStyle = "#e6c68f";
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -164,14 +172,26 @@ export async function buildShareCard(
   ctx.letterSpacing = "0px";
 
   ctx.fillStyle = "#f0eee4";
-  ctx.font = `700 56px ${BODY_FONT}`;
-  ctx.letterSpacing = "9px";
-  ctx.fillText(couponCode, CANVAS_W / 2, boxY + 96);
+  ctx.font = `700 ${codeFontSize}px ${BODY_FONT}`;
+  ctx.letterSpacing = `${codeTracking}px`;
+  // Offset by half the trailing tracking so the glyphs sit optically centred.
+  ctx.fillText(couponCode, CANVAS_W / 2 + codeTracking / 2, boxY + 96);
   ctx.letterSpacing = "0px";
 
+  // Clear, imperative CTA under the box — what to do, where.
+  ctx.fillStyle = "#f0eee4";
+  ctx.font = `700 30px ${BODY_FONT}`;
+  ctx.letterSpacing = "3px";
+  ctx.fillText("USE THIS CODE & BUY", CANVAS_W / 2, boxY + boxH + 48);
+  ctx.letterSpacing = "0px";
+
+  // "Powered by Pay With A Post™" mark — on every card, bottom edge, quiet
+  // but legible, so the mechanic itself gets attribution as these travel.
   ctx.fillStyle = "#a8a8a0";
-  ctx.font = `400 26px ${BODY_FONT}`;
-  ctx.fillText("Use my code at checkout", CANVAS_W / 2, boxY + boxH + 46);
+  ctx.font = `400 22px ${BODY_FONT}`;
+  ctx.letterSpacing = "1px";
+  ctx.fillText("POWERED BY PAY WITH A POST™", CANVAS_W / 2, CANVAS_H - 30);
+  ctx.letterSpacing = "0px";
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png", 0.95));
 }

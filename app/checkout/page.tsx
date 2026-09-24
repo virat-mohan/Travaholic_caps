@@ -11,6 +11,7 @@ import { trackEvent, getSessionKey, getAttribution, getReferralCode } from "@/li
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
 import { PayWithAPostMark } from "@/components/ui/PayWithAPostMark";
+import { PENDING_COUPON_KEY } from "@/components/tracking/CouponCapture";
 
 const WHATSAPP_NUMBER = "918800339125";
 
@@ -90,7 +91,18 @@ export default function CheckoutPage() {
   function updateReferralCode(value: string) {
     setReferralCodeInput(value);
   }
+  // Pre-filled from a ?coupon= landing link (see CouponCapture) so a shopper
+  // arriving from a Pay With A Post share never has to retype the code.
   const [couponCodeInput, setCouponCodeInput] = useState("");
+  useEffect(() => {
+    try {
+      const pending = localStorage.getItem(PENDING_COUPON_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating from browser storage after mount, not derived state
+      if (pending) setCouponCodeInput(pending);
+    } catch {
+      // storage unavailable — the shopper can still type the code
+    }
+  }, []);
   const [couponPreview, setCouponPreview] = useState<{ checked: string; valid: boolean; discountRupees: number } | null>(null);
   const [couponChecking, setCouponChecking] = useState(false);
   const [paying, setPaying] = useState(false);

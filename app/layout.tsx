@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo_Black, Manrope } from "next/font/google";
 import { Navbar } from "@/components/navigation/Navbar";
 import { ScrollToTop } from "@/components/navigation/ScrollToTop";
+import { CouponCapture } from "@/components/tracking/CouponCapture";
 import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
 import { ClarityTracker } from "@/components/tracking/ClarityTracker";
 import { CartProvider } from "@/lib/cart";
@@ -94,6 +95,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ClarityTracker projectId={clarityProjectId} />
         <CartProvider>
           <ScrollToTop />
+          <CouponCapture />
           <Navbar />
           {children}
         </CartProvider>
