@@ -29,8 +29,17 @@ export async function getShareCardProductPool(): Promise<ShareCardProduct[]> {
     .map((c) => ({ imageUrl: chapterImageSrc(c.folder, c.sideImage), productName: c.name }));
 }
 
-/** Deterministic per seed (e.g. an order id) — same order always shows the same pick, different orders land on different products. */
-export function pickShareCardProduct(pool: ShareCardProduct[], seed: string): ShareCardProduct | null {
+/**
+ * With a sequence number (the order's position among barter orders), picks
+ * in rotation from a shuffled-but-fixed ordering of the pool, so every
+ * consecutive post gets a different cap and the whole catalogue cycles
+ * before any repeat. Falls back to a plain hash of the seed otherwise.
+ */
+export function pickShareCardProduct(pool: ShareCardProduct[], seed: string, sequence?: number): ShareCardProduct | null {
   if (pool.length === 0) return null;
-  return pool[hashToIndex(seed, pool.length)];
+  if (sequence === undefined) return pool[hashToIndex(seed, pool.length)];
+  // Fixed shuffle (by name hash) so the rotation doesn't just walk the
+  // catalogue in homepage order.
+  const shuffled = [...pool].sort((a, b) => hashToIndex(a.productName, 1_000_003) - hashToIndex(b.productName, 1_000_003));
+  return shuffled[sequence % shuffled.length];
 }

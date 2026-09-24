@@ -20,7 +20,7 @@ export default async function BarterOrderPage({ params }: { params: Promise<{ or
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, customer_name, barter_tier, barter_coupon_code, barter_required_orders, barter_post_url, barter_qualified_at, shiprocket_awb_code"
+      "id, created_at, customer_name, barter_tier, barter_coupon_code, barter_required_orders, barter_post_url, barter_qualified_at, shiprocket_awb_code"
     )
     .eq("id", orderId)
     .eq("is_post_barter", true)
@@ -31,12 +31,17 @@ export default async function BarterOrderPage({ params }: { params: Promise<{ or
   const instagramProfileUrl = `https://instagram.com/${brand.instagramHandle.replace(/^@/, "")}`;
   const isGiftFirst = order.barter_tier === "gift_first";
 
-  // A different Chapter per order (seeded on the order id, so the same
-  // order always shows the same pick) — the point being that a stream of
-  // these posts, once tagged/collaborator-added, reads as a varied lookbook
-  // rather than the same single cap shared by every barterer.
+  // A different Chapter per post, in rotation: this order's position among
+  // all barter orders picks the cap, so consecutive posts are guaranteed
+  // different (a plain hash of the id could repeat back-to-back). Stable
+  // per order — revisiting the page shows the same card.
   const productPool = await getShareCardProductPool();
-  const shareProduct = pickShareCardProduct(productPool, order.id);
+  const { count: earlierBarterOrders } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("is_post_barter", true)
+    .lt("created_at", order.created_at);
+  const shareProduct = pickShareCardProduct(productPool, order.id, earlierBarterOrders ?? undefined);
 
   let ordersSoFar = 0;
   if (order.barter_coupon_code) {
