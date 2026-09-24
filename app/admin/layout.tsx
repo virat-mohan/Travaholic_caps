@@ -21,6 +21,7 @@ const NAV_SECTIONS = [
       { href: "/admin/content-calendar", label: "Content Calendar" },
       { href: "/admin/reports", label: "Growth Reports" },
       { href: "/admin/abandoned-carts", label: "Abandoned Carts" },
+      { href: "/admin/performance", label: "Performance Manager" },
       { href: "/admin/agent-log", label: "Ad Agent" },
     ],
   },
@@ -56,6 +57,7 @@ const NAV_SECTIONS = [
     label: "Finance",
     links: [
       { href: "/admin/pnl", label: "P&L" },
+      { href: "/admin/business-plan", label: "Business Plan" },
       { href: "/admin/expenses", label: "Expenses" },
       { href: "/admin/discounts", label: "Discount Rules" },
       { href: "/admin/coupons", label: "Coupon Codes" },
