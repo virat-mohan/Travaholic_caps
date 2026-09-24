@@ -262,16 +262,42 @@ export async function cancelShiprocketOrder(shiprocketOrderId: string) {
  * recommendation (serviceability, rate, performance) rather than us
  * hardcoding a preference.
  */
-export async function assignShiprocketAwb(shipmentId: string) {
+export async function assignShiprocketAwb(shipmentId: string, courierId?: number) {
   const data = await shiprocketFetch("/courier/assign/awb", {
     method: "POST",
-    body: JSON.stringify({ shipment_id: Number(shipmentId) }),
+    body: JSON.stringify({ shipment_id: Number(shipmentId), ...(courierId ? { courier_id: courierId } : {}) }),
   });
   const response = data?.response?.data;
+  // Shiprocket returns 200 with awb_assign_status 0 and an error string when
+  // its auto-pick fails (e.g. "Selected courier not available between X and
+  // Y", or an insufficient wallet balance) — surface that instead of a
+  // silent null so the caller can log the real reason.
+  if (!response?.awb_code && response?.awb_assign_error) {
+    throw new Error(`Shiprocket AWB assignment failed: ${response.awb_assign_error}`);
+  }
   return {
     awbCode: response?.awb_code ? String(response.awb_code) : null,
     courierName: response?.courier_name ?? null,
   };
+}
+
+/** AWB/courier Shiprocket already holds for an order — e.g. one assigned manually in its dashboard that our DB never learned about. */
+export async function getShiprocketOrderAwb(shiprocketOrderId: string): Promise<{ awbCode: string | null; courierName: string | null }> {
+  const data = await shiprocketFetch(`/orders/show/${shiprocketOrderId}`);
+  const d = data?.data ?? data;
+  const awb = d?.awb_data?.awb || d?.shipments?.awb || null;
+  const courier = d?.awb_data?.courier_name || d?.shipments?.courier || d?.courier_name || null;
+  return { awbCode: awb ? String(awb) : null, courierName: courier ? String(courier) : null };
+}
+
+/** Cheapest courier Shiprocket says can actually serve this lane — used to retry a stuck AWB with an explicit courier when its auto-pick chose one that can't. */
+export async function findServiceableCourierId(pickupPincode: string, deliveryPincode: string, cod: boolean): Promise<number | null> {
+  const data = await shiprocketFetch(
+    `/courier/serviceability/?pickup_postcode=${pickupPincode}&delivery_postcode=${deliveryPincode}&weight=0.3&cod=${cod ? 1 : 0}`
+  );
+  const couriers: { courier_company_id: number; rate: number }[] = data?.data?.available_courier_companies ?? [];
+  if (couriers.length === 0) return null;
+  return couriers.sort((a, b) => a.rate - b.rate)[0].courier_company_id;
 }
 
 /**
