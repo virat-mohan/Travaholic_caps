@@ -2,6 +2,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getSetting, setSetting } from "@/lib/settings";
 import { getBrandProfile } from "@/lib/brand";
 import { sendEmail } from "@/lib/email";
+import { renderAdsReportHtml, type AdsReport, type ReportAdSet, type ReportAction } from "@/lib/ads-report-email";
 import { sendWhatsAppSessionMessage } from "@/lib/msg91";
 import {
   type AdSetInsightRow,
@@ -990,12 +991,164 @@ async function sendDailyReport(state: PmState, config: Awaited<ReturnType<typeof
     .filter(Boolean)
     .join("\n");
 
-  const html = `<pre style="font-family:ui-monospace,Menlo,monospace;font-size:13px;white-space:pre-wrap">${text.replace(/</g, "&lt;")}</pre>`;
+  const html = renderAdsReportHtml(
+    buildAdsReport({ state, config, yesterday, managed, others, blended7, mer7, cpa7, decisions, queued, isMonday })
+  );
   for (const to of config.alertEmails) await sendEmail(to, `${isMonday ? "Weekly ads review" : "Ads daily report"} — ${yesterday}`, html);
   if (config.alertWhatsApp) {
     const r = await sendWhatsAppSessionMessage(config.alertWhatsApp, text.slice(0, 3900));
     if (!r.sent) log(state, { entityType: "system", entityId: null, entityName: "digest", action: "whatsapp_skipped", reason: r.error ?? "not sent" });
   }
+}
+
+function addDaysIso(fromIso: string, days: number) {
+  return new Date(new Date(`${fromIso}T12:00:00+05:30`).getTime() + days * 86400000).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+}
+function whenLabel(isoDate: string) {
+  const today = istDate();
+  if (isoDate <= today) return "Today";
+  if (isoDate === addDaysIso(today, 1)) return "Tomorrow";
+  return new Date(`${isoDate}T12:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function buildAdsReport(p: {
+  state: PmState;
+  config: Awaited<ReturnType<typeof getPmConfig>>;
+  yesterday: string;
+  managed: AdSetInsightRow[];
+  others: AdSetInsightRow[];
+  blended7: ReturnType<typeof sumWindow>;
+  mer7: Awaited<ReturnType<typeof computeMer>>;
+  cpa7: number | null;
+  decisions: string[];
+  queued: PmExperiment[];
+  isMonday: boolean;
+}): AdsReport {
+  const { state, config, yesterday, managed, others, blended7, mer7, cpa7, decisions, queued, isMonday } = p;
+  const today = istDate();
+  const targetCpa = Math.round(1399 / config.targetRoas);
+  const weekStart = addDaysIso(yesterday, -6);
+
+  const byId = new Map<string, AdSetInsightRow[]>();
+  for (const r of managed) if (r.date >= weekStart) byId.set(r.adsetId, [...(byId.get(r.adsetId) ?? []), r]);
+  const adSets: ReportAdSet[] = [...byId.values()].map((rs) => {
+    const y = rs.find((r) => r.date === yesterday);
+    const spend = rs.reduce((s, r) => s + r.spend, 0);
+    const value = rs.reduce((s, r) => s + r.purchaseValue, 0);
+    return {
+      name: rs[0].adsetName.replace(/^PM \| /, ""),
+      yesterday: { spend: y?.spend ?? 0, purchases: y?.purchases ?? 0, roas: y?.roas ?? null },
+      week: {
+        spend,
+        value,
+        purchases: rs.reduce((s, r) => s + r.purchases, 0),
+        clicks: rs.reduce((s, r) => s + r.linkClicks, 0),
+        addToCarts: rs.reduce((s, r) => s + r.addToCarts, 0),
+        roas: spend > 0 ? value / spend : null,
+      },
+    };
+  });
+
+  // ---- Insights: plain-language reads of this week's numbers ----
+  const insights: string[] = [];
+  const clicks = adSets.reduce((s, a) => s + a.week.clicks, 0);
+  const carts = adSets.reduce((s, a) => s + a.week.addToCarts, 0);
+  const orders = adSets.reduce((s, a) => s + a.week.purchases, 0);
+  const spend = adSets.reduce((s, a) => s + a.week.spend, 0);
+  if (clicks > 0) {
+    if (carts > 0 && orders === 0) insights.push(`${clicks} clicks turned into ${carts} add-to-carts but no orders. Interest is there, so if carts keep not converting, the drop-off is at checkout, not in the ads.`);
+    else if (carts === 0) insights.push(`${clicks} clicks and no add-to-carts yet. People are visiting but not engaging with a product, which is usually a creative/landing mismatch.`);
+    else insights.push(`Funnel: ${clicks} clicks → ${carts} add-to-carts → ${orders} orders (${((orders / clicks) * 100).toFixed(1)}% click-to-order).`);
+  }
+  const withSpend = adSets.filter((a) => a.week.spend >= 50 && a.week.clicks > 0);
+  if (withSpend.length > 1) {
+    const cpc = (a: ReportAdSet) => a.week.spend / a.week.clicks;
+    const best = [...withSpend].sort((a, b) => cpc(a) - cpc(b))[0];
+    const worst = [...withSpend].sort((a, b) => cpc(b) - cpc(a))[0];
+    insights.push(`Cheapest traffic: ${best.name} at ${"₹" + cpc(best).toFixed(1)} per click. Most expensive: ${worst.name} at ${"₹" + cpc(worst).toFixed(1)}.`);
+    const bestCart = [...withSpend].sort((a, b) => b.week.addToCarts / b.week.clicks - a.week.addToCarts / a.week.clicks)[0];
+    if (bestCart.week.addToCarts > 0) insights.push(`Highest purchase intent: ${bestCart.name}, with ${bestCart.week.addToCarts} add-to-carts from ${bestCart.week.clicks} clicks.`);
+  }
+  if (spend > 0 && spend < 2000 * Math.max(1, adSets.length)) insights.push(`Each ad set needs about ₹2,000 of spend before a fair verdict. We're at ${"₹" + Math.round(spend).toLocaleString("en-IN")} across ${adSets.length}, so the numbers are still early signals.`);
+  if (cpa7 !== null) insights.push(cpa7 <= targetCpa ? `Cost per order ${"₹" + cpa7} is within the ${"₹" + targetCpa} needed for ${config.targetRoas}x.` : `Cost per order ${"₹" + cpa7} is above the ${"₹" + targetCpa} needed for ${config.targetRoas}x.`);
+  for (const a of state.alerts ?? []) insights.push(a);
+
+  // ---- Actions: what's scheduled, and when ----
+  const upcoming: ReportAction[] = [];
+  for (const a of adSets) {
+    if (a.week.spend >= 2000) continue;
+    const perDay = a.week.spend / 7 || 1;
+    const days = Math.max(1, Math.ceil((2000 - a.week.spend) / perDay));
+    upcoming.push({ when: whenLabel(addDaysIso(today, days)), what: `First verdict on ${a.name} once it reaches ₹2,000 spend: scale, hold, throttle or pause.`, owner: "System" });
+  }
+  if (state.lastBudgetChangeAt) {
+    const until = new Date(new Date(state.lastBudgetChangeAt).getTime() + 72 * 3600 * 1000).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    if (until > today) upcoming.push({ when: whenLabel(until), what: "Budget can move again. It's held for 72 hours after each change so Meta's learning isn't reset.", owner: "System" });
+  }
+  if (queued[0]) {
+    const next = state.lastLaunchAt ? addDaysIso(new Date(state.lastLaunchAt).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }), 7) : today;
+    upcoming.push({ when: whenLabel(next > today ? next : addDaysIso(today, 1)), what: `Next test launches: ${queued[0].name}.`, owner: "System" });
+  }
+  if (state.experiments.some((e) => e.targetingKind === "lookalike" && e.status === "blocked")) {
+    upcoming.push({ when: "Today", what: "Accept Meta's Custom Audience terms (one click in Ads Manager) to unlock the past-customer lookalike, the strongest audience on the account.", owner: "You" });
+  }
+  for (const e of state.experiments.filter((e) => e.needsCreativeRefresh && e.status === "running")) {
+    upcoming.push({ when: "This week", what: `Pick a new real-customer photo or reel for ${e.name}; the current creative is wearing out.`, owner: "You" });
+  }
+  const daysToMonday = (8 - new Date(`${today}T12:00:00+05:30`).getDay()) % 7 || 7;
+  upcoming.push({ when: whenLabel(addDaysIso(today, daysToMonday)), what: "Weekly review: 7-day ROAS and MER, what won, what was paused, and the next test.", owner: "System" });
+  upcoming.push({ when: "Tomorrow", what: "Next daily report, 8am.", owner: "System" });
+
+  const othersById = new Map<string, AdSetInsightRow[]>();
+  for (const r of others) if (r.date >= weekStart) othersById.set(r.campaignId, [...(othersById.get(r.campaignId) ?? []), r]);
+  const otherCampaigns = [...othersById.values()]
+    .map((rs) => {
+      const s = rs.reduce((t, r) => t + r.spend, 0);
+      const v = rs.reduce((t, r) => t + r.purchaseValue, 0);
+      return { name: rs[0].campaignName, spend7: s, purchases7: rs.reduce((t, r) => t + r.purchases, 0), roas7: s > 0 ? v / s : null };
+    })
+    .filter((o) => o.spend7 > 0);
+
+  return {
+    date: yesterday,
+    isWeekly: isMonday,
+    targetRoas: config.targetRoas,
+    capRupees: config.capRupees,
+    halted: state.halted,
+    adSets,
+    totals: {
+      spend: blended7.spend,
+      purchases: blended7.purchases,
+      value: blended7.value,
+      roas: blended7.roas,
+      mer: mer7.mer,
+      siteRevenue: mer7.revenue,
+      siteOrders: mer7.orders,
+      cpa: cpa7,
+      targetCpa,
+    },
+    insights: insights.slice(0, 6),
+    doneToday: decisions,
+    upcoming,
+    otherCampaigns,
+  };
+}
+
+/** Renders the current email report without sending it — for previewing the design. */
+export async function previewAdsReportHtml() {
+  const config = await getPmConfig();
+  const state = await getPmState();
+  const yesterday = istDate(-1);
+  const rows = await getAdSetInsightsDaily(istDate(-8), yesterday);
+  const managed = rows.filter((r) => config.managedCampaignIds.includes(r.campaignId));
+  const others = rows.filter((r) => !config.managedCampaignIds.includes(r.campaignId));
+  const managedDays = [...byAdset(managed).values()].flatMap((g) => g.days);
+  const blended7 = sumWindow(managedDays, 999);
+  const mer7 = await computeMer(managedDays, 7);
+  const cpa7 = blended7.purchases > 0 ? Math.round(blended7.spend / blended7.purchases) : null;
+  const queued = state.experiments.filter((e) => e.status === "planned").slice(0, 3);
+  const isMonday = new Date().toLocaleDateString("en-US", { timeZone: "Asia/Kolkata", weekday: "short" }) === "Mon";
+  return renderAdsReportHtml(buildAdsReport({ state, config, yesterday, managed, others, blended7, mer7, cpa7, decisions: [], queued, isMonday }));
 }
 
 /** Read-only account view for the admin page. */
