@@ -18,7 +18,7 @@ const BODY = "Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif";
 export type ReportAdSet = {
   name: string;
   yesterday: { spend: number; purchases: number; roas: number | null };
-  week: { spend: number; purchases: number; value: number; clicks: number; addToCarts: number; roas: number | null };
+  week: { spend: number; purchases: number; value: number; clicks: number; addToCarts: number; roas: number | null; activeDays: number };
 };
 
 export type ReportAction = { what: string; when: string; owner: "System" | "You" };

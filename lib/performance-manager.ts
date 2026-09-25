@@ -1045,6 +1045,7 @@ function buildAdsReport(p: {
         clicks: rs.reduce((s, r) => s + r.linkClicks, 0),
         addToCarts: rs.reduce((s, r) => s + r.addToCarts, 0),
         roas: spend > 0 ? value / spend : null,
+        activeDays: new Set(rs.filter((r) => r.spend > 0).map((r) => r.date)).size,
       },
     };
   });
@@ -1077,7 +1078,9 @@ function buildAdsReport(p: {
   const upcoming: ReportAction[] = [];
   for (const a of adSets) {
     if (a.week.spend >= 2000) continue;
-    const perDay = a.week.spend / 7 || 1;
+    // Average over days it actually ran, not a fixed 7 — a 2-day-old ad set
+    // averaged over 7 days pushes the estimate months out.
+    const perDay = a.week.spend / Math.max(1, a.week.activeDays) || 1;
     const days = Math.max(1, Math.ceil((2000 - a.week.spend) / perDay));
     upcoming.push({ when: whenLabel(addDaysIso(today, days)), what: `First verdict on ${a.name} once it reaches ₹2,000 spend: scale, hold, throttle or pause.`, owner: "System" });
   }
