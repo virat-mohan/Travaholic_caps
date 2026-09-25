@@ -120,10 +120,6 @@ export default function CheckoutPage() {
   // risk, so it blocks payment. A plain "unavailable" (our config, or a
   // transient API hiccup) never blocks — see getShippingRate's doc comment.
   const [shippingBlocking, setShippingBlocking] = useState(false);
-  // Pincode is deliverable prepaid but no courier offers COD on that lane —
-  // COD gets hidden rather than letting an order through that would strand
-  // at courier assignment.
-  const [codUnavailable, setCodUnavailable] = useState(false);
 
   // Straight-to-the-form flow: starts as "guest" so the form renders
   // immediately instead of waiting on the account-check network round trip
@@ -223,21 +219,16 @@ export default function CheckoutPage() {
             setShippingCharge(data.rate);
             setShippingUnavailable(false);
             setShippingBlocking(false);
-            const noCod = data.codAvailable === false;
-            setCodUnavailable(noCod);
-            if (noCod) setPaymentType((p) => (p === "cod_advance" ? "prepaid" : p));
           } else {
             setShippingCharge(null);
             setShippingUnavailable(true);
             setShippingBlocking(!!data.blocking);
-            setCodUnavailable(false);
           }
         })
         .catch(() => {
           setShippingCharge(null);
           setShippingUnavailable(false);
           setShippingBlocking(false);
-          setCodUnavailable(false);
         });
     }, 500);
     return () => clearTimeout(timeout);
@@ -726,21 +717,6 @@ export default function CheckoutPage() {
                     </span>
                     <span className="block font-bold uppercase tracking-[0.03em]">Prepaid</span>
                     <span className="block text-caption opacity-80">Free shipping, pay ₹{total.toLocaleString("en-IN")} now</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={codUnavailable}
-                    onClick={() => setPaymentType("cod_advance")}
-                    className={`flex-1 border px-4 py-2.5 text-left font-sans text-body-s transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      paymentType === "cod_advance" ? "border-ink bg-ink text-cream" : "border-ink/30 text-ink"
-                    }`}
-                  >
-                    <span className="block font-bold uppercase tracking-[0.03em]">Cash On Delivery</span>
-                    <span className="block text-caption opacity-80">
-                      {codUnavailable
-                        ? "Not available for this pincode — prepaid only"
-                        : `Pay ₹${razorpay.codAdvanceRupees.toLocaleString("en-IN")} now, rest on delivery`}
-                    </span>
                   </button>
                 </div>
               </div>

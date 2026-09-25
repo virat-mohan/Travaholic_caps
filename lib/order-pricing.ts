@@ -81,8 +81,10 @@ export async function computeTrustedOrderTotal(
     }
     // Server-side twin of the checkout's COD hiding — a tampered client
     // must not be able to place a COD order on a prepaid-only lane.
-    if (paymentType === "cod_advance" && shippingResult.status === "available" && !shippingResult.codAvailable) {
-      throw new Error(`Cash on Delivery isn't available for pincode ${deliveryPincode} — please pay online instead (shipping is free on prepaid).`);
+    // COD is switched off store-wide (prepaid only, free shipping) — refuse
+    // it here too so a cached/old checkout page can't still place one.
+    if (paymentType === "cod_advance") {
+      throw new Error("Cash on Delivery is no longer available — please pay online. Shipping is free on prepaid orders.");
     }
     const realRate = shippingResult.status === "available" ? shippingResult.rate : 0;
     shippingCharge = paymentType === "prepaid" ? 0 : realRate;
