@@ -12,9 +12,14 @@ import { sendMetaConversionEvent } from "@/lib/meta-conversions";
  */
 export async function markCartSessionConverted(
   sessionKey: string | undefined,
-  order: { id: string; customer_email: string; customer_phone: string; total: number }
+  order: { id: string; customer_email: string; customer_phone: string; total: number },
+  opts: { reportPurchaseToMeta?: boolean } = {}
 ) {
+  // An unpaid order request (the WhatsApp fallback) is not a purchase —
+  // reporting it made Meta count phantom purchases and optimise toward them.
+  const report = opts.reportPurchaseToMeta ?? true;
   if (!sessionKey) {
+    if (!report) return;
     await sendMetaConversionEvent("Purchase", {
       email: order.customer_email,
       phone: order.customer_phone,
@@ -43,6 +48,7 @@ export async function markCartSessionConverted(
     console.error("Failed to mark cart session converted", err);
   }
 
+  if (!report) return;
   await sendMetaConversionEvent("Purchase", {
     email: order.customer_email,
     phone: order.customer_phone,

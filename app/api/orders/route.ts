@@ -187,12 +187,17 @@ export async function POST(request: Request) {
       }
     }
 
-    await markCartSessionConverted(body.sessionKey, {
-      id: order.id,
-      customer_email: order.customer_email,
-      customer_phone: order.customer_phone,
-      total,
-    });
+    await markCartSessionConverted(
+      body.sessionKey,
+      {
+        id: order.id,
+        customer_email: order.customer_email,
+        customer_phone: order.customer_phone,
+        total,
+      },
+      // Unpaid WhatsApp order request — not a purchase until money arrives.
+      { reportPurchaseToMeta: false }
+    );
 
     if (body.newsletterOptIn != null) {
       await applyNewsletterOptIn(effectiveCustomerId, order.customer_email, body.newsletterOptIn);

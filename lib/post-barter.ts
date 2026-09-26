@@ -350,12 +350,17 @@ export async function createPostBarterOrder(payload: PostBarterOrderPayload) {
     await applyNewsletterOptIn(guestCustomer?.id ?? null, savedOrder.customer_email, payload.newsletterOptIn);
   }
 
-  await markCartSessionConverted(payload.sessionKey, {
-    id: savedOrder.id,
-    customer_email: savedOrder.customer_email,
-    customer_phone: savedOrder.customer_phone,
-    total: pricing.total,
-  });
+  await markCartSessionConverted(
+    payload.sessionKey,
+    {
+      id: savedOrder.id,
+      customer_email: savedOrder.customer_email,
+      customer_phone: savedOrder.customer_phone,
+      total: pricing.total,
+    },
+    // No money changed hands — reporting it would inflate Meta's ROAS.
+    { reportPurchaseToMeta: false }
+  );
 
   if (isGiftFirst) {
     await decrementInventoryAndShip(savedOrder.id);

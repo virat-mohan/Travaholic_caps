@@ -351,7 +351,6 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not create your order");
-      trackEvent("Purchase", { value: 0, eventId: data.orderId, contentIds: items.map((i) => i.slug) });
       clear();
       router.push(`/barter/${data.orderId}`);
     } catch (err) {
@@ -556,11 +555,8 @@ export default function CheckoutPage() {
       });
       const data = await res.json().catch(() => null);
       createdOrderId = data?.orderId ?? null;
-      trackEvent("Purchase", {
-        value: total,
-        eventId: createdOrderId ?? undefined,
-        contentIds: items.map((i) => i.slug),
-      });
+      // No Purchase event here: this is an unpaid order request, and
+      // reporting it made Meta count purchases that never happened.
     } catch (err) {
       // Best-effort logging — WhatsApp remains the real order channel either way.
       console.error("Order logging failed", err);
