@@ -45,7 +45,7 @@ function inr(n: number) {
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="border border-divider p-4">
+    <div className="admin-kpi rounded-xl border border-divider p-4">
       <p className="text-micro uppercase tracking-[0.05em] text-secondary-text">{label}</p>
       <p className="mt-1.5 font-display text-heading-s text-ink">{value}</p>
       {sub && <p className="mt-0.5 text-caption text-secondary-text">{sub}</p>}
@@ -57,9 +57,9 @@ function FunnelBar({ label, count, of, first }: { label: string; count: number; 
   const rate = of > 0 ? count / of : 0;
   return (
     <div className="flex items-center gap-3">
-      <p className="w-40 shrink-0 text-caption text-secondary-text">{label}</p>
-      <div className="h-6 flex-1 bg-surface-alt">
-        <div className="h-6 bg-ink" style={{ width: `${Math.max(rate * 100, count > 0 ? 2 : 0)}%` }} />
+      <p className="w-28 shrink-0 text-caption text-secondary-text md:w-40">{label}</p>
+      <div className="h-6 min-w-0 flex-1 overflow-hidden rounded-md bg-surface-alt">
+        <div className={`h-6 rounded-md ${first ? "admin-bar-fill-first" : "admin-bar-fill"}`} style={{ width: `${Math.max(rate * 100, count > 0 ? 2 : 0)}%` }} />
       </div>
       <p className="w-28 shrink-0 text-right text-caption text-ink">
         {count.toLocaleString("en-IN")} {!first && `(${pct(rate)})`}

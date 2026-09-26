@@ -37,7 +37,7 @@ export function OrderStatusCell({
       value={current}
       onChange={(e) => update(e.target.value)}
       disabled={saving}
-      className="border border-divider bg-surface px-2 py-1 font-sans text-caption text-ink"
+      className="admin-chip border border-divider px-2 py-1 font-sans text-caption text-ink"
     >
       {OPTIONS[field].map((o) => (
         <option key={o} value={o}>

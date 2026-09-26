@@ -197,7 +197,7 @@ export default function AdminPostBarterPage() {
 
 function StatCard({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={`border p-4 ${highlight ? "border-tan-gold bg-surface-alt" : "border-divider"}`}>
+    <div className={`admin-kpi rounded-xl border p-4 ${highlight ? "border-tan-gold bg-surface-alt" : "border-divider"}`}>
       <p className="text-micro uppercase tracking-[0.1em] text-secondary-text">{label}</p>
       <p className={`mt-1.5 font-display text-heading-s ${highlight ? "text-tan-gold" : "text-ink"}`}>{value}</p>
     </div>
