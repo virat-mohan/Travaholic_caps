@@ -112,7 +112,7 @@ export type PmExperiment = {
   launchedAt?: string;
   endedAt?: string;
   resultNote?: string;
-  source: "bootstrap" | "claude" | "manual";
+  source: "bootstrap" | "claude" | "manual" | "calendar";
   /** Daily spend cap set on the ad set (CBO "give it less" lever), if throttled. */
   spendCapRupees?: number;
   needsCreativeRefresh?: boolean;
@@ -1152,6 +1152,75 @@ export async function previewAdsReportHtml() {
   const queued = state.experiments.filter((e) => e.status === "planned").slice(0, 3);
   const isMonday = new Date().toLocaleDateString("en-US", { timeZone: "Asia/Kolkata", weekday: "short" }) === "Mon";
   return renderAdsReportHtml(buildAdsReport({ state, config, yesterday, managed, others, blended7, mer7, cpa7, decisions: [], queued, isMonday }));
+}
+
+/**
+ * A content-calendar "launch" runs inside the managed campaign instead of
+ * as its own campaign: it promotes the brief's matching Instagram post
+ * (same chapter, or same headline for brand posts) so the post's likes and
+ * comments travel with the ad, targeting the ICP (men 18–44, travel +
+ * streetwear interests, past buyers excluded). Launched on the calendar
+ * date itself — calendar launches are the owner's plan, so they bypass the
+ * one-new-test-a-week cooldown and the 3-slot cap; the normal verdict
+ * ladder still judges them like any other ad set. Falls back to a catalog
+ * ad with the brief's copy when no matching post has been published yet.
+ */
+export async function launchCalendarBriefInManagedCampaign(briefId: string) {
+  const supabase = getSupabaseServerClient();
+  const config = await getPmConfig();
+  const campaignId = config.managedCampaignIds[0];
+  if (!campaignId) throw new Error("No managed campaign — run Bootstrap on /admin/performance first");
+
+  const { data: brief } = await supabase
+    .from("ad_briefs")
+    .select("id, headline, primary_text, chapter_slug, chapter_slugs")
+    .eq("id", briefId)
+    .maybeSingle();
+  if (!brief) throw new Error("Brief not found");
+
+  const chapter = brief.chapter_slug ?? brief.chapter_slugs?.[0] ?? null;
+  let postQuery = supabase
+    .from("ad_briefs")
+    .select("instagram_post_id, headline, posted_at")
+    .not("instagram_post_id", "is", null)
+    .order("posted_at", { ascending: false })
+    .limit(1);
+  postQuery = chapter ? postQuery.eq("chapter_slug", chapter) : postQuery.eq("headline", brief.headline);
+  const { data: post } = await postQuery.maybeSingle();
+
+  const state = await getPmState();
+  const audiences = await ensureAudiences(state);
+  const exp: PmExperiment = {
+    id: newId(),
+    name: `Calendar | ${brief.headline} | Men 18-44`,
+    hypothesis: post
+      ? `Calendar launch: promotes the "${post.headline}" Instagram post so its engagement carries into the ad.`
+      : `Calendar launch: catalog ad with the scheduled copy (no matching Instagram post was live yet).`,
+    targetingKind: "interests",
+    interestKeywords: ["Streetwear", "Baseball cap", "Travel", "Adventure travel"],
+    excludeAudienceKeys: ["pastAll", "purchasers180"],
+    ageMin: 18,
+    ageMax: 44,
+    genders: [1],
+    creativeKind: post ? "ig_post" : "catalog",
+    igMediaId: post?.instagram_post_id ?? undefined,
+    messages: [brief.primary_text, "Free shipping on every prepaid order. Buy 3, get 1 free — applied automatically at checkout."],
+    status: "planned",
+    createdAt: nowIso(),
+    source: "calendar",
+  };
+  state.experiments.unshift(exp);
+  const ok = await launchExperiment(state, exp, campaignId, audiences);
+  if (!ok) {
+    await savePmState(state);
+    throw new Error(exp.resultNote ?? "Calendar launch could not start");
+  }
+  await savePmState(state);
+  await supabase
+    .from("ad_briefs")
+    .update({ status: "launched", queue_status: "published", launched_at: nowIso(), meta_campaign_id: campaignId, meta_adset_id: exp.adsetId ?? null, meta_ad_id: exp.adIds?.[0] ?? null })
+    .eq("id", briefId);
+  return { adsetId: exp.adsetId, creative: exp.creativeKind };
 }
 
 /** Read-only account view for the admin page. */

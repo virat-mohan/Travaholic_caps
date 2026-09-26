@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { postBriefToInstagram, launchBriefCampaign } from "@/lib/ad-brief-publish";
+import { postBriefToInstagram } from "@/lib/ad-brief-publish";
+import { launchCalendarBriefInManagedCampaign } from "@/lib/performance-manager";
 
 async function assertAuthorized(request: Request) {
   const secret = await getSetting("CRON_SECRET");
@@ -31,11 +32,9 @@ export async function GET(request: Request) {
   for (const brief of due ?? []) {
     try {
       if (brief.scheduled_action === "launch") {
-        await launchBriefCampaign(brief.id, {
-          dailyBudgetRupees: brief.ad_daily_budget_rupees ?? 500,
-          cta: brief.ad_cta_override || undefined,
-          targeting: { ageMin: brief.ad_age_min, ageMax: brief.ad_age_max, gender: brief.ad_gender },
-        });
+        // Runs inside the Performance Manager's campaign (its budget cap and
+        // ROAS rules), not as a separate campaign of its own.
+        await launchCalendarBriefInManagedCampaign(brief.id);
       } else {
         await postBriefToInstagram(brief.id);
       }
