@@ -80,6 +80,8 @@ export const SETTINGS_KEYS = [
   "PM_ALERT_WHATSAPP",
   "PM_ALERT_EMAIL",
   "PM_COPY_RULES",
+  "DELIVERY_ALERT_WHATSAPP",
+  "MSG91_DELIVERY_ALERT_TEMPLATE_ID",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

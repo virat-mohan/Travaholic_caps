@@ -1,6 +1,6 @@
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { sendMsg91WhatsAppFlow, sendMsg91Template } from "@/lib/msg91";
+import { sendMsg91WhatsAppFlow, sendMsg91Template, sendWhatsAppSessionMessage } from "@/lib/msg91";
 import { generateAndUploadOrderCard } from "@/lib/order-card";
 
 type OrderForWhatsApp = { id: string; customer_name: string; customer_phone: string; total: number };
@@ -348,4 +348,39 @@ export async function sendWinbackWhatsApp(phone: string, name: string, milesBala
   const msg91TemplateName = await getSetting("MSG91_WINBACK_TEMPLATE_ID");
   const variables = [name, String(milesBalance)];
   return sendTemplateByName(phone, "winback", msg91TemplateName, variables, {});
+}
+
+/**
+ * Internal ops alert — tells the team (DELIVERY_ALERT_WHATSAPP, e.g. Manish)
+ * that an order just reached the customer. Uses the approved template when
+ * MSG91_DELIVERY_ALERT_TEMPLATE_ID is set (variables: order number, customer
+ * name, city, items); otherwise falls back to a free-text session message,
+ * which only lands inside Meta's 24h window. Returns one result per number
+ * so the caller can record exactly who was told.
+ */
+export async function sendDeliveryAlertWhatsApp(order: {
+  id: string;
+  customer_name: string;
+  delivery_city: string | null;
+  itemsLine: string;
+}) {
+  const numbers = ((await getSetting("DELIVERY_ALERT_WHATSAPP")) ?? "")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  const templateName = await getSetting("MSG91_DELIVERY_ALERT_TEMPLATE_ID");
+  const orderNo = order.id.slice(0, 8).toUpperCase();
+  const city = order.delivery_city ?? "—";
+
+  const results: { phone: string; sent: boolean }[] = [];
+  for (const phone of numbers) {
+    const res = templateName
+      ? await sendMsg91Template(templateName, phone, [orderNo, order.customer_name, city, order.itemsLine])
+      : await sendWhatsAppSessionMessage(
+          phone,
+          `✅ Delivered: order #${orderNo} for ${order.customer_name} (${city}) — ${order.itemsLine}.`
+        );
+    results.push({ phone, sent: res.sent });
+  }
+  return results;
 }

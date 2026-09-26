@@ -55,6 +55,8 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "PM_ALERT_WHATSAPP", label: "Alert WhatsApp Number", hint: "Owner's number with country code (e.g. 919999277240) for the daily performance report and halt alerts. Session messages only deliver if you've messaged the business number in the last 24h — the email report always goes out regardless." },
       { key: "PM_ALERT_EMAIL", label: "Alert Email", hint: "Comma-separated emails for the daily performance report. Defaults to the Warehouse Email setting if blank." },
       { key: "PM_COPY_RULES", label: "Ad Copy Rules", hint: "Plain-English rules every generated ad copy must obey (e.g. no discount percentages, no COD encouragement, always mention free shipping on prepaid). Fed to Claude when it proposes new experiments." },
+      { key: "DELIVERY_ALERT_WHATSAPP", label: "Delivery Alert WhatsApp", hint: "Comma-separated numbers with country code (e.g. Manish) who get a WhatsApp each time an order is delivered. Every delivery is also logged against the order in the backend." },
+      { key: "MSG91_DELIVERY_ALERT_TEMPLATE_ID", label: "Delivery Alert Template", hint: "Approved MSG91 template name with 4 variables: order number, customer name, city, items. Without it a free-text message is sent, which only delivers if that number messaged the business number in the last 24h." },
     ],
   },
   {

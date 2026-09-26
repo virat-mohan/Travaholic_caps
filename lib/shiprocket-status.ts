@@ -1,5 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { sendNdrWhatsApp, sendRtoInitiatedWhatsApp, sendRtoRefundedWhatsApp, sendReviewRequestWhatsApp } from "@/lib/whatsapp-notify";
+import { sendDeliveryAlertWhatsApp, sendNdrWhatsApp, sendRtoInitiatedWhatsApp, sendRtoRefundedWhatsApp, sendReviewRequestWhatsApp } from "@/lib/whatsapp-notify";
 import { sendReviewRequestEmail, sendRtoInitiatedEmail, sendRtoRefundedEmail } from "@/lib/email";
 import { refundRazorpayPayment } from "@/lib/razorpay";
 import { checkAndAlertLowStock } from "@/lib/inventory";
@@ -43,7 +43,7 @@ export async function applyShipmentStatusUpdate(input: {
   let lookup = supabase
     .from("orders")
     .select(
-      "id, customer_name, customer_phone, customer_email, shipment_status, review_requested_at, total, shipping_charge, refunded_amount, razorpay_payment_id, rto_notified_at, rto_processed_at, delivered_at"
+      "id, customer_name, customer_phone, customer_email, shipment_status, review_requested_at, total, shipping_charge, refunded_amount, razorpay_payment_id, rto_notified_at, rto_processed_at, delivered_at, delivery_city"
     );
   if (orderId) lookup = lookup.eq("id", orderId);
   else if (shipmentId) lookup = lookup.eq("shiprocket_shipment_id", shipmentId);
@@ -176,6 +176,24 @@ export async function applyShipmentStatusUpdate(input: {
   // duplicate/retried "delivered" hit.
   if (isDelivered && !wasDelivered && !existing.delivered_at) {
     await supabase.from("orders").update({ delivered_at: new Date().toISOString() }).eq("id", existing.id);
+    await logOrderEvent(existing.id, "delivered", [courierName, awbCode].filter(Boolean).join(" · ") || newStatus);
+
+    // Tell the team it landed, and keep a record of who was told in the
+    // order's timeline — same transition guard, so never sent twice.
+    const { data: alertItems } = await supabase
+      .from("order_items")
+      .select("chapter_name, quantity")
+      .eq("order_id", existing.id);
+    const itemsLine = (alertItems ?? []).map((i) => `${i.chapter_name} ×${i.quantity}`).join(", ") || "items";
+    const alerts = await sendDeliveryAlertWhatsApp({
+      id: existing.id,
+      customer_name: existing.customer_name,
+      delivery_city: existing.delivery_city,
+      itemsLine,
+    });
+    for (const a of alerts) {
+      await logOrderEvent(existing.id, a.sent ? "delivery_alert_sent" : "delivery_alert_failed", a.phone);
+    }
   }
 
   // Same transition-only guard, plus review_requested_at as a second safety
