@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import { WhatsAppIcon } from "@/components/contact/WhatsAppIcon";
@@ -28,6 +29,7 @@ const links = [
 ];
 
 export function Navbar() {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -44,6 +46,9 @@ export function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // The admin area has its own shell and top bar.
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <header
