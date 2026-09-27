@@ -161,7 +161,7 @@ export function renderAdsReportHtml(r: AdsReport) {
 
   <tr><td style="padding:36px 32px 8px">
     <div style="border-top:2px solid ${C.ink};padding-top:14px;font-family:${BODY};font-size:12px;line-height:1.6;color:${C.dim}">
-      Made by <b style="color:${C.ink}">DevShop™ Retail OS™</b> · For further information: <b style="color:${C.ink}">Virat Mohan</b> · viratmohan@gmail.com · +91 99992 77240 · <a href="https://viratmohan.com" style="color:${C.terracotta}">viratmohan.com</a>
+      Made by <b style="color:${C.ink}">DevShop™ Retail OS™</b> · For further information: <b style="color:${C.ink}">Virat Mohan</b> · founder@viratmohan.com · +91 99992 77240 · <a href="https://viratmohan.com" style="color:${C.terracotta}">viratmohan.com</a>
     </div>
   </td></tr>
 
