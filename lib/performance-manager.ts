@@ -79,6 +79,7 @@ const FATIGUE_FREQUENCY = 3;
 const FATIGUE_CTR_DROP = 0.3; // last-3-day CTR down 30% vs the ad set's first week
 const LAUNCH_COOLDOWN_MS = 7 * 86400000; // at most one new experiment a week at this budget
 const TARGET_ACTIVE_ADSETS = 3;
+const WARM_ADSET_SLOTS = 2;
 const SNAPSHOT_RETENTION_DAYS = 120;
 
 export type PmAction = {
@@ -508,17 +509,23 @@ async function launchExperiment(state: PmState, exp: PmExperiment, campaignId: s
 }
 
 async function refillActiveSlots(state: PmState, campaignId: string, audiences: Record<string, string>, max = TARGET_ACTIVE_ADSETS, opts?: { ignoreCooldown?: boolean }) {
-  let running = state.experiments.filter((e) => e.status === "running").length;
+  // Warm audiences (retargeting, past buyers) get their own two slots —
+  // they're the cheapest revenue in the account and shouldn't wait behind
+  // prospecting tests for a free slot.
+  const isWarm = (e: PmExperiment) => e.targetingKind === "retargeting";
+  let running = state.experiments.filter((e) => e.status === "running" && !isWarm(e)).length;
+  let warmRunning = state.experiments.filter((e) => e.status === "running" && isWarm(e)).length;
   // One new ad set a week at this budget — more and none of them ever
   // reaches the spend needed for a verdict. Bootstrap/relaunch bypass this.
   const cooldownActive = !opts?.ignoreCooldown && !!state.lastLaunchAt && Date.now() - new Date(state.lastLaunchAt).getTime() < LAUNCH_COOLDOWN_MS;
   for (const exp of state.experiments) {
-    if (running >= max) break;
     if (cooldownActive) break;
     if (exp.status !== "planned" && exp.status !== "blocked") continue;
+    if (isWarm(exp) ? warmRunning >= WARM_ADSET_SLOTS : running >= max) continue;
     try {
       if (await launchExperiment(state, exp, campaignId, audiences)) {
-        running += 1;
+        if (isWarm(exp)) warmRunning += 1;
+        else running += 1;
         state.lastLaunchAt = nowIso();
         if (!opts?.ignoreCooldown) break;
       }
