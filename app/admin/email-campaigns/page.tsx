@@ -19,13 +19,28 @@ const pct = (a: number, b: number) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` 
 
 export default function EmailCampaignsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<string | null>(null);
 
-  useEffect(() => {
+  function load() {
     fetch("/api/admin/email-campaigns")
       .then((r) => r.json())
       .then(setStats)
       .catch(() => setStats(null));
-  }, []);
+  }
+  useEffect(load, []);
+
+  async function sendNextBatch() {
+    if (!window.confirm("Send the next batch of the Welcome Back email now?")) return;
+    setSending(true);
+    setSendResult(null);
+    const data = await fetch("/api/admin/email-campaigns", { method: "POST" })
+      .then((r) => r.json())
+      .catch(() => null);
+    setSending(false);
+    setSendResult(data ? `Sent ${data.sent}. ${data.remaining ?? "?"} remaining. ${data.note ?? ""}` : "Send failed");
+    load();
+  }
 
   const tiles = stats
     ? [
@@ -47,6 +62,20 @@ export default function EmailCampaignsPage() {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-display text-heading-s uppercase text-ink">Welcome Back · 15% off (WELCOMEBACK15)</h2>
           <p className="text-body-s text-secondary-text">Past customers · sent daily in batches until everyone has it · 24h offer per batch</p>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={sendNextBatch}
+            disabled={sending}
+            className="bg-ink px-4 py-2 text-micro uppercase tracking-[0.08em] text-cream disabled:opacity-50"
+          >
+            {sending ? "Sending…" : "Send next batch now"}
+          </button>
+          <button type="button" onClick={load} className="border border-divider px-4 py-2 text-micro uppercase tracking-[0.08em] text-secondary-text">
+            Refresh
+          </button>
+          {sendResult && <span className="text-caption text-secondary-text">{sendResult}</span>}
         </div>
 
         {!stats ? (

@@ -198,6 +198,10 @@ export async function getCachedClarityInsights(): Promise<ClaritySnapshot | null
 const RAGE_CLICK_FLAG_THRESHOLD = 3;
 const DEAD_CLICK_FLAG_THRESHOLD = 3;
 const SCRIPT_ERROR_FLAG_THRESHOLD = 1;
+// A landing page where a third of visitors bounce straight back is losing
+// paid traffic — the homepage hit 63% in Sept 2026 from raw 1MB PNGs.
+const QUICKBACK_MIN_SESSIONS = 10;
+const QUICKBACK_FLAG_RATE = 0.3;
 
 export type InsightFinding = {
   url: string;
@@ -226,9 +230,34 @@ export function deriveFindings(snapshot: ClaritySnapshot): InsightFinding[] {
     if (u.scriptErrors >= SCRIPT_ERROR_FLAG_THRESHOLD) {
       issues.push(`${u.scriptErrors} JS errors (a real bug throwing in the browser on this page)`);
     }
+    const quickbackRate = u.sessions > 0 ? u.quickbacks / u.sessions : 0;
+    if (u.sessions >= QUICKBACK_MIN_SESSIONS && quickbackRate >= QUICKBACK_FLAG_RATE) {
+      issues.push(`${Math.round(quickbackRate * 100)}% quickbacks (${u.quickbacks} of ${u.sessions} visitors left almost immediately — slow load, or the page doesn't match what they clicked)`);
+    }
     if (issues.length === 0) continue;
-    const severity: InsightFinding["severity"] = u.scriptErrors > 0 || u.rageClicks >= 8 ? "high" : "medium";
+    const severity: InsightFinding["severity"] =
+      u.scriptErrors > 0 || u.rageClicks >= 8 || (u.sessions >= QUICKBACK_MIN_SESSIONS && quickbackRate >= 0.5) ? "high" : "medium";
     findings.push({ url: u.url, severity, summary: issues.join("; ") });
   }
   return findings.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "high" ? -1 : 1));
+}
+
+export type FindingStatus = "open" | "fix_requested" | "fixed" | "ignored";
+export type FindingStatusEntry = { status: FindingStatus; note?: string; at: string };
+
+/** Per-URL action state set from the UX Insights dashboard (Request fix / Mark fixed / Ignore). */
+export async function getFindingStatuses(): Promise<Record<string, FindingStatusEntry>> {
+  const raw = await getSetting("UX_FINDING_STATUS");
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function setFindingStatus(url: string, status: FindingStatus, note?: string) {
+  const all = await getFindingStatuses();
+  all[url] = { status, note: note?.slice(0, 500), at: new Date().toISOString() };
+  await setSetting("UX_FINDING_STATUS", JSON.stringify(all));
+  return all;
 }

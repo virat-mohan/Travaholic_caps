@@ -83,6 +83,7 @@ export const SETTINGS_KEYS = [
   "DELIVERY_ALERT_WHATSAPP",
   "MSG91_DELIVERY_ALERT_TEMPLATE_ID",
   "CHECKOUT_HEALTH_LAST_ALERT",
+  "UX_FINDING_STATUS",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];

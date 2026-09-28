@@ -17,6 +17,16 @@ type Finding = { url: string; severity: "high" | "medium"; summary: string };
 
 type Snapshot = { fetchedAt: string; numOfDays: number; urls: UrlInsight[] };
 
+type FindingStatus = "open" | "fix_requested" | "fixed" | "ignored";
+type StatusEntry = { status: FindingStatus; note?: string; at: string };
+
+const STATUS_LABEL: Record<FindingStatus, string> = {
+  open: "Open",
+  fix_requested: "Fix requested",
+  fixed: "Fixed",
+  ignored: "Ignored",
+};
+
 function formatFetchedAt(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -34,6 +44,19 @@ export default function UxInsightsPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statuses, setStatuses] = useState<Record<string, StatusEntry>>({});
+  const [clarityProjectId, setClarityProjectId] = useState<string | null>(null);
+
+  async function setStatus(url: string, status: FindingStatus) {
+    const note = status === "fixed" || status === "fix_requested" ? window.prompt("Note (optional)") ?? undefined : undefined;
+    const res = await fetch("/api/admin/ux-insights", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, status, note }),
+    });
+    const data = await res.json();
+    if (res.ok) setStatuses(data.statuses ?? {});
+  }
 
   function load() {
     fetch("/api/admin/ux-insights")
@@ -42,6 +65,8 @@ export default function UxInsightsPage() {
         setSnapshot(data.snapshot ?? null);
         setFindings(data.findings ?? []);
         setApiCallsUsedToday(data.apiCallsUsedToday ?? 0);
+        setStatuses(data.statuses ?? {});
+        setClarityProjectId(data.clarityProjectId ?? null);
       })
       .finally(() => setLoading(false));
   }
@@ -125,6 +150,38 @@ export default function UxInsightsPage() {
                       <span className="font-sans text-body-s text-ink">{f.url}</span>
                     </div>
                     <p className="mt-1.5 text-caption text-secondary-text">{f.summary}</p>
+                    {statuses[f.url] && statuses[f.url].status !== "open" && (
+                      <p className="mt-1.5 text-caption text-ink">
+                        <b>{STATUS_LABEL[statuses[f.url].status]}</b> · {formatFetchedAt(statuses[f.url].at)}
+                        {statuses[f.url].note ? ` · ${statuses[f.url].note}` : ""}
+                      </p>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {clarityProjectId && (
+                        <a
+                          href={`https://clarity.microsoft.com/projects/view/${clarityProjectId}/impressions?URL=${encodeURIComponent(`1;1;${f.url}`)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="border border-ink px-3 py-1.5 text-micro uppercase tracking-[0.08em] text-ink"
+                        >
+                          Watch recordings
+                        </a>
+                      )}
+                      {(["fix_requested", "fixed", "ignored", "open"] as FindingStatus[])
+                        .filter((s) => (statuses[f.url]?.status ?? "open") !== s)
+                        .map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setStatus(f.url, s)}
+                            className={`px-3 py-1.5 text-micro uppercase tracking-[0.08em] ${
+                              s === "fix_requested" ? "bg-ink text-cream" : "border border-divider text-secondary-text"
+                            }`}
+                          >
+                            {s === "fix_requested" ? "Request fix" : s === "fixed" ? "Mark fixed" : s === "ignored" ? "Ignore" : "Reopen"}
+                          </button>
+                        ))}
+                    </div>
                   </div>
                 ))}
               </div>
