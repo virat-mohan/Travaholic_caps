@@ -1114,7 +1114,8 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-1 gap-4 border-t border-divider pt-6 sm:grid-cols-2">
                 <div>
                   <label className="block font-sans text-caption uppercase tracking-[0.1em] text-secondary-text">
-                    Got A Code From A Friend&apos;s Post?
+                    {/* "Friend's post" framing only when Pay With A Post is live; otherwise codes come from emails/ads. */}
+                    {postBarter.enabled ? "Discount Code (or code from a friend's post)" : "Discount Code"}
                   </label>
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <input
