@@ -3,6 +3,8 @@ import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { verifyRazorpayWebhookSignature, getRazorpayPaymentStatus } from "@/lib/razorpay";
 import { finalizeOrder, type OrderPayload } from "@/lib/order-fulfillment";
+import { runCheckoutHealthCheck } from "@/lib/checkout-health";
+import { finalizePaidUpiQr } from "@/lib/upi-qr-fulfillment";
 
 /**
  * Razorpay's server-to-server safety net, independent of the customer's
@@ -67,6 +69,14 @@ export async function POST(request: Request) {
       }
 
       await finalizeOrder(pending.payload as OrderPayload, razorpayOrderId, razorpayPaymentId);
+    } else if (event === "qr_code.credited") {
+      // Rescue QR paid — finalize even if the customer closed the tab.
+      const qrId = body.payload?.qr_code?.entity?.id as string | undefined;
+      if (qrId) await finalizePaidUpiQr(qrId);
+    } else if (event === "payment.failed") {
+      // Real-time tripwire: a run of failures alerts the team within minutes
+      // instead of being discovered days later from a sales dip.
+      await runCheckoutHealthCheck("razorpay payment.failed webhook");
     } else if (event === "refund.processed" || event === "refund.failed") {
       const refund = body.payload?.refund?.entity;
       const razorpayPaymentId = refund?.payment_id as string | undefined;

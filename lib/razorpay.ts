@@ -123,3 +123,61 @@ export async function verifyRazorpaySignature(
 
   return expected === razorpaySignature;
 }
+
+function razorpayAuthHeader(creds: { keyId: string; keySecret: string }) {
+  return `Basic ${Buffer.from(`${creds.keyId}:${creds.keySecret}`).toString("base64")}`;
+}
+
+/**
+ * One-time UPI QR for a checkout whose in-modal payment failed — fixed to
+ * that order's exact amount and tagged with its razorpay order id, so a
+ * scan-and-pay can be matched back to the pending_orders snapshot and
+ * finalized (order row, invoice, Shiprocket) with no manual step.
+ */
+export async function createUpiQrForOrder(razorpayOrderId: string) {
+  const creds = await getRazorpayCredentials();
+  if (!creds) throw new Error("Razorpay is not configured yet");
+  const auth = razorpayAuthHeader(creds);
+
+  const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${razorpayOrderId}`, { headers: { Authorization: auth } });
+  if (!orderRes.ok) throw new Error(`Razorpay order lookup failed: ${orderRes.status}`);
+  const order = await orderRes.json();
+  if (order.status === "paid") throw new Error("This order is already paid");
+
+  const res = await fetch("https://api.razorpay.com/v1/payments/qr_codes", {
+    method: "POST",
+    headers: { Authorization: auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "upi_qr",
+      name: "Travaholic",
+      usage: "single_use",
+      fixed_amount: true,
+      payment_amount: order.amount,
+      description: `Travaholic order ${razorpayOrderId}`,
+      close_by: Math.floor(Date.now() / 1000) + 30 * 60,
+      notes: { razorpay_order_id: razorpayOrderId },
+    }),
+  });
+  if (!res.ok) throw new Error(`Razorpay QR creation failed: ${res.status} ${await res.text()}`);
+  const qr = await res.json();
+  return { qrId: qr.id as string, imageUrl: qr.image_url as string, amountRupees: order.amount / 100 };
+}
+
+/** The captured payment on a QR (if any) plus the order it was generated for. */
+export async function getUpiQrPayment(qrId: string) {
+  const creds = await getRazorpayCredentials();
+  if (!creds) return null;
+  const auth = razorpayAuthHeader(creds);
+  const [qrRes, payRes] = await Promise.all([
+    fetch(`https://api.razorpay.com/v1/payments/qr_codes/${qrId}`, { headers: { Authorization: auth } }),
+    fetch(`https://api.razorpay.com/v1/payments/qr_codes/${qrId}/payments`, { headers: { Authorization: auth } }),
+  ]);
+  if (!qrRes.ok || !payRes.ok) return null;
+  const qr = await qrRes.json();
+  const payments = ((await payRes.json()).items ?? []) as { id: string; status: string }[];
+  const paid = payments.find((p) => p.status === "captured");
+  return {
+    razorpayOrderId: (qr.notes?.razorpay_order_id as string | undefined) ?? null,
+    paymentId: paid?.id ?? null,
+  };
+}

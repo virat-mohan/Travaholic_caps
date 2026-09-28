@@ -113,6 +113,42 @@ export default function CheckoutPage() {
   // Set once Razorpay reports a failed attempt (UPI timeouts are the common
   // case) — unlocks the WhatsApp payment-link fallback so the sale isn't lost.
   const [payFailed, setPayFailed] = useState(false);
+  const [lastRzpOrderId, setLastRzpOrderId] = useState<string | null>(null);
+  const [upiQr, setUpiQr] = useState<{ qrId: string; imageUrl: string; amountRupees: number } | null>(null);
+  const [upiQrLoading, setUpiQrLoading] = useState(false);
+
+  // Poll the rescue QR — the server finalizes the order (invoice, Shiprocket)
+  // the moment Razorpay sees the payment, then we move to the confirmation.
+  useEffect(() => {
+    if (!upiQr) return;
+    const timer = setInterval(async () => {
+      const data = await fetch(`/api/checkout/razorpay/upi-qr?qr=${upiQr.qrId}`)
+        .then((r) => r.json())
+        .catch(() => null);
+      if (data?.paid && data.orderId) {
+        clearInterval(timer);
+        trackEvent("Purchase", { value: upiQr.amountRupees, eventId: data.orderId, contentIds: items.map((i) => i.slug) });
+        clear();
+        router.push(`/checkout/confirmed?order=${data.orderId}&paid=1`);
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [upiQr]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function showUpiQr() {
+    if (!lastRzpOrderId) return;
+    setUpiQrLoading(true);
+    const data = await fetch("/api/checkout/razorpay/upi-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ razorpayOrderId: lastRzpOrderId }),
+    })
+      .then((r) => r.json())
+      .catch(() => null);
+    setUpiQrLoading(false);
+    if (data?.imageUrl) setUpiQr(data);
+    else setPayError("Couldn't create a QR right now — tap below and we'll send a payment link on WhatsApp.");
+  }
   const [account, setAccount] = useState<Account | null>(null);
   const [redeemMiles, setRedeemMiles] = useState(false);
   // Prepaid ships free nationwide; COD charges the real Shiprocket rate
@@ -470,6 +506,7 @@ export default function CheckoutPage() {
       });
       const createData = await createRes.json();
       if (!createRes.ok) throw new Error(createData.error ?? "Could not start payment");
+      setLastRzpOrderId(createData.razorpayOrderId);
 
       const rzp = new window.Razorpay({
         key: createData.keyId,
@@ -479,6 +516,19 @@ export default function CheckoutPage() {
         name: "Travaholic",
         description: "Order payment",
         prefill: { name: form.name, email: form.email, contact: form.phone },
+        // Lead with "open your UPI app" / QR — typed-UPI-ID collect requests
+        // were the ones timing out. Cards, netbanking and wallets stay below.
+        config: {
+          display: {
+            blocks: {
+              upi_app: { name: "Pay with any UPI app", instruments: [{ method: "upi", flows: ["intent", "qr"] }] },
+            },
+            sequence: ["block.upi_app"],
+            preferences: { show_default_blocks: true },
+          },
+        },
+        retry: { enabled: true, max_count: 4 },
+        timeout: 900,
         handler: async (response: {
           razorpay_order_id: string;
           razorpay_payment_id: string;
@@ -1002,6 +1052,28 @@ export default function CheckoutPage() {
               </div>
 
               {payError && <p className="text-body-s text-paint-orange">{payError}</p>}
+              {payFailed && lastRzpOrderId && !upiQr && (
+                <button
+                  type="button"
+                  onClick={showUpiQr}
+                  disabled={upiQrLoading}
+                  className="w-full bg-ink px-6 py-3 text-body-s uppercase tracking-[0.1em] text-cream disabled:opacity-50"
+                >
+                  {upiQrLoading ? "Creating QR…" : "Scan A UPI QR Instead"}
+                </button>
+              )}
+              {upiQr && (
+                <div className="border border-divider p-4 text-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={upiQr.imageUrl} alt="UPI QR code" className="mx-auto w-64" />
+                  <p className="mt-3 text-body-s text-ink">
+                    Scan with any UPI app to pay ₹{upiQr.amountRupees.toLocaleString("en-IN")}. On a phone? Screenshot it and open it from your UPI app&apos;s &quot;Scan&quot; option.
+                  </p>
+                  <p className="mt-2 text-caption text-secondary-text">
+                    Keep this page open — your order confirms automatically once paid. Valid for 30 minutes.
+                  </p>
+                </div>
+              )}
               {payFailed && (
                 <button
                   type="button"
