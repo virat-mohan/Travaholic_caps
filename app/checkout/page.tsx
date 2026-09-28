@@ -17,7 +17,10 @@ const WHATSAPP_NUMBER = "918800339125";
 
 declare global {
   interface Window {
-    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+    Razorpay: new (options: Record<string, unknown>) => {
+      open: () => void;
+      on: (event: "payment.failed", cb: (resp: { error?: { reason?: string; description?: string } }) => void) => void;
+    };
   }
 }
 
@@ -107,6 +110,9 @@ export default function CheckoutPage() {
   const [couponChecking, setCouponChecking] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  // Set once Razorpay reports a failed attempt (UPI timeouts are the common
+  // case) — unlocks the WhatsApp payment-link fallback so the sale isn't lost.
+  const [payFailed, setPayFailed] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [redeemMiles, setRedeemMiles] = useState(false);
   // Prepaid ships free nationwide; COD charges the real Shiprocket rate
@@ -506,6 +512,14 @@ export default function CheckoutPage() {
           ondismiss: () => setPaying(false),
         },
       });
+      rzp.on("payment.failed", (resp: { error?: { reason?: string; description?: string } }) => {
+        setPayFailed(true);
+        setPayError(
+          resp.error?.reason === "payment_timed_out"
+            ? "The UPI request timed out. Try again and pick your UPI app or scan the QR, or use a card. Still stuck? Tap below and we'll send a payment link on WhatsApp."
+            : "That payment didn't go through and you weren't charged. Try another method, or tap below and we'll send a payment link on WhatsApp."
+        );
+      });
       rzp.open();
     } catch (err) {
       setPayError(err instanceof Error ? err.message : "Could not start payment");
@@ -527,6 +541,13 @@ export default function CheckoutPage() {
       await handleRazorpayPayment();
       return;
     }
+
+    await placeWhatsAppOrder();
+  }
+
+  // Unpaid order request over WhatsApp — the fallback when no gateway is on,
+  // and the rescue path after a failed online payment (we reply with a link).
+  async function placeWhatsAppOrder() {
 
     let createdOrderId: string | null = null;
     try {
@@ -563,7 +584,7 @@ export default function CheckoutPage() {
     }
 
     const lines = [
-      "New order from travaholic.in",
+      payFailed ? "Order from travaholic.in — my online payment failed, please send a payment link" : "New order from travaholic.in",
       "",
       ...items.map((i) => `${i.quantity} x ${i.name} — ₹${(i.price * i.quantity).toLocaleString("en-IN")}`),
       "",
@@ -675,7 +696,9 @@ export default function CheckoutPage() {
         {(identityStep === "verified" || identityStep === "guest") && (
           <>
             <p className="mt-4 max-w-md text-body-s text-secondary-text">
-              {razorpay.enabled
+              {!configLoaded
+                ? "Loading secure payment…"
+                : razorpay.enabled
                 ? "Pay securely below and we'll email your invoice."
                 : "We don't run this through a payment gateway yet — placing an order sends your details and cart straight to us on WhatsApp, and we'll confirm payment and delivery with you directly."}
             </p>
@@ -979,6 +1002,15 @@ export default function CheckoutPage() {
               </div>
 
               {payError && <p className="text-body-s text-paint-orange">{payError}</p>}
+              {payFailed && (
+                <button
+                  type="button"
+                  onClick={() => placeWhatsAppOrder()}
+                  className="w-full border border-ink px-6 py-3 text-body-s uppercase tracking-[0.1em] text-ink"
+                >
+                  Get A Payment Link On WhatsApp
+                </button>
+              )}
 
               <button
                 type="submit"
