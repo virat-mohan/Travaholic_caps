@@ -15,6 +15,7 @@ export const NAV_SECTIONS: NavSection[] = [
     { href: "/admin/content-calendar", label: "Content Calendar" },
     { href: "/admin/reports", label: "Growth Reports" },
     { href: "/admin/abandoned-carts", label: "Abandoned Carts" },
+    { href: "/admin/email-campaigns", label: "Email Campaigns" },
     { href: "/admin/performance", label: "Performance Manager" },
     { href: "/admin/agent-log", label: "Ad Agent" },
   ] },
