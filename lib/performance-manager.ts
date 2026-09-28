@@ -70,7 +70,10 @@ const SCALE_ROAS_7D_FACTOR = 1.25; // ≥ 1.25× target (5x at a 4x target) → 
 const SCALE_MIN_PURCHASES_7D = 6;
 const SCALE_MULTIPLIER = 1.2;
 const BUDGET_CHANGE_COOLDOWN_MS = 72 * 3600 * 1000; // >20% edits reset Meta's learning phase
-const HALT_MIN_SPEND_7D = 3000;
+// Campaign-wide stop only once every live ad set could have earned its own
+// verdict (3 × ₹2,000) — a ₹3k trigger fired on 28 Sep before any had, while
+// the real leak was UPI payments timing out at checkout.
+const HALT_MIN_SPEND_7D = 6000;
 const FATIGUE_FREQUENCY = 3;
 const FATIGUE_CTR_DROP = 0.3; // last-3-day CTR down 30% vs the ad set's first week
 const LAUNCH_COOLDOWN_MS = 7 * 86400000; // at most one new experiment a week at this budget
