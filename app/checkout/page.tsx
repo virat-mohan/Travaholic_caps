@@ -1080,7 +1080,7 @@ export default function CheckoutPage() {
                   onClick={() => placeWhatsAppOrder()}
                   className="w-full border border-ink px-6 py-3 text-body-s uppercase tracking-[0.1em] text-ink"
                 >
-                  Get A Payment Link On WhatsApp
+                  Payment Issue? Chat With Us On WhatsApp
                 </button>
               )}
 

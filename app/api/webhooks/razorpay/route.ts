@@ -4,7 +4,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { verifyRazorpayWebhookSignature, getRazorpayPaymentStatus } from "@/lib/razorpay";
 import { finalizeOrder, type OrderPayload } from "@/lib/order-fulfillment";
 import { runCheckoutHealthCheck } from "@/lib/checkout-health";
-import { finalizePaidUpiQr } from "@/lib/upi-qr-fulfillment";
+import { finalizePaidPaymentLink, finalizePaidUpiQr } from "@/lib/upi-qr-fulfillment";
 
 /**
  * Razorpay's server-to-server safety net, independent of the customer's
@@ -69,6 +69,10 @@ export async function POST(request: Request) {
       }
 
       await finalizeOrder(pending.payload as OrderPayload, razorpayOrderId, razorpayPaymentId);
+    } else if (event === "payment_link.paid") {
+      const orderId = body.payload?.payment_link?.entity?.notes?.razorpay_order_id as string | undefined;
+      const paymentId = body.payload?.payment?.entity?.id as string | undefined;
+      if (orderId && paymentId) await finalizePaidPaymentLink(orderId, paymentId);
     } else if (event === "qr_code.credited") {
       // Rescue QR paid — finalize even if the customer closed the tab.
       const qrId = body.payload?.qr_code?.entity?.id as string | undefined;
