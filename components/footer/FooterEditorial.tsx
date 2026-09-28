@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { brand } from "@/lib/retail-os-brand";
 
 const columns = [
   {
@@ -23,10 +24,10 @@ const columns = [
     title: "Contact",
     links: [
       { label: "Contact Us", href: "/contact" },
-      { label: "+91 88003 39125 (WhatsApp)", href: "https://wa.me/918800339125" },
-      { label: "travaholiccaps@gmail.com", href: "mailto:travaholiccaps@gmail.com" },
-      { label: "Instagram", href: "https://instagram.com/travaholiccaps" },
-      { label: "Facebook", href: "https://facebook.com/profile.php?id=100080234022161" },
+      { label: brand.contact.whatsappLabel, href: brand.contact.whatsappHref },
+      { label: brand.contact.email, href: `mailto:${brand.contact.email}` },
+      { label: "Instagram", href: brand.social.instagram },
+      { label: "Facebook", href: brand.social.facebook },
     ],
   },
 ];
@@ -36,16 +37,15 @@ export function FooterEditorial() {
     <footer className="border-t border-divider bg-cream py-16">
       <div className="mx-auto grid w-full max-w-[1440px] grid-cols-2 gap-10 px-6 font-sans md:grid-cols-5 md:px-12">
         <div className="col-span-2">
-          <p className="font-display text-heading-s uppercase text-ink">Travaholic</p>
+          <p className="font-display text-heading-s uppercase text-ink">{brand.profile.brandName}</p>
           <p className="mt-3 max-w-xs text-caption text-secondary-text">
-            Stories you can wear. Premium trucker caps inspired by journeys, landscapes and
-            moments worth remembering.
+            {brand.footerBlurb}
           </p>
           <p className="mt-4 max-w-xs text-micro uppercase tracking-[0.05em] text-secondary-text">
-            C-152, Industrial Phase-1, Okhla, South Delhi, Delhi, 110020
+            {brand.address.full}
           </p>
           <p className="mt-1 max-w-xs text-micro uppercase tracking-[0.05em] text-secondary-text">
-            GSTIN 07BZNPS5735B2Z3
+            {brand.gstin}
           </p>
           <p className="mt-4 max-w-xs text-micro uppercase tracking-[0.05em] text-secondary-text">
             Built by{" "}
@@ -81,7 +81,7 @@ export function FooterEditorial() {
         ))}
       </div>
       <div className="mx-auto mt-12 flex w-full max-w-[1440px] items-center justify-between px-6 font-sans text-micro uppercase tracking-[0.05em] text-secondary-text md:px-12">
-        <p>© {new Date().getFullYear()} Travaholic</p>
+        <p>© {new Date().getFullYear()} {brand.profile.brandName}</p>
         <div className="flex flex-wrap gap-5">
           <Link href="/privacy" className="hover:text-ink">
             Privacy
@@ -100,7 +100,7 @@ export function FooterEditorial() {
 
       <div aria-hidden className="mt-10 flex w-full justify-center overflow-hidden px-6">
         <Image
-          src="/images/brand/travaholic-wordmark-black.png"
+          src={brand.assets.footerWordmarkPath}
           alt=""
           width={1200}
           height={130}

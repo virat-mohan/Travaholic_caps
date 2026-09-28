@@ -1,27 +1,14 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
+// The brand profile + defaults now live in the canonical Retail OS brand config
+// (lib/retail-os-brand.ts), so the AI pipeline and customer-facing surfaces
+// share one in-repo source. Re-exported so existing "@/lib/brand" imports keep
+// working unchanged.
+import { DEFAULT_BRAND_PROFILE, type BrandProfile } from "@/lib/retail-os-brand";
 
-export type BrandProfile = {
-  brandName: string;
-  tagline: string;
-  voice: string;
-  productNoun: string;
-  currencySymbol: string;
-  siteUrl: string;
-  instagramHandle: string;
-};
+export type { BrandProfile };
+export { DEFAULT_BRAND_PROFILE };
 
 const BRAND_PROFILE_KEY = "BRAND_PROFILE";
-
-export const DEFAULT_BRAND_PROFILE: BrandProfile = {
-  brandName: "Travaholic",
-  tagline: "Stories You Can Wear",
-  voice:
-    "Warm, specific, editorial travel storytelling — never a hard sell. Every product ties back to a real place or moment. Confident but never shouty.",
-  productNoun: "trucker cap",
-  currencySymbol: "₹",
-  siteUrl: "https://travaholic.in",
-  instagramHandle: "@travaholiccaps",
-};
 
 /**
  * Everything downstream (ad brief prompts, image-gen prompts, journal drafts)
