@@ -61,9 +61,9 @@ export function renderWelcomeBack15Email(endsLabel: string, unsubscribeUrl: stri
       </tr>
       <tr>
         <td class="col" width="50%" valign="top" style="padding:16px 6px 6px;">
-          <a href="https://www.travaholic.in/chapter/junglee?coupon=WELCOMEBACK15&utm_source=email&utm_medium=campaign&utm_campaign=welcomeback15" style="text-decoration:none;"><img src="https://www.travaholic.in/images/social/tv-28oct.jpg" width="260" alt="Junglee" style="display:block;width:100%;height:auto;border:0;">
+          <a href="https://www.travaholic.in/chapter/junglee?coupon=WELCOMEBACK15&utm_source=email&utm_medium=campaign&utm_campaign=welcomeback15" style="text-decoration:none;"><img src="https://www.travaholic.in/images/email/junglee-product-v1.jpg" width="260" alt="Junglee" style="display:block;width:100%;height:auto;border:0;">
           <p class="display" style="margin:10px 0 2px;color:#101820;font-size:20px;">Junglee</p>
-          <p class="sans" style="margin:0;color:#4a4a42;font-size:13px;">Kabini, Karnataka · <s>₹1,399</s> <b style="color:#101820;">₹1,189</b></p></a>
+          <p class="sans" style="margin:0;color:#4a4a42;font-size:13px;">Our joint bestseller · <s>₹1,399</s> <b style="color:#101820;">₹1,189</b></p></a>
         </td>
         <td class="col" width="50%" valign="top" style="padding:16px 6px 6px;">
           <a href="https://www.travaholic.in/chapter/dunes-maroon?coupon=WELCOMEBACK15&utm_source=email&utm_medium=campaign&utm_campaign=welcomeback15" style="text-decoration:none;"><img src="https://www.travaholic.in/images/social/tv-23oct.jpg" width="260" alt="Dunes Maroon" style="display:block;width:100%;height:auto;border:0;">
