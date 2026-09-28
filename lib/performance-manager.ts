@@ -1,7 +1,8 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getSetting, setSetting } from "@/lib/settings";
 import { getBrandProfile } from "@/lib/brand";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, ORDER_NOTIFICATION_RECIPIENTS } from "@/lib/email";
+import { getCheckoutHealth } from "@/lib/checkout-health";
 import { renderAdsReportHtml, type AdsReport, type ReportAdSet, type ReportAction } from "@/lib/ads-report-email";
 import { sendWhatsAppSessionMessage } from "@/lib/msg91";
 import {
@@ -750,24 +751,34 @@ export async function runPerformanceSweep() {
     // over 7 days, once there's enough spend for it to mean something.
     const merHalt = mer7.spend >= HALT_MIN_SPEND_7D && (mer7.mer ?? 0) < config.targetRoas && (w7.roas ?? 0) < config.targetRoas;
     if (merHalt && !state.halted) {
-      await setCampaignStatus(campaignId, "PAUSED");
-      state.halted = true;
-      for (const e of state.experiments) {
-        if (e.status === "running") {
-          e.status = "paused";
-          e.resultNote = "Campaign halted: 7-day MER and Meta ROAS both under target.";
+      // Owner rule (28 Sep 2026): never sit paused. Diagnose first — if the
+      // leak is after the click (payments, checkout, site), pausing ads only
+      // throws away sales, so keep them live and escalate the real problem.
+      // If it really is the ads, swap in fresh experiments the same sweep.
+      const diag = await diagnoseLowSales();
+      if (diag.funnelProblem) {
+        const reason = `Under ${config.targetRoas}x (7d MER ${(mer7.mer ?? 0).toFixed(2)}x on ₹${mer7.spend}) but the leak is after the click, so ads stay live: ${diag.findings.join(" ")}`;
+        log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "halt_skipped_funnel_leak", reason });
+        decisions.push(reason);
+        await sendDiagnosisAlert("Ads kept live: sales leak is at checkout, not the ads", reason);
+      } else {
+        const lost: string[] = [];
+        for (const e of state.experiments) {
+          if (e.status === "running" && e.adsetId) {
+            await setAdSetStatus(e.adsetId, "PAUSED");
+            e.status = "lost";
+            e.endedAt = nowIso();
+            e.resultNote = "Rotated out: campaign 7-day MER and Meta ROAS both under target with a healthy checkout.";
+            lost.push(e.name);
+          }
         }
+        state.lastLaunchAt = undefined; // launch replacements in this same sweep
+        const reason = `7-day real MER ${(mer7.mer ?? 0).toFixed(2)}x (₹${mer7.revenue} on ₹${mer7.spend}) and Meta ROAS ${(w7.roas ?? 0).toFixed(2)}x under ${config.targetRoas}x with checkout healthy (${diag.findings.join(" ")}) — rotated out ${lost.length} ad set(s) and launching fresh experiments now; campaign stays live.`;
+        log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "rotated_experiments", reason });
+        decisions.push(reason);
+        await sendDiagnosisAlert("Ads refreshed: underperforming ad sets swapped out", reason);
       }
-      const reason = `7-day real MER ${(mer7.mer ?? 0).toFixed(2)}x (₹${mer7.revenue} revenue on ₹${mer7.spend} spend) and Meta ROAS ${(w7.roas ?? 0).toFixed(2)}x are both under ${config.targetRoas}x — campaign paused. Relaunches with the next queued experiment on the following sweep.`;
-      log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "halted", reason, before: "ACTIVE", after: "PAUSED" });
-      decisions.push(reason);
-    } else if (state.halted) {
-      await setCampaignStatus(campaignId, "ACTIVE");
-      state.halted = false;
-      state.lastLaunchAt = undefined; // a relaunch is allowed to bring in a fresh experiment immediately
-      log(state, { entityType: "campaign", entityId: campaignId, entityName: "PM Prospecting", action: "resumed", reason: "Relaunching with the next queued experiments after a halt.", before: "PAUSED", after: "ACTIVE" });
-      decisions.push("Campaign resumed with fresh experiments after halt.");
-    } else if (
+    } else if (state.halted) {    } else if (
       w7.purchases >= SCALE_MIN_PURCHASES_7D &&
       (w7.roas ?? 0) >= config.targetRoas * SCALE_ROAS_7D_FACTOR &&
       (mer7.mer ?? 0) >= config.targetRoas &&
@@ -1235,3 +1246,53 @@ export async function getPerformanceOverview() {
 }
 
 export { AUDIENCE_KEYS, getAdSetFlexibleSpec };
+
+/**
+ * Why aren't ads turning into sales? Separates "the ads are wrong" from
+ * "people want to buy but can't" (payments failing, checkout abandoned
+ * at the pay step, site down) — the second must never pause ads.
+ */
+async function diagnoseLowSales() {
+  const findings: string[] = [];
+  let funnelProblem = false;
+
+  const health = await getCheckoutHealth().catch(() => null);
+  if (health && !health.ok) {
+    funnelProblem = true;
+    findings.push(`Checkout health: ${health.problems.join(" ")}`);
+  }
+
+  const supabase = getSupabaseServerClient();
+  const since7 = new Date(Date.now() - 7 * 86400000).toISOString();
+  const [{ count: checkouts }, { count: paid }] = await Promise.all([
+    supabase.from("cart_sessions").select("id", { count: "exact", head: true }).gte("created_at", since7).not("customer_phone", "is", null),
+    supabase.from("orders").select("id", { count: "exact", head: true }).gte("created_at", since7).eq("payment_status", "paid"),
+  ]);
+  const c = checkouts ?? 0;
+  const p = paid ?? 0;
+  findings.push(`${c} checkouts started, ${p} paid in 7 days.`);
+  if (c >= 10 && p / c < 0.15) {
+    funnelProblem = true;
+    findings.push(`Only ${Math.round((p / c) * 100)}% of checkouts complete (healthy is 30%+) — the pay step is leaking.`);
+  }
+
+  try {
+    const res = await fetch("https://www.travaholic.in/checkout", { cache: "no-store" });
+    if (!res.ok) {
+      funnelProblem = true;
+      findings.push(`Checkout page returned HTTP ${res.status}.`);
+    }
+  } catch {
+    funnelProblem = true;
+    findings.push("Checkout page unreachable.");
+  }
+
+  return { funnelProblem, findings };
+}
+
+async function sendDiagnosisAlert(subject: string, text: string) {
+  const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#1a1a1a">${text}</div>`;
+  await Promise.allSettled(ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, subject, html)));
+  const wa = await getSetting("PM_ALERT_WHATSAPP");
+  if (wa) await sendWhatsAppSessionMessage(wa, `${subject}\n\n${text}`).catch(() => null);
+}
