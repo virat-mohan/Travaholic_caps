@@ -126,7 +126,7 @@ export default async function Home() {
           </section>
         )}
 
-        <section className="pb-24 pt-8 md:pb-30 md:pt-12">
+        <section id="shop" className="scroll-mt-24 pb-24 pt-8 md:pb-30 md:pt-12">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="mb-6 text-caption uppercase tracking-[0.08em] text-secondary-text">
