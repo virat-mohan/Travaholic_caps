@@ -20,6 +20,12 @@ export function unsubscribeToken(email: string) {
   return crypto.createHmac("sha256", secret).update(email.toLowerCase()).digest("hex").slice(0, 24);
 }
 
+function firstName(name: unknown) {
+  const first = String(name ?? "").trim().split(/\s+/)[0] ?? "";
+  if (!/^[A-Za-z][A-Za-z'-]{1,20}$/.test(first)) return null;
+  return first[0].toUpperCase() + first.slice(1).toLowerCase();
+}
+
 function unsubscribeUrl(email: string) {
   return `https://www.travaholic.in/api/unsubscribe?e=${encodeURIComponent(email)}&t=${unsubscribeToken(email)}`;
 }
@@ -88,7 +94,8 @@ export async function sendWelcomeBack15Batch() {
         sender: { name: "Travaholic", email: "orders@travaholic.in" },
         replyTo: { email: "travaholiccaps@gmail.com" },
         to: [{ email, ...(c.name ? { name: String(c.name) } : {}) }],
-        subject: WELCOMEBACK15.subject,
+        // First-name subject: batch 1 used a generic line and opened at ~3%.
+        subject: firstName(c.name) ? `${firstName(c.name)}, 15% off your next Travaholic cap (24 hours)` : WELCOMEBACK15.subject,
         htmlContent: renderWelcomeBack15Email(endsLabel, unsub),
         tags: [WELCOMEBACK15.key],
         headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
