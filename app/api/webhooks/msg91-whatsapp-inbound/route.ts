@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
-import { logInboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
+import { logInboundWhatsAppMessage, logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
+import { sendWhatsAppSessionMessage } from "@/lib/msg91";
 
 /**
  * MSG91's inbound-WhatsApp webhook — configure this URL under MSG91
@@ -39,16 +40,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  // A cart sent from the WhatsApp catalogue arrives as an "order" message.
+  // Catalogue product ids are the site's chapter slugs (see /api/product-feed),
+  // so it maps 1:1 onto the /cart deep link — the customer lands on checkout
+  // with their cart filled, pays, and the normal flow ships it.
+  const orderItems = (msg?.order?.product_items ?? []) as { product_retailer_id?: string; quantity?: number }[];
+  const cartSuffix = orderItems
+    .filter((i) => i.product_retailer_id)
+    .map((i) => `${i.product_retailer_id}:${i.quantity ?? 1}`)
+    .join(",");
+  const orderSummary = cartSuffix ? `🛒 Catalogue cart: ${cartSuffix}` : null;
+
+  let conversationId: string | null = null;
   try {
-    await logInboundWhatsAppMessage({
+    conversationId = await logInboundWhatsAppMessage({
       phone: String(phone),
-      body: text ?? "",
+      body: text ?? orderSummary ?? "",
       customerName: name,
       mediaUrl,
       providerMessageId: providerMessageId ? String(providerMessageId) : null,
     });
   } catch (err) {
     console.error("Failed to log inbound WhatsApp message", err);
+  }
+
+  if (cartSuffix) {
+    const reply = `Thanks${name ? `, ${String(name).split(" ")[0]}` : ""}! Your cart is ready. Add your address and pay securely here (free shipping, Buy 3 Get 1 Free applied automatically):\nhttps://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}&utm_source=whatsapp&utm_medium=catalogue`;
+    const sent = await sendWhatsAppSessionMessage(String(phone), reply);
+    if (conversationId) {
+      await logOutboundWhatsAppMessage({
+        conversationId,
+        body: reply,
+        providerMessageId: sent.sent ? sent.messageId ?? null : null,
+        status: sent.sent ? "sent" : "failed",
+      }).catch(() => {});
+    }
   }
 
   return NextResponse.json({ ok: true });
