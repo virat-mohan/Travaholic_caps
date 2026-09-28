@@ -8,6 +8,7 @@ import { ShoppingBag, Menu, X } from "lucide-react";
 import { WhatsAppIcon } from "@/components/contact/WhatsAppIcon";
 import { SearchOverlay } from "@/components/navigation/SearchOverlay";
 import { useCart } from "@/lib/cart";
+import { brand } from "@/lib/retail-os-brand";
 
 // Always visible on desktop — kept to shop-path links only. Journal and
 // Travel Inspiration are content, not a purchase path, so they moved to the
@@ -85,8 +86,8 @@ export function Navbar() {
           }`}
         >
           <Image
-            src="/images/brand/travaholic-logo-color-v2.png"
-            alt="Travaholic"
+            src={brand.assets.navLogoPath}
+            alt={brand.assets.navLogoAlt}
             width={340}
             height={340}
             style={{ height: "120px", width: "auto" }}

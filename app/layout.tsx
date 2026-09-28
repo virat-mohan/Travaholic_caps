@@ -7,6 +7,7 @@ import { MetaPixelTracker } from "@/components/tracking/MetaPixel";
 import { ClarityTracker } from "@/components/tracking/ClarityTracker";
 import { CartProvider } from "@/lib/cart";
 import { getSetting } from "@/lib/settings";
+import { brand } from "@/lib/retail-os-brand";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -22,31 +23,35 @@ const archivoBlack = Archivo_Black({
   weight: ["400"],
 });
 
-const SITE_URL = "https://travaholic.in";
-const DESCRIPTION =
-  "Travaholic makes premium trucker caps in India, each one inspired by a real place or journey. Flat ₹1,399 pricing, ships across India. Shop the full Collection at travaholic.in.";
+// Brand identity is now sourced from the canonical Retail OS brand config
+// (lib/retail-os-brand.ts). Values are unchanged — this only removes the
+// hardcoded duplication so Travaholic is configured, not hand-edited.
+const SITE_URL = brand.profile.siteUrl;
+const DESCRIPTION = brand.description;
+const DEFAULT_TITLE = `${brand.profile.brandName} — ${brand.profile.tagline}`;
+const OG_IMAGE = brand.assets.ogImagePath;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Travaholic — Stories You Can Wear",
-    template: "%s — Travaholic",
+    default: DEFAULT_TITLE,
+    template: `%s — ${brand.profile.brandName}`,
   },
   description: DESCRIPTION,
-  keywords: ["trucker caps India", "premium caps", "travel inspired caps", "Travaholic"],
+  keywords: brand.keywords,
   openGraph: {
     type: "website",
-    siteName: "Travaholic",
-    title: "Travaholic — Stories You Can Wear",
+    siteName: brand.profile.brandName,
+    title: DEFAULT_TITLE,
     description: DESCRIPTION,
     url: SITE_URL,
-    images: [{ url: "/images/brand/og-image.jpg", width: 1200, height: 630, alt: "Travaholic" }],
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: brand.profile.brandName }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Travaholic — Stories You Can Wear",
+    title: DEFAULT_TITLE,
     description: DESCRIPTION,
-    images: ["/images/brand/og-image.jpg"],
+    images: [OG_IMAGE],
   },
   alternates: { canonical: SITE_URL },
 };
@@ -57,22 +62,19 @@ export const metadata: Metadata = {
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "Travaholic",
+  name: brand.profile.brandName,
   url: SITE_URL,
-  logo: `${SITE_URL}/images/brand/travaholic-logo-color-black-text.png`,
+  logo: `${SITE_URL}${brand.assets.orgLogoPath}`,
   description: DESCRIPTION,
   address: {
     "@type": "PostalAddress",
-    streetAddress: "C-152, Industrial Phase-1, Okhla",
-    addressLocality: "South Delhi",
-    addressRegion: "Delhi",
-    postalCode: "110020",
-    addressCountry: "IN",
+    streetAddress: brand.address.streetAddress,
+    addressLocality: brand.address.addressLocality,
+    addressRegion: brand.address.addressRegion,
+    postalCode: brand.address.postalCode,
+    addressCountry: brand.address.addressCountry,
   },
-  sameAs: [
-    "https://instagram.com/travaholiccaps",
-    "https://facebook.com/profile.php?id=100080234022161",
-  ],
+  sameAs: [brand.social.instagram, brand.social.facebook],
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
