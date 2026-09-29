@@ -288,12 +288,18 @@ export async function sendMsg91Template(
  * once the first admin reply goes out and adjust the messageId lookup below
  * if delivery status doesn't come back.
  */
-export async function sendWhatsAppSessionMessage(phone: string, text: string) {
+export async function sendWhatsAppSessionMessage(
+  phone: string,
+  text: string,
+  fromNumber?: string
+) {
   const authKey = await getSetting("MSG91_AUTH_KEY");
-  const integratedNumber = await getSetting("MSG91_WHATSAPP_INTEGRATED_NUMBER");
-  if (!authKey || !integratedNumber) {
+  const defaultNumber = await getSetting("MSG91_WHATSAPP_INTEGRATED_NUMBER");
+  const rawIntegratedNumber = fromNumber || defaultNumber;
+  if (!authKey || !rawIntegratedNumber) {
     return { sent: false as const, error: "MSG91 Auth Key or WhatsApp number not configured" };
   }
+  const integratedNumber = rawIntegratedNumber.replace(/\D/g, "");
 
   try {
     const res = await fetch("https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/", {
