@@ -4,6 +4,7 @@ import { finalizeOrder, type OrderPayload } from "@/lib/order-fulfillment";
 import { sendEmail, ORDER_NOTIFICATION_RECIPIENTS } from "@/lib/email";
 import { finalizePaidUpiQr, reconcilePaidPaymentLinks } from "@/lib/upi-qr-fulfillment";
 import { getSetting, setSetting } from "@/lib/settings";
+import { checkAdFundsAndAlert } from "@/lib/ad-funds";
 
 /**
  * The guarantee that a captured payment always becomes an order. Asks
@@ -75,6 +76,13 @@ export async function reconcileCapturedPayments(hours = 72) {
   }
 
   await checkWhatsAppSenderHasTemplates(problems);
+
+  // Ad money runway (incl. GST + unbilled spend + spending limit) — hourly.
+  const fundsAt = Number((await getSetting("AD_FUNDS_CHECKED_AT")) ?? 0);
+  if (Date.now() - fundsAt > 3600 * 1000) {
+    await setSetting("AD_FUNDS_CHECKED_AT", String(Date.now()));
+    await checkAdFundsAndAlert().catch((err) => console.error("Ad funds check failed", err));
+  }
 
   // Recoveries always alert; standing problems at most every 2h.
   let alertProblems = problems.length > 0;
