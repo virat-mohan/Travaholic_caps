@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { logInboundWhatsAppMessage, logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
 import { sendWhatsAppSessionMessage } from "@/lib/msg91";
 
@@ -53,6 +54,25 @@ export async function POST(request: Request) {
   if (!phone) {
     console.error("MSG91 inbound webhook: unrecognized payload shape", JSON.stringify(body));
     return NextResponse.json({ ok: true });
+  }
+
+  // 1. Deduplication check: Has this exact message ID (wamid) already been handled?
+  if (providerMessageId) {
+    try {
+      const supabase = getSupabaseServerClient();
+      const { data: existingMsg } = await supabase
+        .from("whatsapp_conversation_messages")
+        .select("id")
+        .eq("provider_message_id", String(providerMessageId))
+        .maybeSingle();
+
+      if (existingMsg) {
+        console.log("MSG91 inbound webhook: Duplicate message ID ignored", providerMessageId);
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+    } catch (e) {
+      console.warn("Failed to check duplicate provider_message_id", e);
+    }
   }
 
   // Parse order items defensively across MSG91 stringified json, object, or Cloud API order
@@ -115,6 +135,28 @@ export async function POST(request: Request) {
   }
 
   if (orderItems.length > 0) {
+    // 2. Debounce check: If an outbound order reply was already sent to this conversation in the last 20 seconds, skip
+    if (conversationId) {
+      try {
+        const supabase = getSupabaseServerClient();
+        const twentySecAgo = new Date(Date.now() - 20 * 1000).toISOString();
+        const { data: recentReply } = await supabase
+          .from("whatsapp_conversation_messages")
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .eq("direction", "outbound")
+          .gte("created_at", twentySecAgo)
+          .maybeSingle();
+
+        if (recentReply) {
+          console.log("MSG91 inbound webhook: Recent reply sent to this conversation in last 20s, skipping duplicate");
+          return NextResponse.json({ ok: true, duplicate: true });
+        }
+      } catch (e) {
+        console.warn("Failed to check recent conversation reply debounce", e);
+      }
+    }
+
     const firstName = name ? String(name).trim().split(" ")[0] : "there";
     const itemsListText = itemBulletPoints.join("\n");
     const configuredUpiVpa = await getSetting("BUSINESS_UPI_ID");
