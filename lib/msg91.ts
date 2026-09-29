@@ -364,8 +364,8 @@ export async function sendWhatsAppSessionImage(
         integrated_number: integratedNumber,
         recipient_number: toMobile(phone),
         content_type: "image",
-        payload: {
-          url: imageUrl,
+        image: {
+          link: imageUrl,
           caption,
         },
       }),
