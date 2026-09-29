@@ -20,6 +20,7 @@ export default function PerformancePage() {
   const [data, setData] = useState<Overview | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [rangeDays, setRangeDays] = useState<7 | 14 | 30 | 120>(7);
 
   function load() {
     fetch("/api/admin/performance")
@@ -49,7 +50,9 @@ export default function PerformancePage() {
 
   const { config, state } = data;
   const managedSnapshots = state.snapshots.filter((s) => config.managedCampaignIds.includes(s.campaignId));
-  const dates = [...new Set(managedSnapshots.map((s) => s.date))].sort().slice(-7);
+  const allDates = [...new Set(managedSnapshots.map((s) => s.date))].sort();
+  const dates = allDates.slice(-rangeDays);
+  const dataThrough = allDates[allDates.length - 1];
   const adsets = [...new Map(managedSnapshots.map((s) => [s.adsetId, s.adsetName])).entries()];
   const totalsByDate = dates.map((d) => {
     const rows = managedSnapshots.filter((s) => s.date === d);
@@ -106,7 +109,27 @@ export default function PerformancePage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="font-display text-heading-s uppercase text-ink">Managed ad sets — last 7 days</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-display text-heading-s uppercase text-ink">
+            Managed ad sets — {rangeDays === 120 ? "all days" : `last ${rangeDays} days`}
+          </h2>
+          <div className="flex gap-1.5">
+            {([7, 14, 30, 120] as const).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setRangeDays(n)}
+                className={`px-3 py-1.5 text-micro uppercase tracking-[0.08em] ${rangeDays === n ? "bg-ink text-cream" : "border border-divider text-secondary-text"}`}
+              >
+                {n === 120 ? "All" : `${n}D`}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="mt-1 text-caption text-secondary-text">
+          Complete days only, recorded by the daily 8am run{dataThrough ? ` · data through ${dataThrough}` : ""}
+          {state.lastSweepAt ? ` · last run ${new Date(state.lastSweepAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}` : ""}
+        </p>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[700px] text-left text-body-s">
             <thead>

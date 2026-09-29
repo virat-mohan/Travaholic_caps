@@ -42,9 +42,15 @@ async function imageDataUri(src: string): Promise<string | null> {
       if (type.includes("webp")) return null; // Satori can't decode WebP
       return `data:${type};base64,${Buffer.from(await res.arrayBuffer()).toString("base64")}`;
     }
-    const bytes = await readFile(path.join(process.cwd(), "public", decodeURI(src)));
     const type = /\.jpe?g$/i.test(src) ? "image/jpeg" : "image/png";
-    return `data:${type};base64,${bytes.toString("base64")}`;
+    try {
+      const bytes = await readFile(path.join(process.cwd(), "public", decodeURI(src)));
+      return `data:${type};base64,${bytes.toString("base64")}`;
+    } catch {
+      // public/ isn't always bundled into serverless functions — fetch it from the site.
+      const res = await fetch(`https://www.travaholic.in${encodeURI(decodeURI(src))}`);
+      return res.ok ? `data:${type};base64,${Buffer.from(await res.arrayBuffer()).toString("base64")}` : null;
+    }
   } catch {
     return null;
   }
