@@ -1,4 +1,4 @@
-import { chapters, chapterImageSrc } from "@/lib/chapters";
+import { chapters, chapterImageSrc, resolveChapterSlug } from "@/lib/chapters";
 
 /**
  * Parses a `?items=slug:qty,slug:qty` cart deep-link — used to hand a WhatsApp
@@ -11,8 +11,9 @@ export function parseCartDeepLink(itemsParam: string) {
   const resolved: { chapter: (typeof chapters)[number]; image: string; quantity: number }[] = [];
 
   for (const part of itemsParam.split(",")) {
-    const [slug, qtyRaw] = part.split(":");
-    if (!slug) continue;
+    const [rawSlug, qtyRaw] = part.split(":");
+    if (!rawSlug) continue;
+    const slug = resolveChapterSlug(rawSlug);
     const chapter = chapters.find((c) => c.slug === slug.trim());
     if (!chapter) continue;
     const quantity = Math.max(1, parseInt(qtyRaw ?? "1", 10) || 1);

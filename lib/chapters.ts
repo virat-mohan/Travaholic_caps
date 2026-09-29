@@ -310,3 +310,71 @@ export function chapterImageSrc(folder: string, file: string) {
   const resolved = `${stem}_no_bg.png`;
   return `/images/chapters/${encodeURIComponent(folder)}/${encodeURIComponent(resolved)}`;
 }
+
+/**
+ * Meta Commerce Catalog auto-generates 32-character MD5 hashes of scraped URLs
+ * (/chapter/<slug>) when products are indexed from microdata without an explicit SKU.
+ * This map resolves those hashes back to the official chapter slugs.
+ */
+export const META_CATALOG_MD5_MAP: Record<string, string> = {
+  // /chapter/<slug>
+  "372422526c16d5431c5a618849919c1d": "travaholic-black",
+  "1601eb9d24e7631e20928c6ff821c821": "travaholic-ocean",
+  "099d4b7f62f878de7d0f8660ceeba693": "travaholic-sky",
+  "4350e5447c3b6b1ed0a2336f21e17da7": "beachn",
+  "8f733af5125042fcd307a8dff3db20dd": "sunshine",
+  "659d069f5c86eb704b9e07de9ebde364": "tropical-blue",
+  "a974d39bbb77b8616ecfbc00a48a2db7": "tropical-pink",
+  "7806abdc37db2939d84c1038915c7d0d": "dunes-maroon",
+  "d274849e59754b9aea03955d3b433fef": "dunes-yellow",
+  "f85a3bd1ccc6147e1f345bcf30f49f3c": "peaking",
+  "7dc92d636d1a88908e520262867867c2": "travaholic-snow",
+  "99aaaa54bce147a34066685ed09ef060": "wildling",
+  "f1ef83ee3e1248197999e251d00780bd": "junglee",
+  "d8ccda19b1db5aac97981f46c88c9509": "city-slicker",
+  "b57df7d94894617a0030d12f43dd4097": "city-slicker-black",
+  "7fb563bd1ea66cd6c192dcd9379e709c": "travaholic-orange",
+
+  // https://www.travaholic.in/chapter/<slug>
+  "7e7e60fa770c3298a0ebcba179427b2a": "travaholic-black",
+  "7df3d56221c97723910c266dfb375b06": "travaholic-ocean",
+  "922e4313f89069d30ca74251cb14b093": "travaholic-sky",
+  "e4612349e31d044944d18ec062a4d33c": "beachn",
+  "d4ee71110057ec953cae9f0e21010bb1": "sunshine",
+  "ee8f6738942ea7ce2ef30ba6dae356bb": "tropical-blue",
+  "df5c5fa9048a6042db6175bf3bcdd257": "tropical-pink",
+  "914a51e604f7e26ca689ca85e13d70f9": "dunes-maroon",
+  "34e3415951d6ee5144b67b6eb4e82390": "dunes-yellow",
+  "4f54ef7741893c52e616c35c67e816a7": "peaking",
+  "be9aa799933583ca9c00b0f7690bc46c": "travaholic-snow",
+  "61633cfc2d0f0ebcc0604169c9b460d5": "wildling",
+  "0811b7df1e15e85cba57018318260d71": "junglee",
+  "58b9fdfef83fa272ceb5d8d06b6b772b": "city-slicker",
+  "e5c82db604077651a0ae8dbdd1752b5d": "city-slicker-black",
+  "5fe3f0e8f3a3f5a2ba33508a8a48ef2e": "travaholic-orange",
+};
+
+/**
+ * Resolves any product retailer ID (whether clean slug or Meta catalog MD5 hash)
+ * back to the canonical chapter slug.
+ */
+export function resolveChapterSlug(identifier: string): string {
+  if (!identifier) return "";
+  const cleaned = identifier.trim().toLowerCase();
+
+  // 1. Direct Meta catalog hash lookup
+  if (META_CATALOG_MD5_MAP[cleaned]) {
+    return META_CATALOG_MD5_MAP[cleaned];
+  }
+
+  // 2. Direct slug match or name match
+  const direct = chapters.find(
+    (c) =>
+      c.slug === cleaned ||
+      c.slug.replace(/^travaholic-/, "") === cleaned.replace(/^travaholic-/, "") ||
+      c.name.toLowerCase() === cleaned.replace(/[-_]/g, " ")
+  );
+  if (direct) return direct.slug;
+
+  return cleaned;
+}

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFile } from "fs/promises";
 import path from "path";
 import { getAllChapters } from "@/lib/chapters-dynamic";
-import { chapterImageSrc } from "@/lib/chapters";
+import { chapterImageSrc, resolveChapterSlug } from "@/lib/chapters";
 
 export const runtime = "nodejs";
 
@@ -62,13 +62,14 @@ export async function GET(request: Request) {
 
   const chapters = await getAllChapters().catch(() => []);
   const resolvedItems = itemEntries.slice(0, 4).map((entry) => {
+    const canonicalSlug = resolveChapterSlug(entry.slug);
     const chapter = chapters.find(
-      (c) => c.slug === entry.slug || c.name.toLowerCase() === entry.slug.replace(/[-_]/g, " ")
+      (c) => c.slug === canonicalSlug || c.name.toLowerCase() === canonicalSlug.replace(/[-_]/g, " ")
     );
     return {
-      name: chapter ? chapter.name : entry.slug.replace(/[-_]/g, " ").toUpperCase(),
+      name: chapter ? chapter.name : canonicalSlug.replace(/[-_]/g, " ").toUpperCase(),
       series: chapter?.series ?? "Postcards from India",
-      slug: entry.slug,
+      slug: canonicalSlug,
       imagePath: chapter && chapter.primary ? chapterImageSrc(chapter.folder, chapter.primary) : null,
       quantity: entry.quantity,
     };
@@ -325,7 +326,7 @@ export async function GET(request: Request) {
               fontFamily: "Inter",
             }}
           >
-            FREE EXPRESS DELIVERY
+            POSTCARDS FROM INDIA
           </div>
         </div>
       </div>

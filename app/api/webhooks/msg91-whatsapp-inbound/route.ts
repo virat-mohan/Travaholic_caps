@@ -3,6 +3,7 @@ import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { logInboundWhatsAppMessage, logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
 import { sendWhatsAppSessionMessage, sendMsg91Template } from "@/lib/msg91";
+import { chapters, resolveChapterSlug } from "@/lib/chapters";
 
 /**
  * MSG91's inbound-WhatsApp webhook — configure this URL under MSG91
@@ -95,28 +96,35 @@ export async function POST(request: Request) {
     ? rawProductItems.filter((i) => i && i.product_retailer_id)
     : [];
 
-  const cartSuffix = orderItems
-    .map((i) => `${i.product_retailer_id}:${i.quantity ?? 1}`)
+  const resolvedItems = orderItems.map((item) => {
+    const rawId = item.product_retailer_id || "travaholic-cap";
+    const canonicalSlug = resolveChapterSlug(rawId);
+    const chapter = chapters.find((c) => c.slug === canonicalSlug);
+    const displayName = chapter ? chapter.name : rawId.replace(/[-_]/g, " ").split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    const qty = Number(item.quantity) || 1;
+    const price = Number(item.item_price) || (chapter?.price ?? 1399);
+    return {
+      slug: canonicalSlug,
+      displayName,
+      quantity: qty,
+      price,
+    };
+  });
+
+  const cartSuffix = resolvedItems
+    .map((i) => `${i.slug}:${i.quantity}`)
     .join(",");
 
   let totalAmount = 0;
   const itemBulletPoints: string[] = [];
 
-  for (const item of orderItems) {
-    const qty = Number(item.quantity) || 1;
-    const price = Number(item.item_price) || 1399;
-    totalAmount += price * qty;
-    const rawId = item.product_retailer_id || "travaholic-cap";
-    const formattedTitle = rawId
-      .replace(/[-_]/g, " ")
-      .split(" ")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-    itemBulletPoints.push(`• ${qty}x ${formattedTitle} (₹${price.toLocaleString("en-IN")})`);
+  for (const item of resolvedItems) {
+    totalAmount += item.price * item.quantity;
+    itemBulletPoints.push(`• ${item.quantity}x ${item.displayName} (₹${item.price.toLocaleString("en-IN")})`);
   }
 
-  if (orderItems.length > 0 && totalAmount === 0) {
-    totalAmount = 1399 * orderItems.length;
+  if (resolvedItems.length > 0 && totalAmount === 0) {
+    totalAmount = 1399 * resolvedItems.length;
   }
 
   const orderSummary = cartSuffix ? `🛒 Catalogue cart: ${cartSuffix} (₹${totalAmount.toLocaleString("en-IN")})` : null;
