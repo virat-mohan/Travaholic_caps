@@ -119,7 +119,6 @@ export async function POST(request: Request) {
     const itemsListText = itemBulletPoints.join("\n");
     const configuredUpiVpa = await getSetting("BUSINESS_UPI_ID");
     const upiVpa = configuredUpiVpa || "viratmohan-1@okhdfcbank";
-
     const configuredPayeeName = await getSetting("BUSINESS_UPI_NAME");
     const payeeName = configuredPayeeName || "Travaholic Caps";
 
