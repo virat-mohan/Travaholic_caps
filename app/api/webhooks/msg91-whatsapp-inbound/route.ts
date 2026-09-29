@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { logInboundWhatsAppMessage, logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
-import { sendWhatsAppSessionMessage, sendMsg91Template } from "@/lib/msg91";
+import { sendWhatsAppSessionMessage, sendWhatsAppSessionImage, sendMsg91Template } from "@/lib/msg91";
 import { chapters, resolveChapterSlug } from "@/lib/chapters";
 
 /**
@@ -171,34 +171,36 @@ export async function POST(request: Request) {
     const websiteCartLink = `https://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}`;
     const headerImageUrl = `https://www.travaholic.in/api/og/cart?items=${encodeURIComponent(cartSuffix)}`;
 
-    const templateName = (await getSetting("MSG91_CART_CHECKOUT_TEMPLATE_ID")) || "travaholic_cart_checkout";
-    const itemsSummaryForTemplate = itemBulletPoints.map((p) => p.replace(/^•\s*/, "")).join("\n• ");
-
-    // 1. Try sending the official MSG91 WhatsApp Template with Card Image & [Pay on Site] CTA button
+    // --- Strategy: Session reply from the Indian number (+91 88003 39125) ---
+    // The customer just sent a catalog cart, so we're always inside their
+    // 24-hour session window. Session messages are NEVER subject to Meta's
+    // per-user marketing frequency cap (Error 131049), making this 100%
+    // reliable. We send a studio card image with a caption containing the
+    // order summary and a 1-tap cart checkout deep link.
     let sentMessageId: string | null = null;
     let sendSuccess = false;
+    const fromNumber = receivingNumber ? String(receivingNumber) : undefined;
 
-    const templateResult = await sendMsg91Template(
-      templateName,
+    const imageCaption = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.\n\n📦 *Order Summary:*\n${itemsListText}\n\n💰 *Total Amount:* ${formattedTotal} (Free Express Delivery)\n\nYour cart is ready — tap below to complete your order securely on our site:\n${websiteCartLink}`;
+
+    // 1. Try sending the dynamic studio card image with caption (best UX)
+    const imageResult = await sendWhatsAppSessionImage(
       String(phone),
-      [firstName, itemsSummaryForTemplate, formattedTotal],
-      { type: "image", url: headerImageUrl },
-      encodeURIComponent(cartSuffix)
+      headerImageUrl,
+      imageCaption,
+      fromNumber
     );
 
-    if (templateResult.sent) {
+    if (imageResult.sent) {
       sendSuccess = true;
-      sentMessageId = templateResult.messageId ?? null;
+      sentMessageId = imageResult.messageId ?? null;
     } else {
-      // Fallback: If template is still pending Meta approval, send clean session reply with Pay on Site link
-      const fallbackReply = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.\n\n📦 *Order Summary:*\n${itemsListText}\n\n💰 *Total Amount:* ${formattedTotal} (Free Express Delivery)\n\nYour cart is ready. Tap below to complete your order securely on our site:\n${websiteCartLink}`;
-
+      // 2. Fallback: plain text session reply (still 100% reliable, just no image)
       const sessionResult = await sendWhatsAppSessionMessage(
         String(phone),
-        fallbackReply,
-        receivingNumber ? String(receivingNumber) : undefined
+        imageCaption,
+        fromNumber
       );
-
       sendSuccess = sessionResult.sent;
       sentMessageId = sessionResult.sent ? sessionResult.messageId ?? null : null;
     }
