@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { logInboundWhatsAppMessage, logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
-import { sendWhatsAppSessionMessage } from "@/lib/msg91";
+import { sendWhatsAppSessionMessage, sendMsg91Template } from "@/lib/msg91";
 
 /**
  * MSG91's inbound-WhatsApp webhook — configure this URL under MSG91
@@ -159,49 +159,48 @@ export async function POST(request: Request) {
 
     const firstName = name ? String(name).trim().split(" ")[0] : "there";
     const itemsListText = itemBulletPoints.join("\n");
-    const configuredUpiVpa = await getSetting("BUSINESS_UPI_ID");
-    const upiVpa = configuredUpiVpa || "viratmohan-1@okhdfcbank";
-    const configuredPayeeName = await getSetting("BUSINESS_UPI_NAME");
-    const payeeName = configuredPayeeName || "Travaholic Caps";
-
-    const firstItem = orderItems[0]?.product_retailer_id ?? "cap";
-    const oneTapUpiLink = `https://www.travaholic.in/pay/upi?am=${totalAmount}&item=${encodeURIComponent(firstItem)}`;
-    const qrCodeUrl = `https://www.travaholic.in/pay/qr?am=${totalAmount}&item=${encodeURIComponent(firstItem)}`;
+    const formattedTotal = `₹${totalAmount.toLocaleString("en-IN")}`;
     const websiteCartLink = `https://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}`;
+    const headerImageUrl = `https://www.travaholic.in/api/og/cart?items=${encodeURIComponent(cartSuffix)}`;
 
-    const reply = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.
+    const templateName = (await getSetting("MSG91_CART_CHECKOUT_TEMPLATE_ID")) || "travaholic_cart_checkout";
+    const itemsSummaryForTemplate = itemBulletPoints.map((p) => p.replace(/^•\s*/, "")).join("\n• ");
 
-📦 *Order Summary:*
-${itemsListText}
-💰 *Total Amount:* ₹${totalAmount.toLocaleString("en-IN")} (Free Express Shipping)
+    // 1. Try sending the official MSG91 WhatsApp Template with Card Image & [Pay on Site] CTA button
+    let sentMessageId: string | null = null;
+    let sendSuccess = false;
 
-━━━━━━━━━━━━━━━━━━━
-📲 *1-Tap Pay via UPI (GPay / PhonePe / Paytm):*
-${oneTapUpiLink}
-
-📸 *Or Scan QR Code to Pay:*
-${qrCodeUrl}
-
-💳 *Or Pay Directly to UPI ID:*
-\`${upiVpa}\`
-━━━━━━━━━━━━━━━━━━━
-
-🚚 *Next Step to Dispatch:*
-Once paid, reply with a screenshot here and your complete shipping address. We will pack and dispatch your order right away!
-
-(Prefer paying with Cards/NetBanking? Pay on site: ${websiteCartLink})`;
-
-    const sent = await sendWhatsAppSessionMessage(
+    const templateResult = await sendMsg91Template(
+      templateName,
       String(phone),
-      reply,
-      receivingNumber ? String(receivingNumber) : undefined
+      [firstName, itemsSummaryForTemplate, formattedTotal],
+      { type: "image", url: headerImageUrl },
+      encodeURIComponent(cartSuffix)
     );
+
+    if (templateResult.sent) {
+      sendSuccess = true;
+      sentMessageId = templateResult.messageId ?? null;
+    } else {
+      // Fallback: If template is still pending Meta approval, send clean session reply with Pay on Site link
+      const fallbackReply = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.\n\n📦 *Order Summary:*\n${itemsListText}\n\n💰 *Total Amount:* ${formattedTotal} (Free Express Delivery)\n\nYour cart is ready. Tap below to complete your order securely on our site:\n${websiteCartLink}`;
+
+      const sessionResult = await sendWhatsAppSessionMessage(
+        String(phone),
+        fallbackReply,
+        receivingNumber ? String(receivingNumber) : undefined
+      );
+
+      sendSuccess = sessionResult.sent;
+      sentMessageId = sessionResult.sent ? sessionResult.messageId ?? null : null;
+    }
+
     if (conversationId) {
       await logOutboundWhatsAppMessage({
         conversationId,
-        body: reply,
-        providerMessageId: sent.sent ? sent.messageId ?? null : null,
-        status: sent.sent ? "sent" : "failed",
+        body: `[Cart Checkout] ${sendSuccess ? "sent" : "failed"} (Total: ${formattedTotal})`,
+        providerMessageId: sentMessageId,
+        status: sendSuccess ? "sent" : "failed",
       }).catch(() => {});
     }
   }
