@@ -179,30 +179,47 @@ export async function POST(request: Request) {
     // order summary and a 1-tap cart checkout deep link.
     let sentMessageId: string | null = null;
     let sendSuccess = false;
-    const fromNumber = receivingNumber ? String(receivingNumber) : undefined;
-
     const imageCaption = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.\n\n📦 *Order Summary:*\n${itemsListText}\n\n💰 *Total Amount:* ${formattedTotal} (Free Express Delivery)\n\nYour cart is ready — tap below to complete your order securely on our site:\n${websiteCartLink}`;
 
-    // 1. Try sending the dynamic studio card image with caption (best UX)
-    const imageResult = await sendWhatsAppSessionImage(
+    const fromNumber = receivingNumber ? String(receivingNumber) : undefined;
+    const templateName = (await getSetting("MSG91_CART_CHECKOUT_TEMPLATE_ID")) || "travaholic_cart_utility";
+    const itemsSummaryForTemplate = itemBulletPoints.map((p) => p.replace(/^•\s*/, "")).join("\n• ");
+
+    // --- Tier 1: Try official Utility Template with Card Image & [Pay on Site] CTA button ---
+    // Since it's in the UTILITY category, Meta does not apply the 131049 marketing frequency cap.
+    const templateResult = await sendMsg91Template(
+      templateName,
       String(phone),
-      headerImageUrl,
-      imageCaption,
-      fromNumber
+      [firstName, itemsSummaryForTemplate, formattedTotal],
+      { type: "image", url: headerImageUrl },
+      encodeURIComponent(cartSuffix)
     );
 
-    if (imageResult.sent) {
+    if (templateResult.sent) {
       sendSuccess = true;
-      sentMessageId = imageResult.messageId ?? null;
+      sentMessageId = templateResult.messageId ?? null;
     } else {
-      // 2. Fallback: plain text session reply (still 100% reliable, just no image)
-      const sessionResult = await sendWhatsAppSessionMessage(
+      // --- Tier 2 Fallback: Session image reply (used while template is pending Meta approval) ---
+      const imageResult = await sendWhatsAppSessionImage(
         String(phone),
+        headerImageUrl,
         imageCaption,
         fromNumber
       );
-      sendSuccess = sessionResult.sent;
-      sentMessageId = sessionResult.sent ? sessionResult.messageId ?? null : null;
+
+      if (imageResult.sent) {
+        sendSuccess = true;
+        sentMessageId = imageResult.messageId ?? null;
+      } else {
+        // --- Tier 3 Fallback: Plain text session reply ---
+        const sessionResult = await sendWhatsAppSessionMessage(
+          String(phone),
+          imageCaption,
+          fromNumber
+        );
+        sendSuccess = sessionResult.sent;
+        sentMessageId = sessionResult.sent ? sessionResult.messageId ?? null : null;
+      }
     }
 
     if (conversationId) {
