@@ -9,8 +9,6 @@ const GROUPS: { label: string; fields: Field[] }[] = [
   {
     label: "Payments",
     fields: [
-      { key: "BUSINESS_UPI_ID", label: "Business UPI ID (WhatsApp / Direct UPI)", hint: "The UPI ID that receives customer payments via WhatsApp catalog checkout (e.g. viratmohan-1@okhdfcbank). Default: viratmohan-1@okhdfcbank" },
-      { key: "BUSINESS_UPI_NAME", label: "Business UPI Payee Name", hint: "Payee Name displayed on customer UPI apps like Google Pay / PhonePe (e.g. Travaholic Caps). Default: Travaholic Caps" },
       { key: "RAZORPAY_KEY_ID", label: "Razorpay Key ID", hint: "Test or live Key ID from Razorpay → Settings → API Keys." },
       { key: "RAZORPAY_KEY_SECRET", label: "Razorpay Key Secret", hint: "Paired secret for the Key ID above." },
       { key: "RAZORPAY_WEBHOOK_SECRET", label: "Razorpay Webhook Secret", hint: "Make up any random string, then paste the same value into Razorpay Dashboard → Settings → Webhooks when you add https://travaholic.in/api/webhooks/razorpay as a webhook (subscribe to payment.captured, refund.processed, refund.failed). This is the real safety net if a customer's payment succeeds but their browser never makes it back to confirm the order." },
@@ -77,6 +75,7 @@ const GROUPS: { label: string; fields: Field[] }[] = [
       { key: "MSG91_ORDER_RECEIVED_TEMPLATE_ID", label: "MSG91 Order Received Template Name", hint: "The approved bulk-API template's exact name (not a Flow slug). Four variables in order: order number, customer name, customer phone, items+total. Sent to every number in Warehouse WhatsApp Numbers below the moment an order is placed — independent of shipping, so it still fires even if courier assignment later fails." },
       { key: "MSG91_SHIP_NOTIFICATION_TEMPLATE_ID", label: "MSG91 Courier Assigned Template Name", hint: "The approved bulk-API template's exact name (not a Flow slug). Four variables in order: order number, customer name, customer phone, items+total. Sent to every number in Warehouse WhatsApp Numbers below once a courier is actually assigned — word the template as \"Courier assigned\", not \"ready to ship\", to read correctly." },
       { key: "WAREHOUSE_WHATSAPP_NUMBERS", label: "Warehouse WhatsApp Numbers", hint: "Comma-separated numbers with country code (e.g. 919999277240,919971944096) that get both the Order Received and Courier Assigned notifications above." },
+      { key: "MSG91_CART_CHECKOUT_TEMPLATE_ID", label: "WhatsApp Cart Checkout Template Name", hint: "Approved MSG91 template name for WhatsApp cart checkout with [Pay on Site] CTA (e.g. travaholic_cart_checkout). Defaults to travaholic_cart_checkout if unset." },
       { key: "MSG91_WHATSAPP_INTEGRATED_NUMBER", label: "MSG91 WhatsApp Integrated Number", hint: "The WhatsApp-enabled number shown as \"Active\" under MSG91 → WhatsApp. Required for /admin/whatsapp to send free-text replies (separate from the template Flows above)." },
       { key: "MSG91_INBOUND_WEBHOOK_TOKEN", label: "MSG91 Inbound Webhook Token", hint: "A password you make up and also paste into MSG91 → WhatsApp → Settings → Webhook, so only MSG91 can post incoming messages to /api/webhooks/msg91-whatsapp-inbound. Leave blank to accept unauthenticated (not recommended once live)." },
     ],
