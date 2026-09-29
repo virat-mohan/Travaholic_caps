@@ -87,6 +87,9 @@ export const SETTINGS_KEYS = [
   "UX_FINDING_STATUS",
   "BUSINESS_UPI_ID",
   "BUSINESS_UPI_NAME",
+  "WHATSAPP_SENDER_VERIFIED",
+  "WHATSAPP_SENDER_VERIFIED_AT",
+  "RECONCILE_PROBLEM_ALERT_AT",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];
