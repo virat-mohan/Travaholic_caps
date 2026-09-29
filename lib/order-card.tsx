@@ -1,110 +1,157 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "fs/promises";
+import path from "path";
 import { getBrandProfile } from "@/lib/brand";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { getAllChapters } from "@/lib/chapters-dynamic";
+import { chapterImageSrc } from "@/lib/chapters";
 
 type OrderForCard = {
   id: string;
   total: number;
+  customer_name?: string | null;
 };
-type ItemForCard = { chapter_name: string; quantity: number };
+type ItemForCard = { chapter_name: string; quantity: number; chapter_slug?: string | null; unit_price?: number | null };
+
+const INK = "#101820";
+const CREAM = "#f0eee4";
+const GOLD = "#e6c68f";
+const MUTED = "#4a4a42";
+
+// Satori takes TTF/OTF, not WOFF2 — Google's CSS API without a browser
+// user-agent returns plain TTF URLs.
+async function googleFont(family: string, weight: number): Promise<ArrayBuffer | null> {
+  try {
+    const css = await (await fetch(`https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}:wght@${weight}`)).text();
+    const url = css.match(/src: url\((.+?)\) format\('(?:truetype|opentype)'\)/)?.[1];
+    return url ? await (await fetch(url)).arrayBuffer() : null;
+  } catch {
+    return null;
+  }
+}
+
+// Inlined as data URIs — Satori's own remote fetching has been unreliable
+// ("unsupported image format" on valid PNGs). Local files are read from
+// public/; Storage URLs (admin-added caps) are fetched.
+async function imageDataUri(src: string): Promise<string | null> {
+  try {
+    if (/^https?:\/\//.test(src)) {
+      const res = await fetch(src);
+      if (!res.ok) return null;
+      const type = res.headers.get("content-type") ?? "image/png";
+      if (type.includes("webp")) return null; // Satori can't decode WebP
+      return `data:${type};base64,${Buffer.from(await res.arrayBuffer()).toString("base64")}`;
+    }
+    const bytes = await readFile(path.join(process.cwd(), "public", decodeURI(src)));
+    const type = /\.jpe?g$/i.test(src) ? "image/jpeg" : "image/png";
+    return `data:${type};base64,${bytes.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
 
 /**
- * Renders a branded "Order Confirmed" card as a PNG, used as the header
- * image on the WhatsApp order-confirmation template — WhatsApp doesn't
- * render HTML, so this is the closest equivalent to a "designed" email:
- * one image + plain-text body underneath it.
+ * Renders the "Order Confirmed" card used as the header image on the
+ * WhatsApp order-confirmation template (WhatsApp can't render HTML, so this
+ * is the designed part of the message). Brand look: ink header with the
+ * logo, the real product photo of every cap ordered, the Buy 3 Get 1 /
+ * savings line when it applied, and the total.
  *
- * Satori (the renderer behind ImageResponse) requires explicit flexbox on
- * any element with more than one child — this isn't optional CSS styling,
- * it'll throw without it.
+ * Satori needs explicit display:flex on any element with more than one child.
  */
 export async function renderOrderCardPng(order: OrderForCard, items: ItemForCard[]): Promise<ArrayBuffer> {
   const brand = await getBrandProfile();
-  // Fetched and inlined as a data URI rather than passed as a remote URL —
-  // Satori's own remote-image fetching has proven unreliable here ("Input
-  // buffer contains unsupported image format" despite the source being a
-  // valid PNG); fetching it ourselves sidesteps whatever that mismatch is.
-  const logoRes = await fetch(`${brand.siteUrl.replace(/\/$/, "")}/images/brand/travaholic-logo-color-v2.png`);
-  const logoBuffer = await logoRes.arrayBuffer();
-  const logoUrl = `data:image/png;base64,${Buffer.from(logoBuffer).toString("base64")}`;
+  const chapters = await getAllChapters().catch(() => []);
+  const lines = items.slice(0, 4);
+
+  const [logo, display, body, bodyBold, ...photos] = await Promise.all([
+    imageDataUri("/images/brand/travaholic-logo-color-v2.png"),
+    googleFont("Anton", 400),
+    googleFont("Inter", 400),
+    googleFont("Inter", 600),
+    ...lines.map((item) => {
+      const chapter = chapters.find((c) => c.slug === item.chapter_slug || c.name === item.chapter_name);
+      return chapter ? imageDataUri(chapterImageSrc(chapter.folder, chapter.sideImage)) : Promise.resolve(null);
+    }),
+  ]);
+
   const orderNumber = order.id.slice(0, 8).toUpperCase();
-  const itemLines = items.slice(0, 6).map((i) => `${i.quantity} × ${i.chapter_name}`);
+  const firstName = String(order.customer_name ?? "").trim().split(/\s+/)[0];
+  const capCount = items.reduce((s, i) => s + i.quantity, 0);
+  const listTotal = items.reduce((s, i) => s + (i.unit_price ?? 0) * i.quantity, 0);
+  const saved = listTotal > order.total ? listTotal - order.total : 0;
+  const moreCount = items.length - lines.length;
+  const tile = lines.length <= 2 ? 400 : lines.length === 3 ? 300 : 227;
+
+  const fonts = [
+    display && { name: "Display", data: display, weight: 400 as const, style: "normal" as const },
+    body && { name: "Body", data: body, weight: 400 as const, style: "normal" as const },
+    bodyBold && { name: "Body", data: bodyBold, weight: 600 as const, style: "normal" as const },
+  ].filter(Boolean) as { name: string; data: ArrayBuffer; weight: 400 | 600; style: "normal" }[];
 
   const image = new ImageResponse(
     (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-          height: "100%",
-          backgroundColor: "#f0eee4",
-          padding: "56px",
-          fontFamily: "sans-serif",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: "32px" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoUrl} width={90} height={65} alt="" />
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ display: "flex", fontSize: 22, color: "#4a4a42", letterSpacing: 2 }}>
-            ORDER CONFIRMED
-          </div>
-          <div style={{ display: "flex", fontSize: 16, color: "#4a4a42", marginTop: 8 }}>
-            #{orderNumber}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            marginTop: "40px",
-            backgroundColor: "#ffffff",
-            border: "1px solid rgba(16,24,32,0.15)",
-            padding: "32px",
-          }}
-        >
-          {itemLines.map((line, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                fontSize: 20,
-                color: "#101820",
-                marginBottom: i === itemLines.length - 1 ? 0 : 12,
-              }}
-            >
-              {line}
+      <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", backgroundColor: CREAM, fontFamily: "Body" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", backgroundColor: INK, padding: "44px 56px", gap: 36 }}>
+          {logo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo} width={150} height={150} alt="" />
+          )}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", fontFamily: "Display", fontSize: 72, color: CREAM, lineHeight: 1 }}>ORDER CONFIRMED</div>
+            <div style={{ display: "flex", fontSize: 26, color: GOLD, marginTop: 14, letterSpacing: 1 }}>
+              {`#${orderNumber}${firstName ? ` · Thank you, ${firstName}!` : ""}`}
             </div>
-          ))}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: "32px",
-            paddingTop: "24px",
-            borderTop: "1px solid rgba(16,24,32,0.15)",
-          }}
-        >
-          <div style={{ display: "flex", fontSize: 24, color: "#101820", fontWeight: 700 }}>Total</div>
-          <div style={{ display: "flex", fontSize: 24, color: "#101820", fontWeight: 700 }}>
-            ₹{order.total.toLocaleString("en-IN")}
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", marginTop: "40px" }}>
-          <div style={{ display: "flex", fontSize: 14, color: "#4a4a42", letterSpacing: 1 }}>
-            {brand.brandName} · {brand.tagline}
+        {/* Caps */}
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 56px", flexGrow: 1 }}>
+          <div style={{ display: "flex", fontSize: 20, color: MUTED, letterSpacing: 3, fontWeight: 600 }}>
+            {`YOUR ${capCount} ${capCount === 1 ? "CAP" : "CAPS"}`}
+          </div>
+          <div style={{ display: "flex", gap: 20, marginTop: 20 }}>
+            {lines.map((item, i) => (
+              <div key={i} style={{ display: "flex", flexDirection: "column", width: tile }}>
+                <div style={{ display: "flex", width: tile, height: tile, backgroundColor: "#ffffff", alignItems: "center", justifyContent: "center" }}>
+                  {photos[i] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={photos[i] as string} width={tile - 24} height={tile - 24} style={{ objectFit: "contain" }} alt="" />
+                  ) : (
+                    <div style={{ display: "flex", fontFamily: "Display", fontSize: 28, color: INK }}>{item.chapter_name}</div>
+                  )}
+                </div>
+                <div style={{ display: "flex", fontSize: 22, color: INK, marginTop: 12, fontWeight: 600 }}>
+                  {`${item.quantity > 1 ? `${item.quantity} × ` : ""}${item.chapter_name}`}
+                </div>
+              </div>
+            ))}
+          </div>
+          {moreCount > 0 && (
+            <div style={{ display: "flex", fontSize: 20, color: MUTED, marginTop: 12 }}>{`+ ${moreCount} more`}</div>
+          )}
+        </div>
+
+        {/* Totals */}
+        <div style={{ display: "flex", flexDirection: "column", padding: "0 56px 44px" }}>
+          {saved > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 24, color: "#2a7a4f", fontWeight: 600, marginBottom: 14 }}>
+              <div style={{ display: "flex" }}>{capCount >= 4 ? "Buy 3, Get 1 Free applied" : "Savings"}</div>
+              <div style={{ display: "flex" }}>{`− ₹${saved.toLocaleString("en-IN")}`}</div>
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: "2px solid rgba(16,24,32,0.15)", paddingTop: 18 }}>
+            <div style={{ display: "flex", fontFamily: "Display", fontSize: 44, color: INK }}>TOTAL PAID</div>
+            <div style={{ display: "flex", fontFamily: "Display", fontSize: 56, color: INK }}>{`₹${order.total.toLocaleString("en-IN")}`}</div>
+          </div>
+          <div style={{ display: "flex", fontSize: 20, color: MUTED, marginTop: 14 }}>
+            {`Free shipping · We'll send your tracking link when it ships · ${brand.siteUrl.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}`}
           </div>
         </div>
       </div>
     ),
-    { width: 1080, height: 1080 }
+    { width: 1080, height: 1080, fonts: fonts.length ? fonts : undefined }
   );
 
   return image.arrayBuffer();

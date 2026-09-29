@@ -4,7 +4,7 @@ import { sendMsg91WhatsAppFlow, sendMsg91Template, sendWhatsAppSessionMessage } 
 import { generateAndUploadOrderCard } from "@/lib/order-card";
 
 type OrderForWhatsApp = { id: string; customer_name: string; customer_phone: string; total: number };
-type OrderItemForCard = { chapter_name: string; quantity: number };
+type OrderItemForCard = { chapter_name: string; quantity: number; chapter_slug?: string | null; unit_price?: number | null };
 type CartSessionForWhatsApp = {
   id: string;
   customer_name: string | null;
