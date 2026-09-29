@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { logInboundWhatsAppMessage, logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
-import { sendWhatsAppSessionMessage, sendMsg91Template } from "@/lib/msg91";
+import { sendWhatsAppSessionMessage, sendWhatsAppSessionImage, sendMsg91Template } from "@/lib/msg91";
 import { chapters, resolveChapterSlug } from "@/lib/chapters";
 
 /**
@@ -171,13 +171,22 @@ export async function POST(request: Request) {
     const websiteCartLink = `https://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}`;
     const headerImageUrl = `https://www.travaholic.in/api/og/cart?items=${encodeURIComponent(cartSuffix)}`;
 
-    const templateName = (await getSetting("MSG91_CART_CHECKOUT_TEMPLATE_ID")) || "travaholic_cart_checkout";
-    const itemsSummaryForTemplate = itemBulletPoints.map((p) => p.replace(/^•\s*/, "")).join("\n• ");
-
-    // 1. Try sending the official MSG91 WhatsApp Template with Card Image & [Pay on Site] CTA button
+    // --- Strategy: Session reply from the Indian number (+91 88003 39125) ---
+    // The customer just sent a catalog cart, so we're always inside their
+    // 24-hour session window. Session messages are NEVER subject to Meta's
+    // per-user marketing frequency cap (Error 131049), making this 100%
+    // reliable. We send a studio card image with a caption containing the
+    // order summary and a 1-tap cart checkout deep link.
     let sentMessageId: string | null = null;
     let sendSuccess = false;
+    const imageCaption = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.\n\n📦 *Order Summary:*\n${itemsListText}\n\n💰 *Total Amount:* ${formattedTotal} (Free Express Delivery)\n\nYour cart is ready — tap below to complete your order securely on our site:\n${websiteCartLink}`;
 
+    const fromNumber = receivingNumber ? String(receivingNumber) : undefined;
+    const templateName = (await getSetting("MSG91_CART_CHECKOUT_TEMPLATE_ID")) || "travaholic_cart_utility";
+    const itemsSummaryForTemplate = itemBulletPoints.map((p) => p.replace(/^•\s*/, "")).join("\n• ");
+
+    // --- Tier 1: Try official Utility Template with Card Image & [Pay on Site] CTA button ---
+    // Since it's in the UTILITY category, Meta does not apply the 131049 marketing frequency cap.
     const templateResult = await sendMsg91Template(
       templateName,
       String(phone),
@@ -190,17 +199,27 @@ export async function POST(request: Request) {
       sendSuccess = true;
       sentMessageId = templateResult.messageId ?? null;
     } else {
-      // Fallback: If template is still pending Meta approval, send clean session reply with Pay on Site link
-      const fallbackReply = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.\n\n📦 *Order Summary:*\n${itemsListText}\n\n💰 *Total Amount:* ${formattedTotal} (Free Express Delivery)\n\nYour cart is ready. Tap below to complete your order securely on our site:\n${websiteCartLink}`;
-
-      const sessionResult = await sendWhatsAppSessionMessage(
+      // --- Tier 2 Fallback: Session image reply (used while template is pending Meta approval) ---
+      const imageResult = await sendWhatsAppSessionImage(
         String(phone),
-        fallbackReply,
-        receivingNumber ? String(receivingNumber) : undefined
+        headerImageUrl,
+        imageCaption,
+        fromNumber
       );
 
-      sendSuccess = sessionResult.sent;
-      sentMessageId = sessionResult.sent ? sessionResult.messageId ?? null : null;
+      if (imageResult.sent) {
+        sendSuccess = true;
+        sentMessageId = imageResult.messageId ?? null;
+      } else {
+        // --- Tier 3 Fallback: Plain text session reply ---
+        const sessionResult = await sendWhatsAppSessionMessage(
+          String(phone),
+          imageCaption,
+          fromNumber
+        );
+        sendSuccess = sessionResult.sent;
+        sentMessageId = sessionResult.sent ? sessionResult.messageId ?? null : null;
+      }
     }
 
     if (conversationId) {

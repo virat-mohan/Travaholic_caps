@@ -330,6 +330,60 @@ export async function sendWhatsAppSessionMessage(
   }
 }
 
+/**
+ * Sends a WhatsApp image with caption as a session message — valid within
+ * Meta's 24-hour window after the customer last messaged in. Unlike marketing
+ * templates, session messages are never subject to Meta's per-user frequency
+ * cap (Error 131049), making this the most reliable way to reply to an
+ * inbound catalog cart. Uses MSG91's outbound-message endpoint with
+ * content_type "image".
+ */
+export async function sendWhatsAppSessionImage(
+  phone: string,
+  imageUrl: string,
+  caption: string,
+  fromNumber?: string
+) {
+  const authKey = await getSetting("MSG91_AUTH_KEY");
+  const defaultNumber = await getSetting("MSG91_WHATSAPP_INTEGRATED_NUMBER");
+  const rawIntegratedNumber = fromNumber || defaultNumber;
+  if (!authKey || !rawIntegratedNumber) {
+    return { sent: false as const, error: "MSG91 Auth Key or WhatsApp number not configured" };
+  }
+  const integratedNumber = rawIntegratedNumber.replace(/\D/g, "");
+
+  try {
+    const res = await fetch("https://control.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/", {
+      method: "POST",
+      headers: {
+        authkey: authKey,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        integrated_number: integratedNumber,
+        recipient_number: toMobile(phone),
+        content_type: "image",
+        payload: {
+          url: imageUrl,
+          caption,
+        },
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.hasError || data?.type === "error") {
+      console.error("MSG91 session image send failed", res.status, data);
+      return { sent: false as const, error: data?.message ?? `HTTP ${res.status}` };
+    }
+    const messageId =
+      data?.request_id ?? data?.data?.request_id ?? data?.message_id ?? data?.data?.[0]?.message_id ?? null;
+    return { sent: true as const, messageId: messageId ? String(messageId) : undefined };
+  } catch (err) {
+    console.error("MSG91 session image send failed", err);
+    return { sent: false as const, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
 /** Login OTP — one variable (the code). */
 export async function sendOtpViaMsg91(phone: string, code: string) {
   const flowSlug = await getSetting("MSG91_OTP_TEMPLATE_ID");
