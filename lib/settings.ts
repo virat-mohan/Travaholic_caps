@@ -84,6 +84,8 @@ export const SETTINGS_KEYS = [
   "MSG91_DELIVERY_ALERT_TEMPLATE_ID",
   "CHECKOUT_HEALTH_LAST_ALERT",
   "UX_FINDING_STATUS",
+  "BUSINESS_UPI_ID",
+  "BUSINESS_UPI_NAME",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];
