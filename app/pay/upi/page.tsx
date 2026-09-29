@@ -7,7 +7,7 @@ import { Check, Copy, ArrowLeft, MessageCircle, ShieldCheck, Zap } from "lucide-
 function UpiPayContent() {
   const searchParams = useSearchParams();
   const rawAmount = searchParams.get("am") || "1399";
-  const items = searchParams.get("items") || "Travaholic Cap";
+  const items = searchParams.get("item") || searchParams.get("items") || "Travaholic Cap";
   const [copied, setCopied] = useState(false);
 
   // Normalize amount to a clean integer
