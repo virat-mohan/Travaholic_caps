@@ -171,55 +171,37 @@ export async function POST(request: Request) {
     const websiteCartLink = `https://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}`;
     const headerImageUrl = `https://www.travaholic.in/api/og/cart?items=${encodeURIComponent(cartSuffix)}`;
 
-    // --- Strategy: Session reply from the Indian number (+91 88003 39125) ---
-    // The customer just sent a catalog cart, so we're always inside their
-    // 24-hour session window. Session messages are NEVER subject to Meta's
-    // per-user marketing frequency cap (Error 131049), making this 100%
-    // reliable. We send a studio card image with a caption containing the
-    // order summary and a 1-tap cart checkout deep link.
+    // --- Strategy: Session reply from the SAME Indian number (+91 88003 39125) ---
+    // The customer just sent a catalog cart to this exact number, so they're inside
+    // their 24h session window. By replying via session message with `fromNumber`,
+    // the reply appears in the EXACT SAME CHAT THREAD right under their cart (not from
+    // a separate +1 555 number), and is never subject to Meta frequency capping.
     let sentMessageId: string | null = null;
     let sendSuccess = false;
     const imageCaption = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.\n\n📦 *Order Summary:*\n${itemsListText}\n\n💰 *Total Amount:* ${formattedTotal} (Free Express Delivery)\n\nYour cart is ready — tap below to complete your order securely on our site:\n${websiteCartLink}`;
 
     const fromNumber = receivingNumber ? String(receivingNumber) : undefined;
-    const templateName = (await getSetting("MSG91_CART_CHECKOUT_TEMPLATE_ID")) || "travaholic_cart_utility";
-    const itemsSummaryForTemplate = itemBulletPoints.map((p) => p.replace(/^•\s*/, "")).join("\n• ");
 
-    // --- Tier 1: Try official Utility Template with Card Image & [Pay on Site] CTA button ---
-    // Since it's in the UTILITY category, Meta does not apply the 131049 marketing frequency cap.
-    const templateResult = await sendMsg91Template(
-      templateName,
+    // 1. Primary: Send dynamic studio card image + caption in the same thread
+    const imageResult = await sendWhatsAppSessionImage(
       String(phone),
-      [firstName, itemsSummaryForTemplate, formattedTotal],
-      { type: "image", url: headerImageUrl },
-      encodeURIComponent(cartSuffix)
+      headerImageUrl,
+      imageCaption,
+      fromNumber
     );
 
-    if (templateResult.sent) {
+    if (imageResult.sent) {
       sendSuccess = true;
-      sentMessageId = templateResult.messageId ?? null;
+      sentMessageId = imageResult.messageId ?? null;
     } else {
-      // --- Tier 2 Fallback: Session image reply (used while template is pending Meta approval) ---
-      const imageResult = await sendWhatsAppSessionImage(
+      // 2. Fallback: Plain text session reply in the same thread
+      const sessionResult = await sendWhatsAppSessionMessage(
         String(phone),
-        headerImageUrl,
         imageCaption,
         fromNumber
       );
-
-      if (imageResult.sent) {
-        sendSuccess = true;
-        sentMessageId = imageResult.messageId ?? null;
-      } else {
-        // --- Tier 3 Fallback: Plain text session reply ---
-        const sessionResult = await sendWhatsAppSessionMessage(
-          String(phone),
-          imageCaption,
-          fromNumber
-        );
-        sendSuccess = sessionResult.sent;
-        sentMessageId = sessionResult.sent ? sessionResult.messageId ?? null : null;
-      }
+      sendSuccess = sessionResult.sent;
+      sentMessageId = sessionResult.sent ? sessionResult.messageId ?? null : null;
     }
 
     if (conversationId) {
