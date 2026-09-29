@@ -117,12 +117,15 @@ export async function POST(request: Request) {
   if (orderItems.length > 0) {
     const firstName = name ? String(name).trim().split(" ")[0] : "there";
     const itemsListText = itemBulletPoints.join("\n");
-    const upiVpa = "viratmohan-1@okhdfcbank";
-    const payeeName = "Travaholic Caps";
+    const configuredUpiVpa = await getSetting("BUSINESS_UPI_ID");
+    const upiVpa = configuredUpiVpa || "viratmohan-1@okhdfcbank";
+
+    const configuredPayeeName = await getSetting("BUSINESS_UPI_NAME");
+    const payeeName = configuredPayeeName || "Travaholic Caps";
 
     const rawUpiUri = `upi://pay?pa=${upiVpa}&pn=${encodeURIComponent(payeeName)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent(`Travaholic Order ${cartSuffix}`)}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rawUpiUri)}`;
-    const oneTapUpiLink = `https://www.travaholic.in/pay/upi?am=${totalAmount}&items=${encodeURIComponent(cartSuffix)}`;
+    const oneTapUpiLink = `https://www.travaholic.in/pay/upi?am=${totalAmount}&items=${encodeURIComponent(cartSuffix)}&vpa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(payeeName)}`;
     const websiteCartLink = `https://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}&utm_source=whatsapp&utm_medium=catalogue`;
 
     const reply = `Hi ${firstName}! 🧢 Thanks for choosing Travaholic.

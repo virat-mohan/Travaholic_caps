@@ -14,8 +14,8 @@ function UpiPayContent() {
   const amount = parseInt(rawAmount.replace(/\D/g, ""), 10) || 1399;
   const formattedAmount = amount.toLocaleString("en-IN");
 
-  const upiId = "viratmohan-1@okhdfcbank";
-  const payeeName = "Travaholic Caps";
+  const upiId = searchParams.get("vpa") || "viratmohan-1@okhdfcbank";
+  const payeeName = searchParams.get("pn") || "Travaholic Caps";
   const note = `Travaholic Order (${items.slice(0, 30)})`;
 
   // Standard NPCI UPI URI

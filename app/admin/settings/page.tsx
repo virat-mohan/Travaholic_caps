@@ -9,6 +9,8 @@ const GROUPS: { label: string; fields: Field[] }[] = [
   {
     label: "Payments",
     fields: [
+      { key: "BUSINESS_UPI_ID", label: "Business UPI ID (WhatsApp / Direct UPI)", hint: "The UPI ID that receives customer payments via WhatsApp catalog checkout (e.g. viratmohan-1@okhdfcbank). Default: viratmohan-1@okhdfcbank" },
+      { key: "BUSINESS_UPI_NAME", label: "Business UPI Payee Name", hint: "Payee Name displayed on customer UPI apps like Google Pay / PhonePe (e.g. Travaholic Caps). Default: Travaholic Caps" },
       { key: "RAZORPAY_KEY_ID", label: "Razorpay Key ID", hint: "Test or live Key ID from Razorpay → Settings → API Keys." },
       { key: "RAZORPAY_KEY_SECRET", label: "Razorpay Key Secret", hint: "Paired secret for the Key ID above." },
       { key: "RAZORPAY_WEBHOOK_SECRET", label: "Razorpay Webhook Secret", hint: "Make up any random string, then paste the same value into Razorpay Dashboard → Settings → Webhooks when you add https://travaholic.in/api/webhooks/razorpay as a webhook (subscribe to payment.captured, refund.processed, refund.failed). This is the real safety net if a customer's payment succeeds but their browser never makes it back to confirm the order." },

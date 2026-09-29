@@ -302,21 +302,27 @@ export async function sendWhatsAppSessionMessage(
   const integratedNumber = rawIntegratedNumber.replace(/\D/g, "");
 
   try {
-    const res = await fetch("https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/", {
+    const res = await fetch("https://control.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/", {
       method: "POST",
-      headers: { authkey: authKey, "Content-Type": "application/json" },
+      headers: {
+        authkey: authKey,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
       body: JSON.stringify({
         integrated_number: integratedNumber,
-        content: { type: "text", text: { body: text } },
         recipient_number: toMobile(phone),
+        content_type: "text",
+        text: text,
       }),
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok) {
+    if (!res.ok || data?.hasError || data?.type === "error") {
       console.error("MSG91 session message send failed", res.status, data);
       return { sent: false as const, error: data?.message ?? `HTTP ${res.status}` };
     }
-    const messageId = data?.request_id ?? data?.data?.request_id ?? data?.message_id ?? null;
+    const messageId =
+      data?.request_id ?? data?.data?.request_id ?? data?.message_id ?? data?.data?.[0]?.message_id ?? null;
     return { sent: true as const, messageId: messageId ? String(messageId) : undefined };
   } catch (err) {
     console.error("MSG91 session message send failed", err);
