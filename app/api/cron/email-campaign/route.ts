@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
-import { sendWelcomeBack15Batch } from "@/lib/email-campaigns";
+import { sendWelcomeBack15Batch, sendWelcomeBack15ResendBatch } from "@/lib/email-campaigns";
 
 export const maxDuration = 300;
 
@@ -16,5 +16,11 @@ export async function GET(request: Request) {
   if (!(await assertAuthorized(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json(await sendWelcomeBack15Batch());
+  const first = await sendWelcomeBack15Batch();
+  // Once everyone has had the first send, the same daily slot works through
+  // the non-opener resend (from 3 Oct).
+  if (first.remaining === 0) {
+    return NextResponse.json({ first, resend: await sendWelcomeBack15ResendBatch() });
+  }
+  return NextResponse.json({ first });
 }

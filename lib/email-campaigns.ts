@@ -157,3 +157,85 @@ export async function getWelcomeBack15Stats() {
     discountGiven: paid.reduce((s, o) => s + Number(o.coupon_discount_amount ?? 0), 0),
   };
 }
+
+// Second send of the same offer to everyone who never opened the first
+// (≈97% of the list opened nothing in batches 1–3). Starts 3 Oct 2026.
+const RESEND_KEY = "welcomeback15_resend";
+const RESEND_STARTS = new Date("2026-10-03T00:00:00+05:30");
+
+async function brevoEventEmails(apiKey: string, event: string) {
+  const emails = new Set<string>();
+  for (let offset = 0; offset < 20000; offset += 2500) {
+    const res = await fetch(
+      `https://api.brevo.com/v3/smtp/statistics/events?tags=${WELCOMEBACK15.key}&event=${event}&days=90&limit=2500&offset=${offset}`,
+      { headers: { "api-key": apiKey }, cache: "no-store" }
+    );
+    if (!res.ok) throw new Error(`Brevo events ${event} failed: ${res.status}`);
+    const rows = ((await res.json()).events ?? []) as { email: string }[];
+    rows.forEach((r) => emails.add(r.email.toLowerCase()));
+    if (rows.length < 2500) break;
+  }
+  return emails;
+}
+
+export async function sendWelcomeBack15ResendBatch() {
+  if (Date.now() < RESEND_STARTS.getTime()) return { sent: 0, remaining: null, note: "resend starts 3 Oct" };
+  const apiKey = await getSetting("BREVO_API_KEY");
+  if (!apiKey) return { sent: 0, remaining: null, note: "BREVO_API_KEY not set" };
+  const supabase = getSupabaseServerClient();
+
+  const [{ data: firstSends }, { data: resent }, { data: unsubs }, opened, clicked, hardBounced] = await Promise.all([
+    supabase.from("email_campaign_sends").select("email, name").eq("campaign", WELCOMEBACK15.key).eq("status", "sent").limit(10000),
+    supabase.from("email_campaign_sends").select("email").eq("campaign", RESEND_KEY).limit(10000),
+    supabase.from("email_unsubscribes").select("email").limit(10000),
+    brevoEventEmails(apiKey, "opened"),
+    brevoEventEmails(apiKey, "clicks"),
+    brevoEventEmails(apiKey, "hardBounces"),
+  ]);
+  const skip = new Set([...(resent ?? []), ...(unsubs ?? [])].map((r) => r.email.toLowerCase()));
+  const queue = (firstSends ?? []).filter((r) => {
+    const e = r.email.toLowerCase();
+    return !skip.has(e) && !opened.has(e) && !clicked.has(e) && !hardBounced.has(e);
+  });
+  if (queue.length === 0) return { sent: 0, remaining: 0, note: "resend complete" };
+
+  const credits = await brevoCreditsLeft(apiKey);
+  const batchSize = Math.min(MAX_BATCH, Math.max(0, credits - TRANSACTIONAL_RESERVE), queue.length);
+  if (batchSize === 0) return { sent: 0, remaining: queue.length, note: `only ${credits} Brevo credits left today` };
+
+  const offerEndsAt = new Date(Date.now() + WELCOMEBACK15.offerHours * 3600 * 1000);
+  const endsLabel =
+    offerEndsAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST";
+  const { data: coupon } = await supabase.from("coupon_codes").select("expires_at").eq("code", WELCOMEBACK15.couponCode).maybeSingle();
+  if (!coupon?.expires_at || new Date(coupon.expires_at) < offerEndsAt) {
+    await supabase.from("coupon_codes").update({ expires_at: offerEndsAt.toISOString(), active: true }).eq("code", WELCOMEBACK15.couponCode);
+  }
+
+  let sent = 0;
+  for (const c of queue.slice(0, batchSize)) {
+    const email = c.email.toLowerCase();
+    const unsub = unsubscribeUrl(email);
+    const name = firstName(c.name);
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sender: { name: "Travaholic", email: "orders@travaholic.in" },
+        replyTo: { email: "travaholiccaps@gmail.com" },
+        to: [{ email, ...(c.name ? { name: String(c.name) } : {}) }],
+        subject: name ? `${name}, still thinking about it? Your 15% is waiting` : "Still thinking about it? Your 15% is waiting",
+        htmlContent: renderWelcomeBack15Email(endsLabel, unsub),
+        tags: [WELCOMEBACK15.key, RESEND_KEY],
+        headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    await supabase.from("email_campaign_sends").upsert(
+      { campaign: RESEND_KEY, email, name: c.name ?? null, status: res.ok ? "sent" : "failed", message_id: data?.messageId ?? null, offer_ends_at: offerEndsAt.toISOString() },
+      { onConflict: "campaign,email" }
+    );
+    if (res.ok) sent++;
+    else if (res.status === 402 || res.status === 429) break;
+  }
+  return { sent, remaining: queue.length - sent, note: `resend · offer ends ${endsLabel}` };
+}
