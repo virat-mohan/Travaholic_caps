@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     title: DEFAULT_TITLE,
     description: DESCRIPTION,
     url: SITE_URL,
-    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: brand.profile.brandName }],
+    images: [{ url: OG_IMAGE, width: 800, height: 800, alt: brand.profile.brandName, type: "image/png" }],
   },
   twitter: {
     card: "summary_large_image",
