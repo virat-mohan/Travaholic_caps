@@ -30,15 +30,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       images: [
         {
           url: ogImageUrl,
-          width: 1200,
-          height: 630,
+          width: 800,
+          height: 800,
           alt: `${brand.profile.brandName} Cart`,
           type: "image/png",
         },
       ],
     },
     twitter: {
-      card: "summary_large_image",
+      card: "summary",
       title: `Your Cart is Ready — ${brand.profile.brandName}`,
       description:
         "Complete your Travaholic order securely with Free Express Delivery across India.",
