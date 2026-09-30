@@ -12,8 +12,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const resolved = await searchParams;
   const items = typeof resolved?.items === "string" ? resolved.items : "";
   const ogImageUrl = items
-    ? `${SITE_URL}/api/og/cart?items=${encodeURIComponent(items)}`
-    : `${SITE_URL}/api/og/cart`;
+    ? `${SITE_URL}/api/og/cart?items=${encodeURIComponent(items)}&v=clean-hd`
+    : `${SITE_URL}/api/og/cart?v=clean-hd`;
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -30,8 +30,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       images: [
         {
           url: ogImageUrl,
-          width: 800,
-          height: 800,
+          width: 600,
+          height: 600,
           alt: `${brand.profile.brandName} Cart`,
           type: "image/png",
         },

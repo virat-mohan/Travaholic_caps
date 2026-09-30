@@ -6,7 +6,6 @@ import { chapterImageSrc, resolveChapterSlug } from "@/lib/chapters";
 
 export const runtime = "nodejs";
 
-const CREAM = "#F5F3EF";
 const INK = "#101820";
 
 async function imageDataUri(src: string): Promise<string | null> {
@@ -69,10 +68,7 @@ export async function GET(request: Request) {
     quantity: 1,
   };
 
-  const [logo, capPhoto] = await Promise.all([
-    imageDataUri("/images/brand/travaholic-logo-color-black-text.png"),
-    heroItem.imagePath ? imageDataUri(heroItem.imagePath) : Promise.resolve(null),
-  ]);
+  const capPhoto = heroItem.imagePath ? await imageDataUri(heroItem.imagePath) : null;
 
   return new ImageResponse(
     (
@@ -83,50 +79,18 @@ export async function GET(request: Request) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: CREAM,
-          position: "relative",
+          backgroundColor: "#FFFFFF",
+          padding: 24,
         }}
       >
-        {/* Soft circular ambient pedestal */}
-        <div
-          style={{
-            position: "absolute",
-            width: 620,
-            height: 620,
-            borderRadius: 310,
-            backgroundColor: "#EAE6DE",
-            opacity: 0.85,
-          }}
-        />
-
-        {/* Brand Roundel Logo in Top-Left corner */}
-        {logo && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logo}
-            width={110}
-            height={110}
-            style={{
-              position: "absolute",
-              top: 36,
-              left: 36,
-              filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.12))",
-            }}
-            alt=""
-          />
-        )}
-
-        {/* Large Studio Cap Product Photography */}
         {capPhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={capPhoto}
-            width={720}
-            height={640}
+            width={552}
+            height={552}
             style={{
               objectFit: "contain",
-              filter: "drop-shadow(0 30px 42px rgba(0,0,0,0.16))",
-              position: "relative",
             }}
             alt=""
           />
@@ -134,7 +98,7 @@ export async function GET(request: Request) {
           <div
             style={{
               display: "flex",
-              fontSize: 52,
+              fontSize: 48,
               color: INK,
               fontWeight: 700,
             }}
@@ -145,8 +109,8 @@ export async function GET(request: Request) {
       </div>
     ),
     {
-      width: 800,
-      height: 800,
+      width: 600,
+      height: 600,
       headers: {
         "Cache-Control": "public, max-age=86400, s-maxage=86400",
       },
