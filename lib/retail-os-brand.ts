@@ -89,7 +89,7 @@ export const travaholicBrand: RetailOsBrand = {
     navLogoPath: "/images/brand/travaholic-logo-color-v2.png",
     navLogoAlt: "Travaholic",
     footerWordmarkPath: "/images/brand/travaholic-wordmark-black.png",
-    ogImagePath: "/images/brand/og-image.jpg",
+    ogImagePath: "/images/brand/travaholic-logo-square-preview.png",
   },
   footerBlurb:
     "Stories you can wear. Premium trucker caps inspired by journeys, landscapes and moments worth remembering.",
