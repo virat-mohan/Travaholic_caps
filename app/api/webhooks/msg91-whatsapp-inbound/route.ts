@@ -169,7 +169,7 @@ export async function POST(request: Request) {
     const itemsListText = itemBulletPoints.join("\n");
     const formattedTotal = `₹${totalAmount.toLocaleString("en-IN")}`;
     const websiteCartLink = `https://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}`;
-    const headerImageUrl = `https://www.travaholic.in/api/og/cart?items=${encodeURIComponent(cartSuffix)}`;
+    const headerImageUrl = `https://www.travaholic.in/api/og/cart?items=${encodeURIComponent(cartSuffix)}&v=clean-hd`;
 
     // --- Strategy: Session reply from the SAME Indian number (+91 88003 39125) ---
     // The customer just sent a catalog cart to this exact number, so they're inside
