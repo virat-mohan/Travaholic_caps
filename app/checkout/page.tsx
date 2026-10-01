@@ -1110,6 +1110,11 @@ export default function CheckoutPage() {
                             : `Pay ₹${total.toLocaleString("en-IN")}`
                         : "Place Order via WhatsApp"}
               </button>
+              {razorpay.enabled && (
+                <p className="-mt-2 text-center text-caption text-secondary-text">
+                  🔒 Secure payment by Razorpay · UPI, cards &amp; netbanking · Free shipping across India
+                </p>
+              )}
 
               <div className="grid grid-cols-1 gap-4 border-t border-divider pt-6 sm:grid-cols-2">
                 <div>

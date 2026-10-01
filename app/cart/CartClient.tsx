@@ -19,7 +19,7 @@ import { FooterEditorial } from "@/components/footer/FooterEditorial";
  * Split out because useSearchParams() requires a Suspense boundary.
  */
 function CartDeepLinkApplier() {
-  const { addItem, loaded } = useCart();
+  const { addItem, setQuantity, loaded } = useCart();
   const router = useRouter();
   const searchParams = useSearchParams();
   const appliedDeepLink = useRef(false);
@@ -31,7 +31,10 @@ function CartDeepLinkApplier() {
     appliedDeepLink.current = true;
 
     for (const { chapter, image, quantity } of parseCartDeepLink(itemsParam)) {
+      // A shared cart link describes the cart exactly — re-opening it (or a
+      // WhatsApp resend) must not double the quantities already in the cart.
       addItem(chapter, image, quantity);
+      setQuantity(chapter.slug, quantity);
     }
     router.replace("/cart");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -45,6 +48,11 @@ export default function CartClient() {
   const discountRule = useDiscountRule();
   const discount = calculateDiscount(items, discountRule);
   const total = subtotal - discount;
+  const units = items.reduce((sum, i) => sum + i.quantity, 0);
+  // Buy-3-Get-1 nudge: how many more caps unlock the next free one.
+  const group = discountRule && discountRule.discountPercent >= 100 ? discountRule.buyQuantity : 0;
+  const toNextFree = group ? (group - (units % group)) % group : 0;
+  const cheapest = items.length ? Math.min(...items.map((i) => i.price)) : 0;
 
   return (
     <>
@@ -131,6 +139,32 @@ export default function CartClient() {
               ))}
             </div>
 
+            {group > 0 && (
+              <div className="mt-6 border border-tan-gold bg-surface px-4 py-4">
+                {toNextFree > 0 ? (
+                  <>
+                    <p className="font-sans text-body-s font-bold uppercase tracking-[0.05em] text-ink">
+                      Add {toNextFree} more {toNextFree === 1 ? "cap" : "caps"} — get 1 free
+                    </p>
+                    <p className="mt-1 text-caption text-secondary-text">
+                      Buy {group - 1}, Get 1 Free is applied automatically. The free cap saves you up to ₹
+                      {cheapest.toLocaleString("en-IN")}.
+                    </p>
+                    <div className="mt-3 h-1.5 w-full bg-divider">
+                      <div className="h-1.5 bg-tan-gold" style={{ width: `${((units % group) / group) * 100}%` }} />
+                    </div>
+                    <Link href="/#shop" className="mt-3 inline-block font-sans text-caption font-bold uppercase tracking-[0.1em] text-ink underline underline-offset-4">
+                      Pick another cap →
+                    </Link>
+                  </>
+                ) : (
+                  <p className="font-sans text-body-s font-bold uppercase tracking-[0.05em] text-ink">
+                    You&apos;ve unlocked {Math.floor(units / group)} free {Math.floor(units / group) === 1 ? "cap" : "caps"} 🎉
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="mt-8 flex items-center justify-between">
               <p className="font-sans text-body text-ink">Subtotal</p>
               <p className="font-sans text-body text-ink">₹{subtotal.toLocaleString("en-IN")}</p>
@@ -150,8 +184,8 @@ export default function CartClient() {
               <p className="font-display text-heading-m text-ink">₹{total.toLocaleString("en-IN")}</p>
             </div>
             <p className="mt-2 text-caption text-secondary-text">
-              Free shipping when you pay online. Cash on Delivery orders show the exact courier charge
-              at checkout, based on your pincode.
+              Free shipping across India · Secure checkout by Razorpay (UPI, cards, netbanking) ·
+              Questions? <a href="https://wa.me/918800339125" className="underline">WhatsApp us</a>
             </p>
 
             <Link
