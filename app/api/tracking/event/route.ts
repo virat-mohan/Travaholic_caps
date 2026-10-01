@@ -7,6 +7,7 @@ const VALID_EVENTS: TrackingEventName[] = [
   "AddToCart",
   "InitiateCheckout",
   "Purchase",
+  "CheckoutStep",
 ];
 
 export async function POST(request: Request) {

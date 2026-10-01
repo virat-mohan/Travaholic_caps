@@ -5,7 +5,7 @@ export type TrackingEventName =
   | "ViewContent"
   | "AddToCart"
   | "InitiateCheckout"
-  | "Purchase";
+  | "Purchase" | "CheckoutStep";
 
 /**
  * First-party funnel log, independent of whether Meta's pixel is configured

@@ -195,3 +195,19 @@ export function trackEvent(
     }),
   }).catch(() => {});
 }
+
+/**
+ * First-party only (not sent to Meta): which step of checkout a shopper
+ * reached — form_started, pay_clicked, rzp_opened, rzp_closed, rzp_failed,
+ * qr_shown, whatsapp_fallback. Stored as path "/checkout#<step>" so the
+ * funnel can show exactly where carts die.
+ */
+export function trackCheckoutStep(step: string, value?: number) {
+  if (typeof window === "undefined") return;
+  fetch("/api/tracking/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventName: "CheckoutStep", sessionKey: getSessionKey(), path: `/checkout#${step}`, value }),
+    keepalive: true,
+  }).catch(() => {});
+}

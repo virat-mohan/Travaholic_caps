@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
-import { trackEvent, getSessionKey, getAttribution, getReferralCode } from "@/lib/client-tracking";
+import { trackEvent, trackCheckoutStep, getSessionKey, getAttribution, getReferralCode } from "@/lib/client-tracking";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
 import { PayWithAPostMark } from "@/components/ui/PayWithAPostMark";
@@ -146,7 +146,10 @@ export default function CheckoutPage() {
       .then((r) => r.json())
       .catch(() => null);
     setUpiQrLoading(false);
-    if (data?.imageUrl) setUpiQr(data);
+    if (data?.imageUrl) {
+      trackCheckoutStep("qr_shown");
+      setUpiQr(data);
+    }
     else setPayError("Couldn't create a QR right now — tap below and we'll send a payment link on WhatsApp.");
   }
   const [account, setAccount] = useState<Account | null>(null);
@@ -457,9 +460,15 @@ export default function CheckoutPage() {
     return () => clearTimeout(timeout);
   }, [form, items, total]);
 
+  const formStartedLogged = useRef(false);
   function update(field: keyof typeof form) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      if (!formStartedLogged.current) {
+        formStartedLogged.current = true;
+        trackCheckoutStep("form_started");
+      }
       setForm((f) => ({ ...f, [field]: e.target.value }));
+    };
   }
 
   async function logOut() {
@@ -559,10 +568,14 @@ export default function CheckoutPage() {
           }
         },
         modal: {
-          ondismiss: () => setPaying(false),
+          ondismiss: () => {
+            trackCheckoutStep("rzp_closed");
+            setPaying(false);
+          },
         },
       });
       rzp.on("payment.failed", (resp: { error?: { reason?: string; description?: string } }) => {
+        trackCheckoutStep(`rzp_failed_${resp.error?.reason ?? "unknown"}`);
         setPayFailed(true);
         setPayError(
           resp.error?.reason === "payment_timed_out"
@@ -570,6 +583,7 @@ export default function CheckoutPage() {
             : "That payment didn't go through and you weren't charged. Try another method, or tap below and we'll send a payment link on WhatsApp."
         );
       });
+      trackCheckoutStep("rzp_opened", createData.chargeAmount);
       rzp.open();
     } catch (err) {
       setPayError(err instanceof Error ? err.message : "Could not start payment");
@@ -581,6 +595,7 @@ export default function CheckoutPage() {
     e.preventDefault();
 
     if (!configLoaded) return; // guarded — see the disabled submit button below
+    trackCheckoutStep("pay_clicked", total);
 
     if (paymentType === "post_barter") {
       await handlePostBarterSubmit();
@@ -598,6 +613,7 @@ export default function CheckoutPage() {
   // Unpaid order request over WhatsApp — the fallback when no gateway is on,
   // and the rescue path after a failed online payment (we reply with a link).
   async function placeWhatsAppOrder() {
+    trackCheckoutStep("whatsapp_fallback");
 
     let createdOrderId: string | null = null;
     try {
