@@ -133,7 +133,9 @@ export async function POST(request: Request) {
   try {
     conversationId = await logInboundWhatsAppMessage({
       phone: String(phone),
-      body: text ?? orderSummary ?? "",
+      // Anything we can't parse (reactions, locations, stickers, new MSG91
+      // shapes) is stored raw so a real customer's message is never invisible.
+      body: text ?? orderSummary ?? `[unparsed ${String(body.contentType ?? msg?.type ?? body.type ?? "message")}] ${JSON.stringify(body).slice(0, 600)}`,
       customerName: name,
       mediaUrl,
       providerMessageId: providerMessageId ? String(providerMessageId) : null,
@@ -168,7 +170,8 @@ export async function POST(request: Request) {
     const firstName = name ? String(name).trim().split(" ")[0] : "there";
     const itemsListText = itemBulletPoints.join("\n");
     const formattedTotal = `₹${totalAmount.toLocaleString("en-IN")}`;
-    const websiteCartLink = `https://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}`;
+    // utm_source=whatsapp so these orders count under WhatsApp in "Where orders came from".
+    const websiteCartLink = `https://www.travaholic.in/cart?items=${encodeURIComponent(cartSuffix)}&utm_source=whatsapp&utm_medium=catalog_cart`;
     const headerImageUrl = `https://www.travaholic.in/api/og/cart?items=${encodeURIComponent(cartSuffix)}&v=clean-hd`;
 
     // --- Strategy: Session reply from the SAME Indian number (+91 88003 39125) ---
