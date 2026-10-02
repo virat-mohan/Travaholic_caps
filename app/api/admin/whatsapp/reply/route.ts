@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkVoice, hasBlock, describeBlocks } from "@/lib/brand-voice";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendWhatsAppSessionMessage } from "@/lib/msg91";
 import { logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
@@ -39,6 +40,12 @@ export async function POST(request: Request) {
         { error: "More than 24 hours since the customer's last message. Only an approved template can be sent now." },
         { status: 409 }
       );
+    }
+
+    // Brand book lock: a block stops the reply before it is sent or logged.
+    const voice = checkVoice(body.text, "whatsapp");
+    if (hasBlock(voice)) {
+      return NextResponse.json({ error: `Brand voice: ${describeBlocks(voice)}`, findings: voice }, { status: 422 });
     }
 
     const result = await sendWhatsAppSessionMessage(conversation.customer_phone, body.text);

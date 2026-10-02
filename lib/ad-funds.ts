@@ -76,8 +76,8 @@ export async function checkAdFundsAndAlert() {
       : "Add funds in Billing & payments. Remember ~18% of any top-up goes to GST.";
   const text = `⚠️ Travaholic ads: ${funds.runwayDays < 0.5 ? "about to stop" : `~${funds.runwayDays.toFixed(1)} days of spend left`}\n\n${describeAdFunds(funds)}\n\n${limitNote}\nhttps://business.facebook.com/billing_hub/accounts/details?asset_id=10200162541319062`;
   const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;white-space:pre-line">${text}</div>`;
-  await Promise.allSettled(ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "⚠️ Ad account running low — top up / raise limit", html)));
+  await Promise.allSettled(ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "⚠️ Ad account running low — top up / raise limit", html, undefined, { internal: true })));
   const wa = await getSetting("PM_ALERT_WHATSAPP");
-  if (wa) await sendWhatsAppSessionMessage(wa, text).catch(() => null);
+  if (wa) await sendWhatsAppSessionMessage(wa, text, undefined, { internal: true }).catch(() => null);
   return funds;
 }

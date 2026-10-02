@@ -1,6 +1,10 @@
 import { getSetting } from "@/lib/settings";
 import { renderInvoiceHtml } from "@/lib/invoice";
 import { getBrandProfile } from "@/lib/brand";
+import { voiceGate, stripHtml, type VoiceCampaign } from "@/lib/brand-voice";
+
+/** Brand-voice handling for a send. Internal team emails skip the check; transactional ones are logged, never blocked. */
+export type EmailVoice = { internal?: boolean; transactional?: boolean; campaign?: VoiceCampaign };
 
 type InvoiceOrder = Parameters<typeof renderInvoiceHtml>[0];
 type InvoiceItem = Parameters<typeof renderInvoiceHtml>[1][number];
@@ -29,8 +33,12 @@ export async function sendEmail(
   to: string,
   subject: string,
   bodyHtml: string,
-  attachments?: { url: string; name: string }[]
+  attachments?: { url: string; name: string }[],
+  voice: EmailVoice = {}
 ) {
+  // Brand book lock: customer copy is checked before it leaves. A block stops the send.
+  const gate = voiceGate(`${subject}\n${stripHtml(bodyHtml)}`, "email", `email "${subject}"`, voice);
+  if (!gate.ok) return false;
   const apiKey = await getSetting("BREVO_API_KEY");
   if (!apiKey) {
     console.log(`BREVO_API_KEY not set — skipping email "${subject}" to ${to}`);
@@ -72,7 +80,9 @@ export async function sendInvoiceEmail(order: InvoiceOrder, items: InvoiceItem[]
   return sendEmail(
     order.customer_email,
     `Your Travaholic Invoice — Order #${order.id.slice(0, 8).toUpperCase()}`,
-    invoiceHtml
+    invoiceHtml,
+    undefined,
+    { transactional: true }
   );
 }
 
@@ -84,7 +94,7 @@ export async function sendOrderNotificationEmail(order: InvoiceOrder, items: Inv
   const orderNumber = order.id.slice(0, 8).toUpperCase();
   await Promise.all(
     ORDER_NOTIFICATION_RECIPIENTS.map((to) =>
-      sendEmail(to, `New order confirmed — #${orderNumber}`, invoiceHtml)
+      sendEmail(to, `New order confirmed — #${orderNumber}`, invoiceHtml, undefined, { internal: true })
     )
   );
 }
@@ -100,7 +110,7 @@ export async function sendLowStockAlertEmail(chapterName: string, stockRemaining
     </div>
   `;
   await Promise.all(
-    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, `Low stock — ${chapterName} (${stockRemaining} left)`, html))
+    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, `Low stock — ${chapterName} (${stockRemaining} left)`, html, undefined, { internal: true }))
   );
 }
 
@@ -116,7 +126,7 @@ export async function sendExplorerSubmissionNotificationEmail(photoUrl: string, 
     </div>
   `;
   await Promise.all(
-    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "New Explorer submission to review", html))
+    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "New Explorer submission to review", html, undefined, { internal: true }))
   );
 }
 
@@ -132,7 +142,7 @@ export async function sendContactFormEmail(name: string, email: string, message:
     </div>
   `;
   const results = await Promise.all(
-    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, `Contact form — ${name}`, html))
+    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, `Contact form — ${name}`, html, undefined, { internal: true }))
   );
   return results.some(Boolean);
 }
@@ -152,7 +162,7 @@ export async function sendOtpEmail(email: string, code: string) {
       <p style="font-size:13px;color:#999;">This code expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
     </div>
   `;
-  return sendEmail(email, `${code} is your ${brand.brandName} login code`, html);
+  return sendEmail(email, `${code} is your ${brand.brandName} login code`, html, undefined, { transactional: true });
 }
 
 type CartSessionForEmail = {
@@ -246,7 +256,7 @@ export async function sendBuyNow10Email(
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(session.customer_email, `Travaholic Caps | 10% off on what's still in your cart`, html);
+  return sendEmail(session.customer_email, `Travaholic Caps | 10% off on what's still in your cart`, html, undefined, { campaign: "abandoned_cart" });
 }
 
 /** Sent once to each pending "notify me" lead when a sold-out Chapter's stock goes back above zero. */
@@ -375,7 +385,7 @@ export async function sendRtoInitiatedEmail(toEmail: string, name: string | null
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(toEmail, `Your order is on its way back to us`, html);
+  return sendEmail(toEmail, `Your order is on its way back to us`, html, undefined, { transactional: true });
 }
 
 /** Sent once an RTO'd item is physically back and the refund has actually gone through. */
@@ -397,7 +407,7 @@ export async function sendRtoRefundedEmail(toEmail: string, name: string | null,
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(toEmail, `Refunded — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+  return sendEmail(toEmail, `Refunded — order #${orderId.slice(0, 8).toUpperCase()}`, html, undefined, { transactional: true });
 }
 
 /** Sent when an admin approves a return request and schedules the pickup. */
@@ -418,7 +428,7 @@ export async function sendReturnApprovedEmail(toEmail: string, name: string | nu
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(toEmail, `Return approved — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+  return sendEmail(toEmail, `Return approved — order #${orderId.slice(0, 8).toUpperCase()}`, html, undefined, { transactional: true });
 }
 
 /** Sent when an admin denies a return request. */
@@ -439,7 +449,7 @@ export async function sendReturnDeniedEmail(toEmail: string, name: string | null
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(toEmail, `Update on your return — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+  return sendEmail(toEmail, `Update on your return — order #${orderId.slice(0, 8).toUpperCase()}`, html, undefined, { transactional: true });
 }
 
 /** Sent once a customer-initiated return is physically back and refunded — same trigger point as the RTO-refunded email, different copy. */
@@ -461,7 +471,7 @@ export async function sendReturnRefundedEmail(toEmail: string, name: string | nu
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(toEmail, `Return refunded — order #${orderId.slice(0, 8).toUpperCase()}`, html);
+  return sendEmail(toEmail, `Return refunded — order #${orderId.slice(0, 8).toUpperCase()}`, html, undefined, { transactional: true });
 }
 
 /**
@@ -528,7 +538,7 @@ export async function sendWarehouseNotificationEmail(
   const attachments = labelUrl ? [{ url: labelUrl, name: `label-${orderNumber}.pdf` }] : undefined;
   const results = await Promise.all(
     recipients.map((recipient) =>
-      sendEmail(recipient, `Ship this — Order #${orderNumber}`, html, attachments)
+      sendEmail(recipient, `Ship this — Order #${orderNumber}`, html, attachments, { internal: true })
     )
   );
   return results.every(Boolean);
@@ -578,7 +588,7 @@ export async function sendPostBarterOrderConfirmationEmail(
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(toEmail, `You're in — here's your ${brand.brandName} code`, html);
+  return sendEmail(toEmail, `You're in — here's your ${brand.brandName} code`, html, undefined, { transactional: true });
 }
 
 /** Sent the moment a "Pay With A Post" order clears its required-orders line and actually ships. See lib/post-barter.ts. */
@@ -596,7 +606,7 @@ export async function sendPostBarterQualifiedEmail(toEmail: string, phone: strin
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(toEmail, `Good Vibes delivered — it's shipping`, html);
+  return sendEmail(toEmail, `Good Vibes delivered — it's shipping`, html, undefined, { transactional: true });
 }
 
 /** Sent to the barterer every time a NEW, real (non-self) redemption lands on their code, before they've hit the required-orders line — so the loop feels alive instead of silent until it's suddenly done. See lib/post-barter.ts. */
@@ -619,5 +629,5 @@ export async function sendPostBarterProgressEmail(toEmail: string, ordersSoFar: 
       <p style="margin-top:32px;font-size:12px;color:#999;">${brand.brandName} · ${brand.siteUrl}</p>
     </div>
   `;
-  return sendEmail(toEmail, `${ordersSoFar}/${required} — you're getting close`, html);
+  return sendEmail(toEmail, `${ordersSoFar}/${required} — you're getting close`, html, undefined, { transactional: true });
 }

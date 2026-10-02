@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { brandVoicePrompt } from "@/lib/brand-voice";
 import { getSetting } from "@/lib/settings";
 import { computeWebsiteAnalytics } from "@/lib/website-analytics";
 import { getRecentPostPerformance } from "@/lib/instagram";
@@ -116,7 +117,7 @@ Only include a recommendation when the data actually supports it — do not pad 
     body: JSON.stringify({
       model: "claude-sonnet-5",
       max_tokens: 2048,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: `${prompt}\n\n${brandVoicePrompt()}` }],
     }),
   });
   if (!res.ok) throw new Error(`Claude API error: ${res.status} ${await res.text()}`);

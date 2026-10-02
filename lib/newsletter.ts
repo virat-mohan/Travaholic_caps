@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { checkVoice, hasBlock, describeBlocks, stripHtml } from "@/lib/brand-voice";
 import { getSetting } from "@/lib/settings";
 import { getBrandProfile } from "@/lib/brand";
 import { sendEmail } from "@/lib/email";
@@ -80,6 +81,9 @@ export async function sendJournalArticleToSubscribers(article: JournalArticle) {
   if (emails.length === 0) return 0;
 
   const html = renderArticleEmailHtml(article, brand);
+  // Brand book lock: check once before the batch; a block stops the whole newsletter.
+  const findings = checkVoice(`${article.title}\n${stripHtml(html)}`, "email");
+  if (hasBlock(findings)) throw new Error(`Brand voice: ${describeBlocks(findings)}`);
   let sent = 0;
 
   for (const email of emails) {

@@ -1,5 +1,6 @@
 import { getSetting, setSetting } from "@/lib/settings";
 import { SUPPORT_TEMPLATE, isTemplateUsable } from "@/lib/support-template";
+import { checkVoice, hasBlock, describeBlocks } from "@/lib/brand-voice";
 
 type TemplateRow = { name?: string; category?: string; status?: string; languages?: { status?: string }[] };
 
@@ -8,6 +9,9 @@ type TemplateRow = { name?: string; category?: string; status?: string; language
  * template (there is deliberately no "submit all" here).
  */
 export async function submitSupportFollowupTemplate(): Promise<{ ok: boolean; detail: string }> {
+  // Brand book lock: template text is checked before it goes to Meta for approval.
+  const voice = checkVoice(SUPPORT_TEMPLATE.body, "whatsapp");
+  if (hasBlock(voice)) return { ok: false, detail: `Brand voice: ${describeBlocks(voice)}` };
   const authKey = await getSetting("MSG91_AUTH_KEY");
   const integratedNumber = await getSetting("MSG91_WHATSAPP_INTEGRATED_NUMBER");
   if (!authKey || !integratedNumber) return { ok: false, detail: "MSG91 Auth Key or Integrated Number missing in Settings." };

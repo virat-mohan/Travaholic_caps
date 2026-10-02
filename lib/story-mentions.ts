@@ -83,13 +83,15 @@ export async function handleStoryMention(senderId: string, mediaUrl: string) {
     getSetting("PM_ALERT_EMAIL"),
     getSetting("WAREHOUSE_EMAIL"),
   ]);
-  if (waNumber) await sendWhatsAppSessionMessage(waNumber, text).catch(() => null);
+  if (waNumber) await sendWhatsAppSessionMessage(waNumber, text, undefined, { internal: true }).catch(() => null);
   const to = (emailSetting || warehouseEmail || "").split(",")[0]?.trim();
   if (to) {
     await sendEmail(
       to,
       `Story tag from ${handle} — approve to repost`,
-      `<p>${text.replace(adminUrl, `<a href="${adminUrl}">${adminUrl}</a>`)}</p><p><img src="${storedUrl}" alt="" style="max-width:360px"></p>`
+      `<p>${text.replace(adminUrl, `<a href="${adminUrl}">${adminUrl}</a>`)}</p><p><img src="${storedUrl}" alt="" style="max-width:360px"></p>`,
+      undefined,
+      { internal: true }
     ).catch(() => false);
   }
 

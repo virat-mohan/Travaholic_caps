@@ -1,5 +1,12 @@
 import { createHash } from "crypto";
 import { getSetting } from "@/lib/settings";
+import { voiceGate } from "@/lib/brand-voice";
+
+/** Brand book lock: ad copy with a block is never created in Meta. */
+function assertAdOnBrand(where: string, ...parts: string[]) {
+  const gate = voiceGate(parts.join("\n"), "ad", where);
+  if (!gate.ok) throw new Error(gate.reason);
+}
 
 // Lower-level Meta Marketing API layer for the performance manager
 // (lib/performance-manager.ts). lib/meta-ads.ts is the older brief-launch
@@ -465,6 +472,7 @@ export async function createCatalogAd(input: {
   link: string;
   status: "ACTIVE" | "PAUSED";
 }) {
+  assertAdOnBrand("Meta catalog ad", ...input.messages);
   const auth = await getMetaMarketingAuth();
   const creative = await graphPost<{ id: string }>(`${auth.account}/adcreatives`, auth.accessToken, {
     name: `${input.name} — Creative`,
@@ -529,6 +537,7 @@ export async function createImageLinkAd(input: {
   link: string;
   status: "ACTIVE" | "PAUSED";
 }) {
+  assertAdOnBrand("Meta image ad", input.headline, input.message);
   const auth = await getMetaMarketingAuth();
   const upload = await graphPost<{ images: Record<string, { hash: string }> }>(`${auth.account}/adimages`, auth.accessToken, {
     url: input.imageUrl,

@@ -103,9 +103,9 @@ export async function runCheckoutHealthCheck(trigger: string) {
 
   const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#1a1a1a;white-space:pre-line">${text}</div>`;
   await Promise.allSettled(
-    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "🚨 Checkout alert — payments failing", html))
+    ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "🚨 Checkout alert — payments failing", html, undefined, { internal: true }))
   );
   const wa = await getSetting("PM_ALERT_WHATSAPP");
-  if (wa) await sendWhatsAppSessionMessage(wa, text);
+  if (wa) await sendWhatsAppSessionMessage(wa, text, undefined, { internal: true });
   return health;
 }

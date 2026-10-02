@@ -1,4 +1,13 @@
 import { getSetting } from "@/lib/settings";
+import { voiceGate, type VoiceCampaign } from "@/lib/brand-voice";
+
+/** Brand-voice handling for a WhatsApp send. Internal team alerts skip it; transactional ones log, never block. */
+export type WhatsAppVoice = { internal?: boolean; transactional?: boolean; campaign?: VoiceCampaign };
+
+/** Brand book lock: checks the customer-visible text (template variables or session text). A block stops the send. */
+function whatsappGate(text: string, where: string, voice: WhatsAppVoice = {}) {
+  return voiceGate(text, "whatsapp", where, voice);
+}
 
 function toMobile(phone: string) {
   const digits = phone.replace(/\D/g, "");
@@ -21,7 +30,8 @@ export async function sendMsg91Flow(
   flowSlug: string | null,
   phone: string,
   variables: string[],
-  mediaUrl?: string
+  mediaUrl?: string,
+  voice: WhatsAppVoice = {}
 ) {
   // Hard off-switch for launch — going live on email only, WhatsApp/SMS is
   // being set up separately. This is the one choke point every WhatsApp
@@ -30,6 +40,8 @@ export async function sendMsg91Flow(
   // one setting is enough to silence all of them without touching each
   // call site. Set WHATSAPP_SMS_ENABLED to "true" in /admin/settings once
   // MSG91 is actually configured and ready to go live.
+  const gate = whatsappGate(variables.join("\n"), `flow ${flowSlug}`, voice);
+  if (!gate.ok) return { sent: false as const, error: gate.reason };
   const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
   if (enabled !== "true") {
     return { sent: false as const };
@@ -96,8 +108,11 @@ export async function sendMsg91WhatsAppFlow(
   flowSlug: string | null,
   phone: string,
   bodyValues: string[],
-  mediaUrl?: string
+  mediaUrl?: string,
+  voice: WhatsAppVoice = {}
 ) {
+  const gate = whatsappGate(bodyValues.join("\n"), `flow ${flowSlug}`, voice);
+  if (!gate.ok) return { sent: false as const, error: gate.reason };
   const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
   if (enabled !== "true") {
     return { sent: false as const };
@@ -156,8 +171,11 @@ export async function sendMsg91WhatsAppFlow(
 export async function sendMsg91Campaign(
   campaignSlug: string | null,
   phone: string,
-  bodyValues: string[]
+  bodyValues: string[],
+  voice: WhatsAppVoice = {}
 ) {
+  const gate = whatsappGate(bodyValues.join("\n"), `campaign ${campaignSlug}`, voice);
+  if (!gate.ok) return { sent: false as const, error: gate.reason };
   const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
   if (enabled !== "true") {
     return { sent: false as const };
@@ -219,8 +237,11 @@ export async function sendMsg91Template(
   // MSG91/Meta) — this is just the suffix text appended to that base URL,
   // not a full URL. A static-URL button (fixed for every send) needs
   // nothing here at all.
-  buttonUrlValue?: string
+  buttonUrlValue?: string,
+  voice: WhatsAppVoice = {}
 ) {
+  const gate = whatsappGate(bodyValues.join("\n"), `template ${templateName}`, voice);
+  if (!gate.ok) return { sent: false as const, error: gate.reason };
   const enabled = await getSetting("WHATSAPP_SMS_ENABLED");
   if (enabled !== "true") {
     return { sent: false as const };
@@ -291,8 +312,11 @@ export async function sendMsg91Template(
 export async function sendWhatsAppSessionMessage(
   phone: string,
   text: string,
-  fromNumber?: string
+  fromNumber?: string,
+  voice: WhatsAppVoice = {}
 ) {
+  const gate = whatsappGate(text, "session message", voice);
+  if (!gate.ok) return { sent: false as const, error: gate.reason };
   const authKey = await getSetting("MSG91_AUTH_KEY");
   const defaultNumber = await getSetting("MSG91_WHATSAPP_INTEGRATED_NUMBER");
   const rawIntegratedNumber = fromNumber || defaultNumber;
@@ -342,8 +366,11 @@ export async function sendWhatsAppSessionImage(
   phone: string,
   imageUrl: string,
   caption: string,
-  fromNumber?: string
+  fromNumber?: string,
+  voice: WhatsAppVoice = {}
 ) {
+  const gate = whatsappGate(caption, "session image", voice);
+  if (!gate.ok) return { sent: false as const, error: gate.reason };
   const authKey = await getSetting("MSG91_AUTH_KEY");
   const defaultNumber = await getSetting("MSG91_WHATSAPP_INTEGRATED_NUMBER");
   const rawIntegratedNumber = fromNumber || defaultNumber;
@@ -387,6 +414,6 @@ export async function sendWhatsAppSessionImage(
 /** Login OTP — one variable (the code). */
 export async function sendOtpViaMsg91(phone: string, code: string) {
   const flowSlug = await getSetting("MSG91_OTP_TEMPLATE_ID");
-  const result = await sendMsg91Flow(flowSlug, phone, [code]);
+  const result = await sendMsg91Flow(flowSlug, phone, [code], undefined, { transactional: true });
   return result.sent;
 }

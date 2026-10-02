@@ -1,6 +1,6 @@
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { sendMsg91WhatsAppFlow, sendMsg91Template, sendWhatsAppSessionMessage } from "@/lib/msg91";
+import { sendMsg91WhatsAppFlow, sendMsg91Template, sendWhatsAppSessionMessage, type WhatsAppVoice } from "@/lib/msg91";
 import { generateAndUploadOrderCard } from "@/lib/order-card";
 
 type OrderForWhatsApp = { id: string; customer_name: string; customer_phone: string; total: number };
@@ -52,9 +52,10 @@ async function sendTemplate(
   msg91TemplateId: string | null,
   variables: string[],
   logAgainst: { cartSessionId?: string; orderId?: string },
-  mediaUrl?: string
+  mediaUrl?: string,
+  voice: WhatsAppVoice = {}
 ) {
-  const result = await sendMsg91WhatsAppFlow(msg91TemplateId, phone, variables, mediaUrl);
+  const result = await sendMsg91WhatsAppFlow(msg91TemplateId, phone, variables, mediaUrl, voice);
   if (result.sent) {
     await logSend(result.messageId, templateName, logAgainst);
     return true;
@@ -74,10 +75,11 @@ async function sendTemplateByName(
   variables: string[],
   logAgainst: { cartSessionId?: string; orderId?: string },
   header?: { type: "image" | "document"; url: string; filename?: string },
-  buttonUrlValue?: string
+  buttonUrlValue?: string,
+  voice: WhatsAppVoice = {}
 ) {
   if (!msg91TemplateName) return false;
-  const result = await sendMsg91Template(msg91TemplateName, phone, variables, header, buttonUrlValue);
+  const result = await sendMsg91Template(msg91TemplateName, phone, variables, header, buttonUrlValue, voice);
   if (result.sent) {
     await logSend(result.messageId, templateName, logAgainst);
     return true;
@@ -261,7 +263,9 @@ export async function sendBuyNow10WhatsApp(
 ) {
   const msg91TemplateName = await getSetting("MSG91_BUYNOW10_TEMPLATE_ID");
   const variables = [name ?? "there", itemsLine, couponCode];
-  return sendTemplateByName(phone, "buynow10_nudge", msg91TemplateName, variables, { cartSessionId });
+  return sendTemplateByName(phone, "buynow10_nudge", msg91TemplateName, variables, { cartSessionId }, undefined, undefined, {
+    campaign: "abandoned_cart",
+  });
 }
 
 /**
@@ -375,10 +379,12 @@ export async function sendDeliveryAlertWhatsApp(order: {
   const results: { phone: string; sent: boolean }[] = [];
   for (const phone of numbers) {
     const res = templateName
-      ? await sendMsg91Template(templateName, phone, [orderNo, order.customer_name, city, order.itemsLine])
+      ? await sendMsg91Template(templateName, phone, [orderNo, order.customer_name, city, order.itemsLine], undefined, undefined, { internal: true })
       : await sendWhatsAppSessionMessage(
           phone,
-          `✅ Delivered: order #${orderNo} for ${order.customer_name} (${city}) — ${order.itemsLine}.`
+          `✅ Delivered: order #${orderNo} for ${order.customer_name} (${city}) — ${order.itemsLine}.`,
+          undefined,
+          { internal: true }
         );
     results.push({ phone, sent: res.sent });
   }

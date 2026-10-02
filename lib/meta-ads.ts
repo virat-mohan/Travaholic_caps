@@ -1,5 +1,12 @@
 import { getSetting } from "@/lib/settings";
 import { getBrandProfile } from "@/lib/brand";
+import { voiceGate } from "@/lib/brand-voice";
+
+/** Brand book lock: ad copy with a block is never created in Meta. */
+function assertAdOnBrand(where: string, ...parts: Array<string | undefined>) {
+  const gate = voiceGate(parts.filter(Boolean).join("\n"), "ad", where);
+  if (!gate.ok) throw new Error(gate.reason);
+}
 
 async function getPixelId() {
   return getSetting("META_PIXEL_ID");
@@ -72,6 +79,7 @@ export async function createPausedMetaCampaign(brief: {
   hashtags?: string[];
   targeting?: AdTargeting;
 }) {
+  assertAdOnBrand("Meta ad", brief.headline, brief.primaryText, (brief.hashtags ?? []).join(" "));
   const creds = await getMetaCredentials();
   if (!creds) {
     throw new Error(
@@ -164,6 +172,7 @@ export async function createPausedMetaCarouselCampaign(brief: {
   hashtags?: string[];
   targeting?: AdTargeting;
 }) {
+  assertAdOnBrand("Meta ad", brief.headline, brief.primaryText, (brief.hashtags ?? []).join(" "));
   const creds = await getMetaCredentials();
   if (!creds) {
     throw new Error(

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { chapters, chapterImageSrc } from "@/lib/chapters";
 import { journalIssues } from "@/lib/journal";
+import { checkVoice, hasBlock, describeBlocks } from "@/lib/brand-voice";
 
 function slugify(title: string) {
   return title
@@ -32,6 +33,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!draft) return NextResponse.json({ error: "Draft not found" }, { status: 404 });
     if (!draft.title || !draft.body?.length) {
       return NextResponse.json({ error: "Draft is missing title/body" }, { status: 400 });
+    }
+
+    // Brand book lock: publishing is the approval, so a block cannot go live.
+    const copy = [draft.title, draft.subtitle, draft.excerpt, ...(draft.body ?? [])].filter(Boolean).join("\n");
+    const findings = checkVoice(copy, "site");
+    if (hasBlock(findings)) {
+      return NextResponse.json({ error: `Brand voice: ${describeBlocks(findings)}`, findings }, { status: 422 });
     }
 
     const relatedSlugs: string[] = draft.related_chapter_slugs ?? [];

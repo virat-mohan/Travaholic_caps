@@ -104,7 +104,7 @@ export async function runOpsDigest() {
 
   await Promise.all(
     ORDER_NOTIFICATION_RECIPIENTS.map((to) =>
-      sendEmail(to, `Daily Ops Digest — ${newOrders} orders, ₹${revenue.toLocaleString("en-IN")}`, html)
+      sendEmail(to, `Daily Ops Digest — ${newOrders} orders, ₹${revenue.toLocaleString("en-IN")}`, html, undefined, { internal: true })
     )
   );
 

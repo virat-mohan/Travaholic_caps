@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/settings";
+import { brandVoicePrompt } from "@/lib/brand-voice";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
 // "veo-3.0-generate-001" no longer exists for this API key — confirmed via
@@ -20,7 +21,8 @@ export async function startVideoGeneration(prompt: string, referenceImageUrl?: s
   const apiKey = await getSetting("IMAGE_GEN_API_KEY");
   if (!apiKey) throw new Error("IMAGE_GEN_API_KEY is not set — add a Gemini/Veo key in /admin/settings");
 
-  const instance: Record<string, unknown> = { prompt };
+  // Brand book lock: every video prompt carries the brand's visual rules.
+  const instance: Record<string, unknown> = { prompt: `${prompt}\n\n${brandVoicePrompt("image")}` };
   if (referenceImageUrl) {
     const refRes = await fetch(referenceImageUrl);
     if (refRes.ok) {

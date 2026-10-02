@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/settings";
+import { voiceGate } from "@/lib/brand-voice";
 
 const GRAPH_VERSION = "v21.0";
 
@@ -59,6 +60,12 @@ async function waitForMediaReady(containerId: string, accessToken: string) {
  * since this is always an explicit admin action, never a best-effort
  * side-effect of something else.
  */
+/** Brand book lock: a caption with a block is never published. */
+function assertCaptionOnBrand(caption: string) {
+  const gate = voiceGate(caption, "social", "Instagram publish");
+  if (!gate.ok) throw new Error(gate.reason);
+}
+
 function buildUserTags(usernames?: string[]) {
   if (!usernames || usernames.length === 0) return undefined;
   // Centered on the image — Instagram doesn't expose a way to place these
@@ -67,6 +74,7 @@ function buildUserTags(usernames?: string[]) {
 }
 
 export async function postToInstagramFeed(imageUrl: string, caption: string, taggedUsernames?: string[]) {
+  assertCaptionOnBrand(caption);
   const { accessToken, igUserId } = await getInstagramAuth();
 
   const created = await igPost(`${igUserId}/media`, accessToken, {
@@ -95,6 +103,7 @@ export async function postToInstagramCarouselFeed(
 ) {
   const { accessToken, igUserId } = await getInstagramAuth();
   if (imageUrls.length < 2) throw new Error("A carousel post needs at least 2 images");
+  assertCaptionOnBrand(caption);
 
   const childIds: string[] = [];
   for (const imageUrl of imageUrls) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { checkVoice, hasBlock, describeBlocks } from "@/lib/brand-voice";
 
 /**
  * Queues (or cancels) a brief for the cron in app/api/cron/publish-queue to
@@ -26,6 +27,21 @@ export async function POST(request: Request) {
   }
   if (!["post", "launch"].includes(body.scheduledAction)) {
     return NextResponse.json({ error: "scheduledAction must be post or launch" }, { status: 400 });
+  }
+
+  // Brand book lock: queuing is an approval, so a block cannot be queued.
+  {
+    const { data: brief } = await getSupabaseServerClient()
+      .from("ad_briefs")
+      .select("headline, primary_text, hashtags")
+      .eq("id", body.id)
+      .maybeSingle();
+    if (brief) {
+      const tags = ((brief.hashtags as string[] | null) ?? []).map((h) => `#${h.replace(/^#/, "")}`).join(" ");
+      const copy = body.scheduledAction === "launch" ? `${brief.headline ?? ""}\n${brief.primary_text ?? ""}` : `${brief.primary_text ?? ""}\n\n${tags}`;
+      const findings = checkVoice(copy, body.scheduledAction === "launch" ? "ad" : "social");
+      if (hasBlock(findings)) return NextResponse.json({ error: `Brand voice: ${describeBlocks(findings)}`, findings }, { status: 422 });
+    }
   }
 
   const patch: Record<string, unknown> = {

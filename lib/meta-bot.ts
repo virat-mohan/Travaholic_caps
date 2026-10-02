@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/settings";
+import { voiceGate } from "@/lib/brand-voice";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getBrandProfile } from "@/lib/brand";
 import { chapters } from "@/lib/chapters";
@@ -35,6 +36,8 @@ async function getPageToken() {
 }
 
 export async function sendMessage(recipientId: string, text: string) {
+  // Brand book lock: a block stops the DM.
+  if (!voiceGate(text, "social", "IG/Messenger DM").ok) return false;
   const [accessToken, pageId] = await Promise.all([getPageToken(), getSetting("META_PAGE_ID")]);
   if (!accessToken || !pageId) {
     console.log("Meta not configured — would have sent:", text);
@@ -60,6 +63,7 @@ export async function sendMessage(recipientId: string, text: string) {
 }
 
 async function sendPrivateReplyToComment(commentId: string, text: string) {
+  if (!voiceGate(text, "social", "comment private reply").ok) return false;
   const [accessToken, pageId] = await Promise.all([getPageToken(), getSetting("META_PAGE_ID")]);
   if (!accessToken || !pageId) return false;
   const res = await fetch(

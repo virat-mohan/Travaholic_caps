@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkVoice, hasBlock, describeBlocks } from "@/lib/brand-voice";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { sendMsg91Template } from "@/lib/msg91";
 import { logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
@@ -41,6 +42,10 @@ export async function POST(request: Request) {
       customerName = (customer as { name?: string } | null)?.name ?? null;
     }
     const firstName = firstNameOrThere(conversation.customer_name, customerName);
+
+    // Brand book lock: the exact text the customer sees is checked first.
+    const voice = checkVoice(renderSupportBody(firstName), "whatsapp");
+    if (hasBlock(voice)) return NextResponse.json({ error: `Brand voice: ${describeBlocks(voice)}` }, { status: 422 });
 
     const result = await sendMsg91Template(SUPPORT_TEMPLATE.name, conversation.customer_phone, [firstName]);
     await logOutboundWhatsAppMessage({

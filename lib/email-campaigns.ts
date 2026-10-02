@@ -2,6 +2,12 @@ import crypto from "crypto";
 import { getSetting } from "@/lib/settings";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { renderWelcomeBack15Email } from "@/lib/email-templates/welcomeback15";
+import { voiceGate, stripHtml } from "@/lib/brand-voice";
+
+/** Brand book lock: the campaign email is checked once per batch; a block stops the whole batch. */
+function campaignVoiceGate(subject: string, endsLabel: string) {
+  return voiceGate(`${subject}\n${stripHtml(renderWelcomeBack15Email(endsLabel, "https://www.travaholic.in"))}`, "email", "WELCOMEBACK15 campaign", { campaign: "welcomeback15" });
+}
 
 export const WELCOMEBACK15 = {
   key: "welcomeback15",
@@ -77,6 +83,8 @@ export async function sendWelcomeBack15Batch() {
   const offerEndsAt = new Date(Date.now() + WELCOMEBACK15.offerHours * 3600 * 1000);
   const endsLabel =
     offerEndsAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST";
+  const voice = campaignVoiceGate(WELCOMEBACK15.subject, endsLabel);
+  if (!voice.ok) return { sent: 0, remaining: queue.length, note: voice.reason ?? "brand voice block" };
   // Never shorten a window already promised to an earlier batch.
   const { data: coupon } = await supabase.from("coupon_codes").select("expires_at").eq("code", WELCOMEBACK15.couponCode).maybeSingle();
   if (!coupon?.expires_at || new Date(coupon.expires_at) < offerEndsAt) {
@@ -206,6 +214,8 @@ export async function sendWelcomeBack15ResendBatch() {
   const offerEndsAt = new Date(Date.now() + WELCOMEBACK15.offerHours * 3600 * 1000);
   const endsLabel =
     offerEndsAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST";
+  const voice = campaignVoiceGate("Still thinking about it? Your 15% is waiting", endsLabel);
+  if (!voice.ok) return { sent: 0, remaining: queue.length, note: voice.reason ?? "brand voice block" };
   const { data: coupon } = await supabase.from("coupon_codes").select("expires_at").eq("code", WELCOMEBACK15.couponCode).maybeSingle();
   if (!coupon?.expires_at || new Date(coupon.expires_at) < offerEndsAt) {
     await supabase.from("coupon_codes").update({ expires_at: offerEndsAt.toISOString(), active: true }).eq("code", WELCOMEBACK15.couponCode);

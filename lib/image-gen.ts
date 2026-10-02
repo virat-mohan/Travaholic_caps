@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/settings";
+import { brandVoicePrompt } from "@/lib/brand-voice";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
 /**
@@ -26,6 +27,8 @@ export async function generateAdImage(options: {
   const geminiKey = await getSetting("IMAGE_GEN_API_KEY");
   const openaiKey = await getSetting("OPENAI_API_KEY");
   const aspectRatio = options.aspectRatio ?? "square";
+  // Brand book lock: every image prompt carries the brand's visual rules.
+  options = { ...options, prompt: `${options.prompt}\n\n${brandVoicePrompt("image")}` };
 
   let base64Png: string;
   if (geminiKey) {

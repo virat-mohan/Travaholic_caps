@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { brandVoicePrompt } from "@/lib/brand-voice";
 import { getSetting } from "@/lib/settings";
 import { getAllChapters } from "@/lib/chapters-dynamic";
 import { isPostBarterEnabled } from "@/lib/post-barter";
@@ -306,7 +307,7 @@ Then call submit_business_plan_drivers exactly once with your final drivers and 
     body: JSON.stringify({
       model: "claude-sonnet-5",
       max_tokens: 8000,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: `${prompt}\n\n${brandVoicePrompt()}` }],
       tools: [
         // Tool type as of today (2026-09-24) per Anthropic's docs — verify
         // this hasn't changed before relying on it in production.

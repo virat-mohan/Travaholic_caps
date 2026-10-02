@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/settings";
+import { brandVoicePrompt } from "@/lib/brand-voice";
 import { getBrandProfile } from "@/lib/brand";
 import type { ChapterSales } from "@/lib/sales-metrics";
 
@@ -107,7 +108,7 @@ Return ONLY a JSON object, no commentary, in this exact shape:
     body: JSON.stringify({
       model: "claude-sonnet-5",
       max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: `${prompt}\n\n${brandVoicePrompt("ad")}` }],
     }),
   });
 
@@ -188,7 +189,7 @@ Apply that instruction. Keep everything else about the brief's voice and intent 
     body: JSON.stringify({
       model: "claude-sonnet-5",
       max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: `${prompt}\n\n${brandVoicePrompt("ad")}` }],
     }),
   });
 

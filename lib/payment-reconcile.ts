@@ -96,7 +96,7 @@ export async function reconcileCapturedPayments(hours = 72) {
       ${recovered.length ? `<p><b>Recovered ${recovered.length} paid order(s)</b> whose checkout never confirmed (customer paid, browser didn't return). Invoice, confirmation and shipping have now run:</p><ul>${recovered.map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}
       ${problems.length ? `<p><b>Could not recover:</b></p><ul>${problems.map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}
     </div>`;
-    await Promise.allSettled(ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "Payment reconcile: paid orders recovered", html)));
+    await Promise.allSettled(ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, "Payment reconcile: paid orders recovered", html, undefined, { internal: true })));
   }
   return { checked, recovered, problems };
 }

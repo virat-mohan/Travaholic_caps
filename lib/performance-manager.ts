@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { brandVoicePrompt } from "@/lib/brand-voice";
 import { getSetting, setSetting } from "@/lib/settings";
 import { getBrandProfile } from "@/lib/brand";
 import { sendEmail, ORDER_NOTIFICATION_RECIPIENTS } from "@/lib/email";
@@ -907,7 +908,7 @@ Use web search to check current Indian D2C fashion-accessory audience/CPM benchm
     body: JSON.stringify({
       model: "claude-sonnet-5",
       max_tokens: 6000,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: `${prompt}\n\n${brandVoicePrompt("ad")}` }],
       tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }, IDEAS_TOOL],
       tool_choice: { type: "auto" },
     }),
@@ -1015,9 +1016,9 @@ async function sendDailyReport(state: PmState, config: Awaited<ReturnType<typeof
   const html = renderAdsReportHtml(
     buildAdsReport({ state, config, yesterday, managed, others, blended7, mer7, cpa7, decisions, queued, isMonday })
   );
-  for (const to of config.alertEmails) await sendEmail(to, `${isMonday ? "Weekly ads review" : "Ads daily report"} — ${yesterday}`, html);
+  for (const to of config.alertEmails) await sendEmail(to, `${isMonday ? "Weekly ads review" : "Ads daily report"} — ${yesterday}`, html, undefined, { internal: true });
   if (config.alertWhatsApp) {
-    const r = await sendWhatsAppSessionMessage(config.alertWhatsApp, text.slice(0, 3900));
+    const r = await sendWhatsAppSessionMessage(config.alertWhatsApp, text.slice(0, 3900), undefined, { internal: true });
     if (!r.sent) log(state, { entityType: "system", entityId: null, entityName: "digest", action: "whatsapp_skipped", reason: r.error ?? "not sent" });
   }
 }
@@ -1299,7 +1300,7 @@ async function diagnoseLowSales() {
 
 async function sendDiagnosisAlert(subject: string, text: string) {
   const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#1a1a1a">${text}</div>`;
-  await Promise.allSettled(ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, subject, html)));
+  await Promise.allSettled(ORDER_NOTIFICATION_RECIPIENTS.map((to) => sendEmail(to, subject, html, undefined, { internal: true })));
   const wa = await getSetting("PM_ALERT_WHATSAPP");
-  if (wa) await sendWhatsAppSessionMessage(wa, `${subject}\n\n${text}`).catch(() => null);
+  if (wa) await sendWhatsAppSessionMessage(wa, `${subject}\n\n${text}`, undefined, { internal: true }).catch(() => null);
 }

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "prebuild": "node scripts/optimize-images.mjs",
-    "test": "node --experimental-strip-types --test lib/retail-os-brand.test.ts lib/revenue-fix.test.ts lib/inbox-spam.test.ts lib/support-template.test.ts"
+    "test": "node --experimental-strip-types --test lib/retail-os-brand.test.ts lib/revenue-fix.test.ts lib/inbox-spam.test.ts lib/support-template.test.ts lib/brand-voice.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",

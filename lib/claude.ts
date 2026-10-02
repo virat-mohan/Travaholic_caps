@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/settings";
+import { brandVoicePrompt } from "@/lib/brand-voice";
 import { chapters } from "@/lib/chapters";
 
 export type GeneratedJournalDraft = {
@@ -78,7 +79,7 @@ Write 4-6 paragraphs in "body", including exactly one pull-quote paragraph start
     body: JSON.stringify({
       model: "claude-sonnet-5",
       max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: `${prompt}\n\n${brandVoicePrompt("site")}` }],
     }),
   });
 
