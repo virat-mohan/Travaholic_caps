@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { canReplyFreeForm } from "@/lib/whatsapp-window";
 
 /** One conversation's full message history, and clears its unread count (the admin is looking at it now). */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -21,7 +22,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       await supabase.from("whatsapp_conversations").update({ unread_count: 0 }).eq("id", id);
     }
 
-    return NextResponse.json({ conversation, messages: messages ?? [] });
+    const lastInbound = [...(messages ?? [])].reverse().find((m) => m.direction === "inbound")?.created_at ?? null;
+    return NextResponse.json({ conversation, messages: messages ?? [], canReply: canReplyFreeForm(lastInbound) });
   } catch (err) {
     console.error("Failed to load WhatsApp conversation", err);
     return NextResponse.json({ error: "Could not load conversation" }, { status: 500 });

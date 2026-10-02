@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { logInboundWhatsAppMessage, logOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
 import { sendWhatsAppSessionMessage, sendWhatsAppSessionImage, sendMsg91Template } from "@/lib/msg91";
 import { chapters, resolveChapterSlug } from "@/lib/chapters";
+import { normaliseStatus } from "@/lib/whatsapp-window";
 
 /**
  * MSG91's inbound-WhatsApp webhook — configure this URL under MSG91
@@ -23,6 +24,20 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: true });
+
+  // Status events (sent/delivered/read/failed) sometimes arrive on this same
+  // webhook, Cloud-API style. Apply them to the inbox thread, not as messages.
+  const statuses: Array<{ id?: string; status?: string }> = Array.isArray(body.statuses) ? body.statuses : [];
+  if (statuses.length && !Array.isArray(body.messages)) {
+    const supabase = getSupabaseServerClient();
+    for (const s of statuses) {
+      const status = normaliseStatus(s?.status);
+      if (s?.id && status) {
+        await supabase.from("whatsapp_conversation_messages").update({ status }).eq("provider_message_id", String(s.id)).eq("direction", "outbound");
+      }
+    }
+    return NextResponse.json({ ok: true, statuses: statuses.length });
+  }
 
   // Some BSPs (and MSG91, per their docs) wrap inbound events in a
   // Cloud-API-style `messages` array alongside a `contacts` array for the

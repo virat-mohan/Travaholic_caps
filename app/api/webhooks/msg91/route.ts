@@ -52,6 +52,14 @@ export async function POST(request: Request) {
   try {
     const supabase = getSupabaseServerClient();
     await supabase.from("whatsapp_messages").update(patch).eq("msg91_message_id", messageId);
+    // The inbox thread shows the same status on the dashboard reply.
+    if (patch.status) {
+      await supabase
+        .from("whatsapp_conversation_messages")
+        .update({ status: patch.status })
+        .eq("provider_message_id", String(messageId))
+        .eq("direction", "outbound");
+    }
   } catch (err) {
     console.error("Failed to process MSG91 webhook", err);
   }

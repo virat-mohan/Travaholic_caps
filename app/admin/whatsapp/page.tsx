@@ -9,6 +9,7 @@ type Conversation = {
   last_message_at: string;
   last_message_preview: string | null;
   unread_count: number;
+  can_reply?: boolean;
 };
 
 type Message = {
@@ -88,10 +89,12 @@ export default function WhatsAppInboxPage() {
   }
 
   const selected = conversations.find((c) => c.id === selectedId);
+  const canReply = selected?.can_reply !== false;
+  const totalUnread = conversations.reduce((n, c) => n + (c.unread_count || 0), 0);
 
   return (
     <main className="mx-auto w-full max-w-[1200px] px-6 pt-28 pb-24 md:px-12">
-      <h1 className="mt-2 font-display text-heading-l uppercase text-ink">WhatsApp Inbox</h1>
+      <h1 className="mt-2 font-display text-heading-l uppercase text-ink">WhatsApp Inbox{totalUnread > 0 ? ` (${totalUnread} unread)` : ""}</h1>
       <p className="mt-2 max-w-2xl text-body-s text-secondary-text">
         Replies only deliver within 24 hours of the customer&apos;s last message — Meta&apos;s
         session-message rule for every WhatsApp Business inbox, not specific to this one.
@@ -165,6 +168,11 @@ export default function WhatsAppInboxPage() {
 
               <div className="border-t border-divider p-4">
                 {error && <p className="mb-2 text-caption text-paint-orange">{error}</p>}
+                {!canReply && (
+                  <p className="mb-2 text-caption text-secondary-text">
+                    More than 24 hours since their last message. Only an approved template can go out now.
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <textarea
                     rows={2}
@@ -175,7 +183,7 @@ export default function WhatsAppInboxPage() {
                   />
                   <button
                     onClick={sendReply}
-                    disabled={sending || !replyText.trim()}
+                    disabled={sending || !canReply || !replyText.trim()}
                     className="shrink-0 border border-ink bg-ink px-4 py-2 text-caption font-bold uppercase tracking-[0.05em] text-cream disabled:opacity-40"
                   >
                     {sending ? "Sending..." : "Send"}
