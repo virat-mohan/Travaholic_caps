@@ -27,7 +27,7 @@ export async function logTrackingEvent(
 ) {
   try {
     const supabase = getSupabaseServerClient();
-    await supabase.from("tracking_events").insert({
+    const { error } = await supabase.from("tracking_events").insert({
       event_name: eventName,
       session_key: data.sessionKey ?? null,
       chapter_slug: data.chapterSlug ?? null,
@@ -37,6 +37,9 @@ export async function logTrackingEvent(
       ad_brief_id: data.adBriefId ?? null,
       utm_source: data.utmSource ?? null,
     });
+    // supabase-js returns errors instead of throwing — without this a bad
+    // row (e.g. a fractional value into the integer column) vanished silently.
+    if (error) console.error("tracking_events insert failed", eventName, error.message);
   } catch (err) {
     console.error("Failed to log tracking event", eventName, err);
   }

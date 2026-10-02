@@ -204,10 +204,19 @@ export function trackEvent(
  */
 export function trackCheckoutStep(step: string, value?: number) {
   if (typeof window === "undefined") return;
-  fetch("/api/tracking/event", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventName: "CheckoutStep", sessionKey: getSessionKey(), path: `/checkout#${step}`, value }),
-    keepalive: true,
-  }).catch(() => {});
+  const body = JSON.stringify({
+    eventName: "CheckoutStep",
+    step,
+    sessionKey: getSessionKey(),
+    path: `/checkout#${step}`,
+    value: value != null ? Math.round(value) : undefined,
+  });
+  // sendBeacon survives the page being torn down (Razorpay redirect, app
+  // switch to a UPI app, tab close) — exactly the moments these steps fire.
+  try {
+    if (navigator.sendBeacon?.("/api/tracking/event", new Blob([body], { type: "application/json" }))) return;
+  } catch {
+    // fall through to fetch
+  }
+  fetch("/api/tracking/event", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
 }
