@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useDiscountRule } from "@/lib/useDiscountRule";
 import { calculateDiscount } from "@/lib/discounts";
+import { pickSingleDiscount, flooredGoodsTotal } from "@/lib/money-rules";
+import { detectInAppBrowser, openInBrowserUrl, cartDeepLinkPath, whatsappHelpUrl } from "@/lib/checkout-browser";
 import { trackEvent, trackCheckoutStep, getSessionKey, getAttribution, getReferralCode } from "@/lib/client-tracking";
 import { FooterEditorial } from "@/components/footer/FooterEditorial";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
@@ -42,9 +44,9 @@ type Account = {
 type IdentityStep = "guest" | "verified";
 
 export default function CheckoutPage() {
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, clear, loaded: cartLoaded } = useCart();
   const discountRule = useDiscountRule();
-  const discount = calculateDiscount(items, discountRule);
+  const ruleDiscountCandidate = calculateDiscount(items, discountRule);
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",
@@ -135,13 +137,14 @@ export default function CheckoutPage() {
     return () => clearInterval(timer);
   }, [upiQr]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function showUpiQr() {
-    if (!lastRzpOrderId) return;
+  async function showUpiQr(orderIdOverride?: string) {
+    const rzpOrderId = typeof orderIdOverride === "string" ? orderIdOverride : lastRzpOrderId;
+    if (!rzpOrderId) return;
     setUpiQrLoading(true);
     const data = await fetch("/api/checkout/razorpay/upi-qr", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ razorpayOrderId: lastRzpOrderId }),
+      body: JSON.stringify({ razorpayOrderId: rzpOrderId }),
     })
       .then((r) => r.json())
       .catch(() => null);
@@ -176,14 +179,14 @@ export default function CheckoutPage() {
   // for now; git history has it if it's needed back.
   const [identityStep, setIdentityStep] = useState<IdentityStep>("guest");
 
-  const loyaltyDiscount = redeemMiles ? account?.loyalty?.maxRedeemableRupees ?? 0 : 0;
+  const loyaltyCandidate = redeemMiles ? account?.loyalty?.maxRedeemableRupees ?? 0 : 0;
   const normalizedReferralCode = referralCodeInput.trim().toUpperCase();
-  const referralDiscount =
+  const referralCandidate =
     referralPreview?.checked === normalizedReferralCode && referralPreview.valid
       ? Math.min(referralPreview.discountRupees, subtotal)
       : 0;
   const normalizedCouponCode = couponCodeInput.trim().toUpperCase();
-  const couponDiscount =
+  const couponCandidate =
     couponPreview?.checked === normalizedCouponCode && couponPreview.valid
       ? Math.min(couponPreview.discountRupees, subtotal)
       : 0;
@@ -191,9 +194,24 @@ export default function CheckoutPage() {
   // shippingCharge itself always holds the real Shiprocket rate (needed to
   // confirm the pincode is even deliverable, and shown as-is for COD).
   const displayShippingCharge = paymentType === "prepaid" ? 0 : (shippingCharge ?? 0);
+  // Mirrors the server (computeTrustedOrderTotal): one discount per order,
+  // the best one wins, total floored at ₹1 unless a free-reward code.
+  const oneDiscount = pickSingleDiscount({
+    rule: ruleDiscountCandidate,
+    loyalty: loyaltyCandidate,
+    referral: referralCandidate,
+    coupon: couponCandidate,
+  });
+  const discount = oneDiscount.rule;
+  const loyaltyDiscount = oneDiscount.loyalty;
+  const referralDiscount = oneDiscount.referral;
+  const couponDiscount = oneDiscount.coupon;
   const total =
-    Math.max(0, subtotal - discount - loyaltyDiscount - referralDiscount - couponDiscount) +
-    displayShippingCharge;
+    flooredGoodsTotal(
+      subtotal,
+      discount + loyaltyDiscount + referralDiscount + couponDiscount,
+      couponDiscount > 0 && couponDiscount >= subtotal
+    ) + displayShippingCharge;
   const unitCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   // Live referral-code validation — mirrors resolveReferralDiscount's rules
@@ -431,12 +449,38 @@ export default function CheckoutPage() {
       .catch(() => setIdentityStep("guest"));
   }, []);
 
+  // Waits for the cart to hydrate from storage: on a full page load (an ad
+  // click, "Open in browser", a refresh) items is [] on the first render, so
+  // the old mount-only effect never fired InitiateCheckout for those visits.
+  const initiateLogged = useRef(false);
   useEffect(() => {
-    if (items.length > 0) {
-      trackEvent("InitiateCheckout", { value: total, contentIds: items.map((i) => i.slug) });
-    }
+    if (!cartLoaded || initiateLogged.current || items.length === 0) return;
+    initiateLogged.current = true;
+    trackEvent("InitiateCheckout", { value: total, contentIds: items.map((i) => i.slug) });
+    trackCheckoutStep("page_loaded", total);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartLoaded, items.length]);
+
+  // Instagram / Facebook in-app browsers often block the Razorpay popup and
+  // UPI app hand-off. There we lead with the UPI QR, offer UPI app links,
+  // keep Razorpay as a fallback, and hint at opening a real browser.
+  const [inApp, setInApp] = useState<"instagram" | "facebook" | null>(null);
+  const [browserHandoffUrl, setBrowserHandoffUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const which = detectInAppBrowser(ua);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- UA is only known after mount
+    setInApp(which);
+    if (which) trackCheckoutStep(`inapp_${which}`);
   }, []);
+  useEffect(() => {
+    if (!inApp || items.length === 0) return;
+    const https = `${window.location.origin}${cartDeepLinkPath(items)}`;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived from window
+    setBrowserHandoffUrl(openInBrowserUrl(https, navigator.userAgent) ?? https);
+  }, [inApp, items]);
+  const [upiIntents, setUpiIntents] = useState<{ any: string; gpay: string; phonepe: string; paytm: string } | null>(null);
+  const [pendingRzp, setPendingRzp] = useState<{ open: () => void } | null>(null);
 
   // Debounced cart-session capture — this is what makes an abandoned cart
   // retargetable at all: the moment a shopper has typed a phone/email, we
@@ -583,6 +627,15 @@ export default function CheckoutPage() {
             : "That payment didn't go through and you weren't charged. Try another method, or tap below and we'll send a payment link on WhatsApp."
         );
       });
+      setUpiIntents(createData.upiIntents ?? null);
+      if (inApp) {
+        // In-app webview: show the auto-confirming UPI QR first; Razorpay
+        // stays one tap away for cards / netbanking.
+        setPendingRzp(rzp);
+        setPaying(false);
+        await showUpiQr(createData.razorpayOrderId);
+        return;
+      }
       trackCheckoutStep("rzp_opened", createData.chargeAmount);
       rzp.open();
     } catch (err) {
@@ -1071,7 +1124,7 @@ export default function CheckoutPage() {
               {payFailed && lastRzpOrderId && !upiQr && (
                 <button
                   type="button"
-                  onClick={showUpiQr}
+                  onClick={() => showUpiQr()}
                   disabled={upiQrLoading}
                   className="w-full bg-ink px-6 py-3 text-body-s uppercase tracking-[0.1em] text-cream disabled:opacity-50"
                 >
@@ -1089,6 +1142,39 @@ export default function CheckoutPage() {
                     Keep this page open — your order confirms automatically once paid. Valid for 30 minutes.
                   </p>
                 </div>
+              )}
+              {upiIntents && lastRzpOrderId && (
+                <div className="space-y-2">
+                  <p className="text-caption uppercase tracking-[0.15em] text-secondary-text">Or open your UPI app</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([["gpay", "GPay"], ["phonepe", "PhonePe"], ["paytm", "Paytm"]] as const).map(([k, label]) => (
+                      <a
+                        key={k}
+                        href={upiIntents[k]}
+                        onClick={() => trackCheckoutStep(`upi_intent_${k}`)}
+                        className="border border-ink/30 px-3 py-3 text-center text-body-s text-ink"
+                      >
+                        {label}
+                      </a>
+                    ))}
+                  </div>
+                  <p className="text-caption text-secondary-text">
+                    Paid in the app? Send us the screenshot on WhatsApp below and we&apos;ll confirm your order.
+                  </p>
+                </div>
+              )}
+              {pendingRzp && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    trackCheckoutStep("rzp_opened_fallback");
+                    setPaying(true);
+                    pendingRzp.open();
+                  }}
+                  className="w-full border border-ink px-6 py-3 text-body-s uppercase tracking-[0.1em] text-ink"
+                >
+                  Pay Another Way (Card, Netbanking, UPI)
+                </button>
               )}
               {payFailed && (
                 <button
@@ -1131,6 +1217,35 @@ export default function CheckoutPage() {
                   🔒 Secure payment by Razorpay · UPI, cards &amp; netbanking · Free shipping across India
                 </p>
               )}
+              {inApp && browserHandoffUrl && (
+                <p className="text-center text-caption text-secondary-text">
+                  Payment stuck inside {inApp === "instagram" ? "Instagram" : "Facebook"}?{" "}
+                  <a
+                    href={browserHandoffUrl}
+                    onClick={() => trackCheckoutStep("open_in_browser")}
+                    className="underline underline-offset-2"
+                  >
+                    Open in your browser
+                  </a>{" "}
+                  (or tap ••• and choose Open in browser). Your cart comes with you.
+                </p>
+              )}
+              <p className="text-center text-caption text-secondary-text">
+                <a
+                  href={whatsappHelpUrl(WHATSAPP_NUMBER, [
+                    "Hi, my payment isn't going through on travaholic.in.",
+                    "",
+                    ...items.map((i) => `${i.quantity} x ${i.name}`),
+                    `Total: ₹${total.toLocaleString("en-IN")}`,
+                  ])}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackCheckoutStep("whatsapp_help")}
+                  className="underline underline-offset-2"
+                >
+                  Payment not going through? WhatsApp us
+                </a>
+              </p>
 
               <div className="grid grid-cols-1 gap-4 border-t border-divider pt-6 sm:grid-cols-2">
                 <div>
