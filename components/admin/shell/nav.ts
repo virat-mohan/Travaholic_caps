@@ -28,6 +28,7 @@ export const NAV_SECTIONS: NavSection[] = [
     { href: "/admin/newsletter", label: "Newsletter" },
   ] },
   { label: "Customers", accent: "bronze", links: [
+    { href: "/admin/whatsapp", label: "WhatsApp Inbox" },
     { href: "/admin/customers", label: "Customers & Miles" },
     { href: "/admin/leads", label: "Leads" },
   ] },
