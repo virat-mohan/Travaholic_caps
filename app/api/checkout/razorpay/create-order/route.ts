@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createRazorpayOrder } from "@/lib/razorpay";
 import { computeTrustedOrderTotal, getCodAdvanceRupees } from "@/lib/order-pricing";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { getSetting } from "@/lib/settings";
+import { buildUpiIntents } from "@/lib/checkout-browser";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -51,7 +53,13 @@ export async function POST(request: Request) {
       }
     }
 
+    // UPI app deep links, built here from the trusted charge (never a client
+    // number). Only when a business UPI ID is configured in settings.
+    const [upiVpa, upiName] = await Promise.all([getSetting("BUSINESS_UPI_ID"), getSetting("BUSINESS_UPI_NAME")]);
+    const upiIntents = buildUpiIntents({ vpa: upiVpa, payeeName: upiName || "Travaholic", amountRupees: chargeAmount, ref: razorpayOrderId });
+
     return NextResponse.json({
+      upiIntents,
       razorpayOrderId,
       keyId,
       subtotal: pricing.subtotal,
@@ -66,9 +74,8 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("Failed to create Razorpay order", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Could not create Razorpay order" },
-      { status: 500 }
-    );
+    const message = err instanceof Error ? err.message : "Could not create Razorpay order";
+    const isInput = /Quantity|Invalid cart|Unknown chapter|pincode|Cash on Delivery/.test(message);
+    return NextResponse.json({ error: message }, { status: isInput ? 400 : 500 });
   }
 }

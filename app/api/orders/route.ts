@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { markCartSessionConverted } from "@/lib/cart-session-convert";
-import { getCurrentCustomer, findOrCreateCustomerForGuest } from "@/lib/auth";
-import { getRedeemableAmount, earnMilesForOrder, redeemMilesForOrder } from "@/lib/loyalty";
-import { sendInvoiceEmail, sendOrderNotificationEmail } from "@/lib/email";
+import { findOrCreateCustomerForGuest } from "@/lib/auth";
+import { sendOrderNotificationEmail } from "@/lib/email";
 import { applyNewsletterOptIn } from "@/lib/newsletter";
-import { getShippingRate } from "@/lib/shiprocket";
-import { resolveReferralDiscount, rewardReferrer } from "@/lib/referrals";
-import { resolveCouponDiscount, redeemCoupon } from "@/lib/coupons";
-import { checkAndAlertLowStock } from "@/lib/inventory";
-import { maybeQualifyBarterOrderForCoupon } from "@/lib/post-barter";
+import { computeTrustedOrderTotal } from "@/lib/order-pricing";
 
 type OrderPayload = {
   customer: {
@@ -50,58 +45,25 @@ export async function POST(request: Request) {
 
   try {
     const supabase = getSupabaseServerClient();
-    const discountAmount = body.discountAmount ?? 0;
 
-    // Loyalty customer_id and redemption amount are resolved server-side
-    // from the session cookie and the ledger — never from client input, so
-    // a tampered request can't claim someone else's Miles or redeem more
-    // than they actually have.
-    const customer = await getCurrentCustomer();
-    let loyaltyDiscountAmount = 0;
-    if (customer && body.redeemMilesRupees) {
-      const { maxRedeemableRupees } = await getRedeemableAmount(customer.id);
-      loyaltyDiscountAmount = Math.min(body.redeemMilesRupees, maxRedeemableRupees);
-    }
-
-    // Looked up fresh from Shiprocket by pincode, same as the Razorpay flow
-    // — never a client-supplied amount, so it stays a genuine pass-through.
-    const unitCount = body.items.reduce((sum, item) => sum + item.quantity, 0);
-    let shippingCharge = 0;
-    if (body.customer.pincode) {
-      const shippingResult = await getShippingRate(body.customer.pincode, unitCount);
-      if (shippingResult.status === "checked_unavailable") {
-        return NextResponse.json(
-          {
-            error: `We can't currently deliver to pincode ${body.customer.pincode} — please double-check it or use a different address.`,
-          },
-          { status: 400 }
-        );
-      }
-      shippingCharge = shippingResult.status === "available" ? shippingResult.rate : 0;
-    }
-
-    const referral = await resolveReferralDiscount(body.referralCode, customer?.id ?? null, body.customer.phone);
-    const referralDiscountAmount = referral ? Math.min(referral.discountRupees, body.subtotal) : 0;
-
-    const coupon = await resolveCouponDiscount(body.couponCode, body.subtotal);
-    const couponDiscountAmount = coupon ? coupon.discountRupees : 0;
-
-    // Guest checkout (no OTP session) still gets a real customer record —
-    // matched/deduped by phone/email, never a logged-in session — so Miles
-    // and a referral code work for them too, not just people who verified.
-    const wasGuest = !customer;
-    const guestCustomer = wasGuest
+    // Unpaid WhatsApp order request. Money audit: prices, discount and total
+    // are recomputed server-side (never the client's numbers); stock, Miles,
+    // coupons and referral rewards are NOT touched here, because nothing has
+    // been paid. Those run only in finalizeOrder once payment is confirmed.
+    const pricing = await computeTrustedOrderTotal(
+      body.items.map((i) => ({ slug: i.slug, quantity: i.quantity })),
+      body.redeemMilesRupees,
+      body.customer.pincode,
+      body.referralCode,
+      body.customer.phone,
+      body.couponCode,
+      "prepaid"
+    );
+    const customer = pricing.customer;
+    const guestCustomer = !customer
       ? await findOrCreateCustomerForGuest(body.customer.phone, body.customer.email, body.customer.name)
       : null;
     const effectiveCustomerId = customer?.id ?? guestCustomer?.id ?? null;
-
-    const total =
-      body.subtotal -
-      discountAmount -
-      loyaltyDiscountAmount -
-      referralDiscountAmount -
-      couponDiscountAmount +
-      shippingCharge;
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -113,11 +75,12 @@ export async function POST(request: Request) {
         delivery_city: body.customer.city ?? null,
         delivery_state: body.customer.state ?? null,
         delivery_pincode: body.customer.pincode ?? null,
-        subtotal: body.subtotal,
-        discount_amount: discountAmount,
-        loyalty_discount_amount: loyaltyDiscountAmount,
-        shipping_charge: shippingCharge,
-        total,
+        subtotal: pricing.subtotal,
+        discount_amount: pricing.discountAmount,
+        loyalty_discount_amount: pricing.loyaltyDiscountAmount,
+        shipping_charge: pricing.shippingCharge,
+        total: pricing.total,
+        payment_status: "unpaid",
         is_gift: body.isGift ?? false,
         gift_note: body.giftNote ?? null,
         customer_id: effectiveCustomerId,
@@ -125,76 +88,29 @@ export async function POST(request: Request) {
           body.attributedAdBriefId && UUID_RE.test(body.attributedAdBriefId)
             ? body.attributedAdBriefId
             : null,
-        referral_code_used: referral ? body.referralCode?.toUpperCase() : null,
-        referral_discount_amount: referralDiscountAmount,
-        coupon_code_used: coupon ? coupon.code : null,
-        coupon_discount_amount: couponDiscountAmount,
+        referral_code_used: pricing.referral ? body.referralCode?.toUpperCase() : null,
+        referral_discount_amount: pricing.referralDiscountAmount,
+        coupon_code_used: pricing.coupon ? pricing.coupon.code : null,
+        coupon_discount_amount: pricing.couponDiscountAmount,
       })
       .select()
       .single();
 
     if (orderError) throw orderError;
 
-    const { error: itemsError } = await supabase.from("order_items").insert(
-      body.items.map((item) => ({
-        order_id: order.id,
-        chapter_slug: item.slug,
-        chapter_name: item.name,
-        unit_price: item.price,
-        quantity: item.quantity,
-      }))
-    );
-
+    const orderItems = pricing.items.map((item) => ({
+      order_id: order.id,
+      chapter_slug: item.slug,
+      chapter_name: item.name,
+      unit_price: item.price,
+      quantity: item.quantity,
+    }));
+    const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
     if (itemsError) throw itemsError;
-
-    if (discountAmount > 0) {
-      const { data: activeRule } = await supabase
-        .from("discount_rules")
-        .select("id")
-        .eq("active", true)
-        .limit(1)
-        .maybeSingle();
-      if (activeRule) {
-        await supabase.from("discount_rule_redemptions").insert({
-          discount_rule_id: activeRule.id,
-          order_id: order.id,
-          customer_phone: body.customer.phone,
-          customer_email: body.customer.email,
-          discount_amount: discountAmount,
-        });
-      }
-    }
-
-    if (effectiveCustomerId) {
-      const capsBought = body.items.reduce((sum, item) => sum + item.quantity, 0);
-      if (customer && loyaltyDiscountAmount > 0) {
-        await redeemMilesForOrder(effectiveCustomerId, order.id, loyaltyDiscountAmount);
-      }
-      await earnMilesForOrder(effectiveCustomerId, order.id, capsBought);
-    }
-
-    // Decrement inventory. Best-effort — a failed decrement shouldn't fail the order.
-    for (const item of body.items) {
-      const { data: inv } = await supabase
-        .from("inventory")
-        .select("stock_on_hand")
-        .eq("chapter_slug", item.slug)
-        .maybeSingle();
-      if (inv) {
-        const newStock = Math.max(0, inv.stock_on_hand - item.quantity);
-        await supabase.from("inventory").update({ stock_on_hand: newStock }).eq("chapter_slug", item.slug);
-        await checkAndAlertLowStock(item.slug, newStock);
-      }
-    }
 
     await markCartSessionConverted(
       body.sessionKey,
-      {
-        id: order.id,
-        customer_email: order.customer_email,
-        customer_phone: order.customer_phone,
-        total,
-      },
+      { id: order.id, customer_email: order.customer_email, customer_phone: order.customer_phone, total: pricing.total },
       // Unpaid WhatsApp order request — not a purchase until money arrives.
       { reportPurchaseToMeta: false }
     );
@@ -203,39 +119,13 @@ export async function POST(request: Request) {
       await applyNewsletterOptIn(effectiveCustomerId, order.customer_email, body.newsletterOptIn);
     }
 
-    if (referral) {
-      await rewardReferrer(
-        referral.referrerCustomerId,
-        order.id,
-        effectiveCustomerId,
-        body.customer.phone,
-        referral.rewardMiles
-      );
-    }
-
-    if (coupon) {
-      await redeemCoupon(coupon.couponId, order.id, couponDiscountAmount, body.customer.phone, body.customer.email);
-      // Only ever actually counts if this order later shows payment_status
-      // = 'paid' — see maybeQualifyBarterOrderForCoupon's own filter, which
-      // deliberately excludes this no-payment-gateway manual order path from
-      // faking progress toward a barterer's free shipment.
-      await maybeQualifyBarterOrderForCoupon(coupon.code, body.customer.phone, body.customer.email);
-    }
-
-    // Best-effort — a failed email must never fail the order itself.
-    const emailItems = body.items.map((item) => ({
-      chapter_name: item.name,
-      unit_price: item.price,
-      quantity: item.quantity,
-    }));
-    await Promise.allSettled([
-      sendInvoiceEmail(order, emailItems),
-      sendOrderNotificationEmail(order, emailItems),
-    ]);
+    // Team notification only; the invoice goes out when payment is confirmed.
+    await Promise.allSettled([sendOrderNotificationEmail(order, orderItems)]);
 
     return NextResponse.json({ orderId: order.id });
   } catch (err) {
     console.error("Failed to save order", err);
-    return NextResponse.json({ error: "Could not save order" }, { status: 500 });
+    const msg = err instanceof Error && /Quantity|Invalid cart|Unknown chapter|pincode|Cash on Delivery/.test(err.message) ? err.message : "Could not save order";
+    return NextResponse.json({ error: msg }, { status: msg === "Could not save order" ? 500 : 400 });
   }
 }

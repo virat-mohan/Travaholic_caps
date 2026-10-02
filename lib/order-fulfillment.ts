@@ -11,6 +11,8 @@ import { maybeQualifyBarterOrderForCoupon } from "@/lib/post-barter";
 import { findOrCreateCustomerForGuest } from "@/lib/auth";
 import { checkAndAlertLowStock } from "@/lib/inventory";
 import { shipOrder } from "@/lib/order-shipping";
+import { getRazorpayPayment } from "@/lib/razorpay";
+import { amountMatches } from "@/lib/money-rules";
 
 export type OrderPayload = {
   customer: {
@@ -70,6 +72,21 @@ export async function finalizeOrder(
     payload.couponCode,
     payload.paymentType === "cod_advance" ? "cod_advance" : "prepaid"
   );
+
+  // Money audit: the amount Razorpay actually captured must equal the
+  // trusted total for exactly this cart, on every path (verify, webhook,
+  // QR, payment link, reconcile). A mismatch never becomes a shipped order:
+  // it is held for a human (refund or top-up); the payment-reconcile sweep
+  // surfaces the thrown error in its alert email to the team.
+  const isCodAdvanceCheck = payload.paymentType === "cod_advance";
+  const expectedCharge = isCodAdvanceCheck ? Math.min(await getCodAdvanceRupees(), pricing.total) : pricing.total;
+  const payment = await getRazorpayPayment(razorpayPaymentId);
+  const paidOk = payment.status === "captured" || payment.status === "authorized";
+  if (!paidOk || payment.currency !== "INR" || !amountMatches(payment.amountPaise, expectedCharge)) {
+    const msg = `Payment ${razorpayPaymentId} (order ${razorpayOrderId}): paid ₹${payment.amountPaise / 100} ${payment.status}, expected ₹${expectedCharge}. Not fulfilled.`;
+    console.error("Payment amount mismatch", msg);
+    throw new Error("Payment amount does not match the order total");
+  }
 
   const wasGuest = !pricing.customer;
   const guestCustomer = wasGuest
@@ -157,17 +174,10 @@ export async function finalizeOrder(
     });
   }
 
+  // Stock leaves only now, after payment is confirmed. Compare-and-swap so
+  // two concurrent orders can't both read the same stock and lose a unit.
   for (const item of pricing.items) {
-    const { data: inv } = await supabase
-      .from("inventory")
-      .select("stock_on_hand")
-      .eq("chapter_slug", item.slug)
-      .maybeSingle();
-    if (inv) {
-      const newStock = Math.max(0, inv.stock_on_hand - item.quantity);
-      await supabase.from("inventory").update({ stock_on_hand: newStock }).eq("chapter_slug", item.slug);
-      await checkAndAlertLowStock(item.slug, newStock);
-    }
+    await decrementStockAtomically(item.slug, item.quantity);
   }
 
   if (effectiveCustomerId) {
@@ -243,4 +253,24 @@ export async function finalizeOrder(
   }
 
   return { orderId: savedOrder.id as string, alreadyExisted: false };
+}
+
+async function decrementStockAtomically(slug: string, quantity: number) {
+  const supabase = getSupabaseServerClient();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data: inv } = await supabase.from("inventory").select("stock_on_hand").eq("chapter_slug", slug).maybeSingle();
+    if (!inv) return;
+    const newStock = Math.max(0, inv.stock_on_hand - quantity);
+    const { data: updated } = await supabase
+      .from("inventory")
+      .update({ stock_on_hand: newStock })
+      .eq("chapter_slug", slug)
+      .eq("stock_on_hand", inv.stock_on_hand)
+      .select("stock_on_hand");
+    if (updated && updated.length > 0) {
+      await checkAndAlertLowStock(slug, newStock);
+      return;
+    }
+  }
+  console.error("Stock decrement lost the race 5 times", slug, quantity);
 }

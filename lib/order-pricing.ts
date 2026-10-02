@@ -7,6 +7,7 @@ import { getShippingRate } from "@/lib/shiprocket";
 import { getSetting } from "@/lib/settings";
 import { resolveReferralDiscount } from "@/lib/referrals";
 import { resolveCouponDiscount } from "@/lib/coupons";
+import { assertValidItems, pickSingleDiscount, flooredGoodsTotal } from "@/lib/money-rules";
 
 /** The fixed amount charged upfront for a COD order — the rest is collected by the courier on delivery. */
 export async function getCodAdvanceRupees() {
@@ -31,6 +32,9 @@ export async function computeTrustedOrderTotal(
   couponCode?: string | null,
   paymentType: "prepaid" | "cod_advance" = "prepaid"
 ) {
+  // Quantity is an integer 1-50 per line — a fractional, negative or huge
+  // quantity must never reach pricing or stock.
+  assertValidItems(items);
   const chapters = await getAllChapters();
   const pricedItems = items.map((item) => {
     const chapter = chapters.find((c) => c.slug === item.slug);
@@ -55,13 +59,13 @@ export async function computeTrustedOrderTotal(
         discountPercent: ruleRow.discount_percent,
       }
     : null;
-  const discountAmount = calculateDiscount(pricedItems, discountRule);
+  const ruleDiscountCandidate = calculateDiscount(pricedItems, discountRule);
 
   const customer = await getCurrentCustomer();
-  let loyaltyDiscountAmount = 0;
+  let loyaltyCandidate = 0;
   if (customer && requestedRedeemRupees) {
     const { maxRedeemableRupees } = await getRedeemableAmount(customer.id);
-    loyaltyDiscountAmount = Math.min(requestedRedeemRupees, maxRedeemableRupees);
+    loyaltyCandidate = Math.max(0, Math.min(Number(requestedRedeemRupees) || 0, maxRedeemableRupees));
   }
 
   // Free shipping is a prepaid-only perk — a COD order still needs the real
@@ -90,23 +94,36 @@ export async function computeTrustedOrderTotal(
     shippingCharge = paymentType === "prepaid" ? 0 : realRate;
   }
 
-  const referral = await resolveReferralDiscount(referralCode, customer?.id ?? null, checkoutPhone ?? "");
-  const referralDiscountAmount = referral ? Math.min(referral.discountRupees, subtotal) : 0;
+  const referralResolved = await resolveReferralDiscount(referralCode, customer?.id ?? null, checkoutPhone ?? "");
+  const couponResolved = await resolveCouponDiscount(couponCode, subtotal);
 
-  const coupon = await resolveCouponDiscount(couponCode, subtotal);
-  const couponDiscountAmount = coupon ? coupon.discountRupees : 0;
+  // One discount per order: the best one for the shopper wins, the others
+  // don't stack (and aren't redeemed/recorded).
+  const one = pickSingleDiscount({
+    rule: ruleDiscountCandidate,
+    loyalty: loyaltyCandidate,
+    referral: referralResolved ? Math.min(referralResolved.discountRupees, subtotal) : 0,
+    coupon: couponResolved ? couponResolved.discountRupees : 0,
+  });
+  const discountAmount = one.rule;
+  const loyaltyDiscountAmount = one.loyalty;
+  const referralDiscountAmount = one.referral;
+  const couponDiscountAmount = one.coupon;
+  const referral = one.kind === "referral" ? referralResolved : null;
+  const coupon = one.kind === "coupon" ? couponResolved : null;
+  // Genuine free-reward code: a coupon that covers the whole subtotal.
+  const isFreeReward = !!coupon && couponDiscountAmount >= subtotal;
 
   const total =
-    Math.max(
-      0,
-      subtotal - discountAmount - loyaltyDiscountAmount - referralDiscountAmount - couponDiscountAmount
-    ) + shippingCharge;
+    flooredGoodsTotal(subtotal, discountAmount + loyaltyDiscountAmount + referralDiscountAmount + couponDiscountAmount, isFreeReward) +
+    shippingCharge;
 
   return {
     items: pricedItems,
     subtotal,
     discountAmount,
-    discountRule,
+    discountRule: one.kind === "rule" ? discountRule : null,
+    discountKind: one.kind,
     loyaltyDiscountAmount,
     referralDiscountAmount,
     referral,

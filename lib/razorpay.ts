@@ -181,3 +181,20 @@ export async function getUpiQrPayment(qrId: string) {
     paymentId: paid?.id ?? null,
   };
 }
+
+/** The payment as Razorpay recorded it — the only trusted source for how much was actually paid. */
+export async function getRazorpayPayment(paymentId: string) {
+  const creds = await getRazorpayCredentials();
+  if (!creds) throw new Error("Razorpay is not configured");
+  const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+    headers: { Authorization: razorpayAuthHeader(creds) },
+  });
+  if (!res.ok) throw new Error(`Razorpay payment lookup failed: ${res.status}`);
+  const p = await res.json();
+  return {
+    amountPaise: Number(p.amount),
+    status: String(p.status),
+    orderId: (p.order_id as string | null) ?? null,
+    currency: String(p.currency),
+  };
+}

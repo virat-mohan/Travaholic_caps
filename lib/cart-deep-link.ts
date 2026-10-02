@@ -16,7 +16,7 @@ export function parseCartDeepLink(itemsParam: string) {
     const slug = resolveChapterSlug(rawSlug);
     const chapter = chapters.find((c) => c.slug === slug.trim());
     if (!chapter) continue;
-    const quantity = Math.max(1, parseInt(qtyRaw ?? "1", 10) || 1);
+    const quantity = Math.min(50, Math.max(1, parseInt(qtyRaw ?? "1", 10) || 1));
     resolved.push({ chapter, image: chapterImageSrc(chapter.folder, chapter.sideImage), quantity });
   }
 
