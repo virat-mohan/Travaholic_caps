@@ -39,6 +39,39 @@ export default function WhatsAppInboxPage() {
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [templateUsable, setTemplateUsable] = useState<boolean | null>(null);
+  const [sendingTemplate, setSendingTemplate] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/whatsapp/template")
+      .then((res) => res.json())
+      .then((data) => setTemplateUsable(Boolean(data.usable)))
+      .catch(() => setTemplateUsable(false));
+  }, []);
+
+  async function sendFollowupTemplate() {
+    if (!selectedId) return;
+    setSendingTemplate(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/whatsapp/template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: selectedId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not send template");
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), direction: "outbound", body: data.body, status: "sent", created_at: new Date().toISOString() },
+      ]);
+      loadConversations();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send template");
+    } finally {
+      setSendingTemplate(false);
+    }
+  }
 
   function loadConversations() {
     fetch("/api/admin/whatsapp")
@@ -169,9 +202,19 @@ export default function WhatsAppInboxPage() {
               <div className="border-t border-divider p-4">
                 {error && <p className="mb-2 text-caption text-paint-orange">{error}</p>}
                 {!canReply && (
-                  <p className="mb-2 text-caption text-secondary-text">
-                    More than 24 hours since their last message. Only an approved template can go out now.
-                  </p>
+                  <div className="mb-3 flex flex-wrap items-center gap-3">
+                    <p className="text-caption text-secondary-text">
+                      More than 24 hours since their last message, so a free-text reply won&apos;t deliver.
+                      {templateUsable === false && " Follow-up template pending Meta approval."}
+                    </p>
+                    <button
+                      onClick={sendFollowupTemplate}
+                      disabled={sendingTemplate || !templateUsable}
+                      className="shrink-0 border border-ink px-4 py-2 text-caption font-bold uppercase tracking-[0.05em] text-ink disabled:opacity-40"
+                    >
+                      {sendingTemplate ? "Sending..." : templateUsable === false ? "Template pending Meta approval" : "Send follow-up template"}
+                    </button>
+                  </div>
                 )}
                 <div className="flex gap-2">
                   <textarea
