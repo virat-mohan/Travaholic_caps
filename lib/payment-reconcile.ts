@@ -5,6 +5,7 @@ import { sendEmail, ORDER_NOTIFICATION_RECIPIENTS } from "@/lib/email";
 import { finalizePaidUpiQr, reconcilePaidPaymentLinks } from "@/lib/upi-qr-fulfillment";
 import { getSetting, setSetting } from "@/lib/settings";
 import { checkAdFundsAndAlert } from "@/lib/ad-funds";
+import { refundRazorpayPayment } from "@/lib/razorpay";
 
 /**
  * The guarantee that a captured payment always becomes an order. Asks
@@ -76,6 +77,36 @@ export async function reconcileCapturedPayments(hours = 72) {
   }
 
   await checkWhatsAppSenderHasTemplates(problems);
+
+  // Cancelled orders whose refund failed (e.g. Razorpay balance too low) —
+  // retried every run until the money actually moves, then the team is told.
+  try {
+    const { data: pendingRefunds } = await supabase
+      .from("orders")
+      .select("id, total, refunded_amount, razorpay_payment_id, customer_name")
+      .eq("status", "cancelled")
+      .eq("refund_status", "failed")
+      .not("razorpay_payment_id", "is", null)
+      .limit(10);
+    for (const o of pendingRefunds ?? []) {
+      const due = o.total - (o.refunded_amount ?? 0);
+      if (due <= 0) continue;
+      try {
+        const refund = await refundRazorpayPayment(o.razorpay_payment_id as string, due);
+        await supabase
+          .from("orders")
+          .update({ refunded_amount: (o.refunded_amount ?? 0) + refund.amountRupees, razorpay_refund_id: refund.refundId, refund_status: "refunded" })
+          .eq("id", o.id);
+        await supabase.from("order_events").insert({ order_id: o.id, event_type: "refund_completed", detail: `₹${refund.amountRupees} via ${refund.refundId} (auto-retry)` });
+        recovered.push(`Refund of ₹${refund.amountRupees} sent for order ${o.id.slice(0, 8).toUpperCase()} (${o.customer_name})`);
+      } catch {
+        // still no balance — try again next run; the standing problem is raised once below
+        problems.push(`Refund of ₹${due} for cancelled order ${o.id.slice(0, 8).toUpperCase()} still pending: add funds to the Razorpay balance.`);
+      }
+    }
+  } catch (err) {
+    console.error("Pending refund retry failed", err);
+  }
 
   // Ad money runway (incl. GST + unbilled spend + spending limit) — hourly.
   const fundsAt = Number((await getSetting("AD_FUNDS_CHECKED_AT")) ?? 0);
