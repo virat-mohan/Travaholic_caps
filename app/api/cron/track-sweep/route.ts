@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   const sinceCutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
   const { data: orders, error } = await supabase
     .from("orders")
-    .select("id, shiprocket_shipment_id, shipment_status")
+    .select("id, shiprocket_shipment_id, shiprocket_awb_code, shipment_status, created_at")
     .not("shiprocket_shipment_id", "is", null)
     .not("shipment_status", "ilike", "%delivered%")
     .neq("status", "cancelled")
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
   const results: { orderId: string; ok: boolean; status?: string; error?: string }[] = [];
   for (const order of orders ?? []) {
     try {
-      const tracking = await trackShiprocketShipment(order.shiprocket_shipment_id as string);
+      const tracking = await trackShiprocketShipment(order.shiprocket_shipment_id as string, order.shiprocket_awb_code as string | null);
       if (!tracking.status) {
         results.push({ orderId: order.id, ok: true, status: "(no update from Shiprocket)" });
         continue;
@@ -56,6 +56,8 @@ export async function GET(request: Request) {
         status: tracking.status,
         awbCode: tracking.awbCode,
         courierName: tracking.courierName,
+        // Orders older than 7 days are a backfill: update quietly, no late customer messages.
+        quiet: Date.now() - new Date(order.created_at as string).getTime() > 7 * 24 * 60 * 60 * 1000,
       });
       results.push({ orderId: order.id, ok: true, status: tracking.status });
     } catch (err) {

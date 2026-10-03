@@ -36,6 +36,8 @@ export async function applyShipmentStatusUpdate(input: {
   awbCode?: string | null;
   status: string;
   courierName?: string | null;
+  /** Update the order but send no customer messages (used for stale backfills). */
+  quiet?: boolean;
 }) {
   const supabase = getSupabaseServerClient();
   const { orderId, shipmentId, awbCode, status, courierName } = input;
@@ -80,7 +82,7 @@ export async function applyShipmentStatusUpdate(input: {
   // Only on the transition into NDR, not on every hit while already in that
   // status — a retried/duplicate signal for the same failed attempt must
   // never spam the customer repeatedly.
-  if (isNdr && !wasNdr && existing.customer_phone) {
+  if (isNdr && !wasNdr && existing.customer_phone && !input.quiet) {
     await sendNdrWhatsApp({
       id: existing.id,
       customer_name: existing.customer_name,
@@ -95,7 +97,7 @@ export async function applyShipmentStatusUpdate(input: {
   if (isRto && !isRtoDelivered && !wasRto && !existing.rto_notified_at) {
     // WhatsApp-first: a phone number gets this via WhatsApp only; email is
     // the fallback, used only when there's no phone (or WhatsApp failed).
-    const rtoInitiatedWhatsAppSent = existing.customer_phone
+    const rtoInitiatedWhatsAppSent = existing.customer_phone && !input.quiet
       ? await sendRtoInitiatedWhatsApp({
           id: existing.id,
           customer_name: existing.customer_name,
@@ -103,7 +105,7 @@ export async function applyShipmentStatusUpdate(input: {
           total: 0,
         })
       : false;
-    if (!rtoInitiatedWhatsAppSent && existing.customer_email) {
+    if (!rtoInitiatedWhatsAppSent && existing.customer_email && !input.quiet) {
       await sendRtoInitiatedEmail(existing.customer_email, existing.customer_name, existing.id);
     }
     await supabase.from("orders").update({ rto_notified_at: new Date().toISOString() }).eq("id", existing.id);
@@ -159,13 +161,13 @@ export async function applyShipmentStatusUpdate(input: {
     if (refundedRupees > 0) {
       // WhatsApp-first: a phone number gets this via WhatsApp only; email is
       // the fallback, used only when there's no phone (or WhatsApp failed).
-      const rtoRefundedWhatsAppSent = existing.customer_phone
+      const rtoRefundedWhatsAppSent = existing.customer_phone && !input.quiet
         ? await sendRtoRefundedWhatsApp(
             { id: existing.id, customer_name: existing.customer_name, customer_phone: existing.customer_phone, total: 0 },
             refundedRupees
           )
         : false;
-      if (!rtoRefundedWhatsAppSent && existing.customer_email) {
+      if (!rtoRefundedWhatsAppSent && existing.customer_email && !input.quiet) {
         await sendRtoRefundedEmail(existing.customer_email, existing.customer_name, existing.id, refundedRupees);
       }
     }
@@ -199,7 +201,7 @@ export async function applyShipmentStatusUpdate(input: {
   // Same transition-only guard, plus review_requested_at as a second safety
   // net in case a delivered->something->delivered flip ever happens on a
   // courier's side — never send the review ask twice.
-  if (isDelivered && !wasDelivered && !existing.review_requested_at && (existing.customer_phone || existing.customer_email)) {
+  if (!input.quiet && isDelivered && !wasDelivered && !existing.review_requested_at && (existing.customer_phone || existing.customer_email)) {
     const { data: items } = await supabase.from("order_items").select("chapter_name").eq("order_id", existing.id);
     const chapterNames = [...new Set((items ?? []).map((i) => i.chapter_name))];
     if (chapterNames.length > 0) {

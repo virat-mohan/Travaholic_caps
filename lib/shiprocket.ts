@@ -1,3 +1,4 @@
+import { parseShiprocketTracking } from "@/lib/shiprocket-tracking";
 import { getSetting, setSetting } from "@/lib/settings";
 
 const BASE_URL = "https://apiv2.shiprocket.in/v1/external";
@@ -364,12 +365,12 @@ export async function generateShiprocketLabelsBatch(shipmentIds: string[]): Prom
   }
 }
 
-export async function trackShiprocketShipment(shipmentId: string) {
-  const data = await shiprocketFetch(`/courier/track/shipment/${shipmentId}`);
-  const tracking = data[shipmentId]?.tracking_data;
-  return {
-    status: tracking?.shipment_track?.[0]?.current_status ?? null,
-    awbCode: tracking?.shipment_track?.[0]?.awb_code ?? null,
-    courierName: tracking?.shipment_track?.[0]?.courier_name ?? null,
-  };
+export async function trackShiprocketShipment(shipmentId: string, awb?: string | null) {
+  let parsed = parseShiprocketTracking(await shiprocketFetch(`/courier/track/shipment/${shipmentId}`), shipmentId);
+  if (!parsed.status && awb) {
+    // Fallback: tracking by AWB returns { tracking_data } at the top level.
+    parsed = parseShiprocketTracking(await shiprocketFetch(`/courier/track/awb/${awb}`));
+  }
+  if (!parsed.status) console.warn("Shiprocket returned no status", { shipmentId, awb });
+  return parsed;
 }
