@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSetting } from "@/lib/settings";
+import { sendDiwaliGiftBatch } from "@/lib/email-campaign-diwali";
 import { sendWelcomeBack15Batch, sendWelcomeBack15ResendBatch } from "@/lib/email-campaigns";
 
 export const maxDuration = 300;
@@ -19,8 +20,9 @@ export async function GET(request: Request) {
   const first = await sendWelcomeBack15Batch();
   // Once everyone has had the first send, the same daily slot works through
   // the non-opener resend (from 3 Oct).
-  if (first.remaining === 0) {
-    return NextResponse.json({ first, resend: await sendWelcomeBack15ResendBatch() });
-  }
-  return NextResponse.json({ first });
+  const resend = first.remaining === 0 ? await sendWelcomeBack15ResendBatch() : undefined;
+  // Diwali gifting runs after, in the same slot, on whatever Brevo credits are left,
+  // and never to anyone already emailed in the last 20 hours. Off until enabled.
+  const diwali = await sendDiwaliGiftBatch();
+  return NextResponse.json({ first, ...(resend ? { resend } : {}), diwali });
 }

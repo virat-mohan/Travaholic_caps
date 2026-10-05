@@ -164,6 +164,7 @@ export const BRAND_VOICE = {
   /** Where each live code may appear. [V][EC][AC] */
   coupons: {
     WELCOMEBACK15: { channels: ["email"] as VoiceChannel[], note: "15% off, time-limited, email-only win-back code. Banned in ads." },
+    GIFT10: { channels: ["email", "social", "site", "whatsapp"] as VoiceChannel[], note: "10% off, Diwali gifting offer, valid until 8 Nov 2026 (end of day IST). One discount per order, never stacked. Not for ads." },
     BUYNOW10: {
       channels: ["whatsapp", "email"] as VoiceChannel[],
       campaign: "abandoned_cart" as VoiceCampaign,
@@ -259,7 +260,9 @@ function runChecks(text: string, opts: VoiceOptions): VoiceResult {
     t.match(/\b(?:flat|save|extra|upto|up to|get)\s+\d{1,3}\s?%/i) ??
     t.match(/\b\d{1,3}\s?percent\s+off\b/i) ??
     t.match(/\byour\s+\d{1,3}\s?%/i);
-  if (pctOff) {
+  // Diwali gifting: "10% off" is allowed outside ads when it is the GIFT10 offer (approved by Virat 5 Oct 2026).
+  const giftOffer = /\bGIFT10\b/.test(t) && /\b10\s?%\s*off\b/i.test(pctOff?.[0] ?? "") && channel !== "ad";
+  if (pctOff && !giftOffer) {
     const msg = `"${pctOff[0]}": discount percentages are not a public offer. The only hooks are Buy 3, Get 1 Free and free shipping on prepaid orders. (discount-percent)`;
     if (channel === "ad" || channel === "social" || channel === "site") block(msg);
     else if (channel === "whatsapp" && campaign !== "abandoned_cart") block(msg);

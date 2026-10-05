@@ -13,6 +13,7 @@ import {
 } from "./brand-voice.ts";
 import { DEFAULT_BRAND_PROFILE, travaholicBrand } from "./retail-os-brand.ts";
 import { SUPPORT_TEMPLATE, renderSupportBody } from "./support-template.ts";
+import { renderDiwaliGiftEmail, diwaliSubject } from "./email-templates/diwaligift.ts";
 import { renderWelcomeBack15Email } from "./email-templates/welcomeback15.ts";
 
 const rules = (f: ReturnType<typeof checkVoice>, level: "block" | "warn") => f.filter((x) => x.level === level).map((x) => x.rule);
@@ -50,6 +51,14 @@ test("discount % and codes: ads never, coupons only in their channel", () => {
   assert.ok(hasBlock(checkVoice("Use BUYNOW10 for 10% off", "whatsapp")));
   assert.ok(!hasBlock(checkVoice("Use BUYNOW10 for 10% off", "whatsapp", { campaign: "abandoned_cart" })));
   assert.ok(rules(checkVoice("Try LOYAL10", "whatsapp"), "warn").includes("unknown-coupon"));
+});
+
+test("GIFT10: 10% off allowed outside ads, never in ads, other percents still blocked", () => {
+  assert.ok(!hasBlock(checkVoice("Use GIFT10 for 10% off your gift order, until 8 Nov.", "social")));
+  assert.ok(!hasBlock(checkVoice("Use GIFT10 for 10% off your gift order.", "email")));
+  assert.ok(hasBlock(checkVoice("Use GIFT10 for 10% off", "ad")));
+  assert.ok(hasBlock(checkVoice("Get 10% off your gift order", "social")));
+  assert.ok(hasBlock(checkVoice("Use GIFT10 for 25% off", "social")));
 });
 
 test("ads: no sale, no markdown on ₹1,399", () => {
@@ -95,6 +104,13 @@ test("approved copy passes: WELCOMEBACK15 campaign email", () => {
   const text = stripHtml(renderWelcomeBack15Email("Fri, 3 Oct, 8:00 pm IST", "https://www.travaholic.in/u"));
   const f = checkVoice(`Your next story is 15% off (24 hours only)\n${text}`, "email", { campaign: "welcomeback15" });
   assert.ok(!hasBlock(f), describeBlocks(f));
+});
+
+test("approved copy passes: Diwali gifting email, both segments", () => {
+  for (const seg of ["past", "incomplete"] as const) {
+    const f = checkVoice(`${diwaliSubject(seg, "Riya")}\n${stripHtml(renderDiwaliGiftEmail(seg, "https://www.travaholic.in/u"))}`, "email");
+    assert.ok(!hasBlock(f), describeBlocks(f));
+  }
 });
 
 test("approved copy passes: performance-manager ad messages", () => {

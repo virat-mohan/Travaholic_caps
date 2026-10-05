@@ -93,6 +93,7 @@ export const SETTINGS_KEYS = [
   "RECONCILE_PROBLEM_ALERT_AT",
   "AD_FUNDS_ALERT_AT",
   "AD_FUNDS_CHECKED_AT",
+  "DIWALI_GIFT_ENABLED",
 ] as const;
 
 export type SettingKey = (typeof SETTINGS_KEYS)[number];
