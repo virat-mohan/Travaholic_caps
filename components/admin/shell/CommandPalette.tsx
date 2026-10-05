@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { NAV_SECTIONS } from "./nav";
+import { NAV_SECTIONS } from "@/lib/dashboard-nav";
 
 const ITEMS = (() => {
   const seen = new Set<string>();

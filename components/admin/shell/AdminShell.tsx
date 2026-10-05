@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { NAV_SECTIONS, TAB_LINKS, findCurrent } from "@/components/admin/shell/nav";
+import { NAV_SECTIONS, TAB_LINKS, findCurrent } from "@/lib/dashboard-nav";
 import { CommandPalette } from "@/components/admin/shell/CommandPalette";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
