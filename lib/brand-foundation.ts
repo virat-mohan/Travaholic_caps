@@ -93,6 +93,34 @@ export function getTravaholicFoundation(): BrandFoundation {
       "Customer copy speaks as Travaholic only, never DevShop / Retail OS.",
     ],
     founderContext: "Founder Ishan Seth. Partner brand: profit share, DevShop 40% / Ishan 60%. CEO agent 'Nomad'.",
+    // The exact prose/marketing values the runtime prompt interpolates that are
+    // not first-class Foundation fields. Held here so the committed Foundation —
+    // not brand-voice.ts — is the source brandVoicePrompt() reads. All values are
+    // DERIVED from the existing in-repo authority (BRAND_VOICE); nothing invented.
+    marketingPreferences: {
+      promptModel: {
+        productLine: "premium trucker caps made in India",
+        voiceSentence: v.voice,
+        terms: { product: v.terms.product, collection: v.terms.collection, customers: [...v.terms.customers] },
+        productNoun: v.productNoun,
+        offers: {
+          priceLabel: v.offers.priceLabel,
+          buy3Get1: v.offers.buy3Get1,
+          shipping: v.offers.shipping,
+          payment: v.offers.payment,
+          adHooks: [...v.offers.adHooks],
+        },
+        contact: {
+          senderName: v.contact.senderName,
+          sender: v.contact.sender,
+          replyTo: v.contact.replyTo,
+          whatsapp: v.contact.whatsapp,
+          instagram: v.contact.instagram,
+        },
+        cta: { primary: v.cta.primary, chapter: v.cta.chapter, whatsapp: v.cta.whatsapp, metaAdCta: v.cta.metaAdCta },
+        hashtags: [...v.hashtags],
+      },
+    },
     enabledModules: [],
     communicationRules: {
       escalateWhen: [
@@ -129,6 +157,72 @@ export function requireCommittedFoundation(): BrandFoundation {
     throw new Error("Travaholic Brand Foundation is not COMMITTED; brand output is blocked until it is.");
   }
   return f;
+}
+
+/**
+ * The exact values `brandVoicePrompt()` interpolates — all read FROM the committed
+ * Foundation, so the Foundation (not BRAND_VOICE) is their source. Structural prose
+ * in the prompt (headings, channel instructions) stays in the adapter; every brand
+ * VALUE below comes from here.
+ */
+export type TravaholicVoiceModel = {
+  brand: string;
+  tagline: string;
+  productLine: string;
+  positioning: string;
+  voice: string;
+  terms: { product: string; collection: string; customers: string[] };
+  productNoun: string;
+  do: string[];
+  dont: string[];
+  colours: { cream: string; ink: string; tanGold: string };
+  offers: { priceLabel: string; buy3Get1: string; shipping: string; payment: string; adHooks: string[] };
+  contact: { senderName: string; sender: string; replyTo: string; whatsapp: string; instagram: string };
+  cta: { primary: string; chapter: string; whatsapp: string; metaAdCta: string };
+  hashtags: string[];
+};
+
+type PromptModel = NonNullable<BrandFoundation["marketingPreferences"]>["promptModel"];
+
+/**
+ * The hard gate + the source of truth for brandVoicePrompt(): returns the prompt
+ * values assembled from the COMMITTED Foundation's own fields (identity, voice,
+ * visual, marketingPreferences). brand-voice.ts consumes this instead of reading
+ * BRAND_VOICE directly, so it is an adapter, not a second authority.
+ */
+export function getTravaholicVoiceModel(): TravaholicVoiceModel {
+  const f = requireCommittedFoundation();
+  const p = (f.marketingPreferences as { promptModel: PromptModel }).promptModel as {
+    productLine: string;
+    voiceSentence: string;
+    terms: { product: string; collection: string; customers: string[] };
+    productNoun: string;
+    offers: { priceLabel: string; buy3Get1: string; shipping: string; payment: string; adHooks: string[] };
+    contact: { senderName: string; sender: string; replyTo: string; whatsapp: string; instagram: string };
+    cta: { primary: string; chapter: string; whatsapp: string; metaAdCta: string };
+    hashtags: string[];
+  };
+  const hex = (name: string): string => {
+    const c = f.visual.colors.find((x) => x.name === name);
+    if (!c) throw new Error(`Foundation visual colour missing: ${name}`);
+    return c.hex;
+  };
+  return {
+    brand: f.identity.name,
+    tagline: f.identity.tagline ?? "",
+    productLine: p.productLine,
+    positioning: f.identity.positioning,
+    voice: p.voiceSentence,
+    terms: p.terms,
+    productNoun: p.productNoun,
+    do: f.voice.do,
+    dont: f.voice.dont,
+    colours: { cream: hex("cream"), ink: hex("ink"), tanGold: hex("tanGold") },
+    offers: p.offers,
+    contact: p.contact,
+    cta: p.cta,
+    hashtags: p.hashtags,
+  };
 }
 
 /** Proves brand-voice.ts agrees with the committed Foundation (consumer/validator, not a rival source). */
