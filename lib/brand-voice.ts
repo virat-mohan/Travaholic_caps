@@ -28,9 +28,15 @@
  * Anything these sources do not cover is in GAPS (for
  * Ishan Seth) and is never guessed.
  *
- * Pure module (no imports), so it runs under `node --test` and in the app.
- * lib/brand-voice.test.ts checks these constants still match [RB].
+ * Authority: this module is now a CONSUMER/ADAPTER of the structured Brand
+ * Foundation in @retail-os/brand-config (see lib/brand-foundation.ts), which is
+ * the machine-readable authority. BRAND_VOICE below remains the detailed in-repo
+ * data (and the test checks it still matches [RB]); `brandVoicePrompt()` is gated
+ * on the Foundation being COMMITTED so no AI output can be driven from an
+ * uncommitted brand. checkVoice/voiceGate are unchanged.
  */
+
+import { requireCommittedFoundation } from "./brand-foundation.ts";
 
 export type VoiceChannel = "email" | "whatsapp" | "social" | "ad" | "site" | "ai";
 export type VoiceKind = VoiceChannel;
@@ -402,6 +408,8 @@ export function voiceGate(
 
 /** The brand book as an instruction block for every AI text or image generation. */
 export function brandVoicePrompt(kind?: VoiceChannel | "image"): string {
+  // Hard gate: AI generation may be driven only by a COMMITTED Brand Foundation.
+  requireCommittedFoundation();
   const v = BRAND_VOICE;
   const c = v.colours;
   const visual = [
