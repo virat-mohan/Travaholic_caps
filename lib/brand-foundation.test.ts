@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   getTravaholicFoundation, requireCommittedFoundation, assertFoundationMatchesVoice, RECONCILIATION_ITEMS,
+  getTravaholicVoiceModel,
 } from "./brand-foundation.ts";
 import { brandVoicePrompt } from "./brand-voice.ts";
 import {
@@ -51,6 +52,24 @@ test("brandVoicePrompt output is byte-identical to the pre-change baseline (no d
 test("brandVoicePrompt is gated: it runs only because the Foundation is committed", () => {
   // Proven indirectly: the call above succeeds; requireCommittedFoundation() is its first statement.
   assert.ok(brandVoicePrompt("ad").includes("Travaholic"));
+});
+
+test("brandVoicePrompt's values are sourced from the committed Foundation, not BRAND_VOICE", () => {
+  const f = getTravaholicFoundation();
+  const m = getTravaholicVoiceModel();
+  // identity + voice + visual come from the Foundation's own first-class fields
+  assert.equal(m.brand, f.identity.name);
+  assert.equal(m.tagline, f.identity.tagline);
+  assert.equal(m.positioning, f.identity.positioning);
+  assert.deepEqual(m.do, f.voice.do);
+  assert.deepEqual(m.dont, f.voice.dont);
+  assert.equal(m.colours.cream, f.visual.colors.find((c) => c.name === "cream")?.hex);
+  // the prose/marketing values come from the Foundation's marketingPreferences
+  const p = (f.marketingPreferences as any).promptModel;
+  assert.equal(m.voice, p.voiceSentence);
+  assert.equal(m.productLine, p.productLine);
+  assert.deepEqual(m.hashtags, p.hashtags);
+  assert.equal(m.offers.priceLabel, p.offers.priceLabel);
 });
 
 test("genuine unresolved conflicts are recorded, not auto-committed", () => {

@@ -28,15 +28,16 @@
  * Anything these sources do not cover is in GAPS (for
  * Ishan Seth) and is never guessed.
  *
- * Authority: this module is now a CONSUMER/ADAPTER of the structured Brand
- * Foundation in @retail-os/brand-config (see lib/brand-foundation.ts), which is
- * the machine-readable authority. BRAND_VOICE below remains the detailed in-repo
- * data (and the test checks it still matches [RB]); `brandVoicePrompt()` is gated
- * on the Foundation being COMMITTED so no AI output can be driven from an
- * uncommitted brand. checkVoice/voiceGate are unchanged.
+ * Authority: this module is a CONSUMER/ADAPTER of the structured Brand Foundation
+ * in @retail-os/brand-config (see lib/brand-foundation.ts), which is the
+ * machine-readable authority. `brandVoicePrompt()` now reads every brand VALUE it
+ * interpolates from the COMMITTED Foundation via getTravaholicVoiceModel() (which
+ * is also the hard gate) — not from BRAND_VOICE. BRAND_VOICE below remains the
+ * detailed in-repo data the Foundation is built from (and the source checkVoice
+ * uses); the test checks it still matches [RB]. checkVoice/voiceGate are unchanged.
  */
 
-import { requireCommittedFoundation } from "./brand-foundation.ts";
+import { getTravaholicVoiceModel } from "./brand-foundation.ts";
 
 export type VoiceChannel = "email" | "whatsapp" | "social" | "ad" | "site" | "ai";
 export type VoiceKind = VoiceChannel;
@@ -408,34 +409,36 @@ export function voiceGate(
 
 /** The brand book as an instruction block for every AI text or image generation. */
 export function brandVoicePrompt(kind?: VoiceChannel | "image"): string {
-  // Hard gate: AI generation may be driven only by a COMMITTED Brand Foundation.
-  requireCommittedFoundation();
-  const v = BRAND_VOICE;
-  const c = v.colours;
+  // Source of truth: the COMMITTED Brand Foundation. getTravaholicVoiceModel()
+  // is the hard gate (throws if not committed) AND returns every brand VALUE
+  // this prompt interpolates, read from the Foundation — not from BRAND_VOICE.
+  // Only the structural prose below (headings, channel instructions) lives here.
+  const m = getTravaholicVoiceModel();
+  const c = m.colours;
   const visual = [
-    `Visual rules for ${v.brand}: narrow, warm-neutral palette (cream ${c.cream}, ink ${c.ink}, tan-gold ${c.tanGold}); other colours only as they occur naturally in the photograph; no bright brand colour.`,
-    `Every scene is a real, recognisable place or moment (the brand is "${v.tagline}": each cap is tied to a real place). Lifestyle photography, not studio banners.`,
+    `Visual rules for ${m.brand}: narrow, warm-neutral palette (cream ${c.cream}, ink ${c.ink}, tan-gold ${c.tanGold}); other colours only as they occur naturally in the photograph; no bright brand colour.`,
+    `Every scene is a real, recognisable place or moment (the brand is "${m.tagline}": each cap is tied to a real place). Lifestyle photography, not studio banners.`,
     "The cap must be the exact real product: never invent or alter patches, badges, logos, embroidery or text on it.",
     "No on-image prices other than ₹1,399, no discount percentages, no coupon codes, no 'sale', no Cash on Delivery.",
   ].join("\n");
   if (kind === "image") return visual;
 
   const channelLine: Record<VoiceChannel, string> = {
-    email: `You are writing an email. Sender "${v.contact.senderName}" <${v.contact.sender}>, replies to ${v.contact.replyTo}. Display type is uppercase and short. CTA: "${v.cta.primary}" or "${v.cta.chapter}". End with "${v.cta.whatsapp}"`,
-    whatsapp: `You are writing a WhatsApp message: short, warm, one clear link. Customers reach us on ${v.contact.whatsapp}.`,
-    social: `You are writing an Instagram/Facebook caption: a place-led hook, the Chapter credited like a magazine credits an outfit, then "${v.cta.primary} at travaholic.in", then ${v.hashtags.join(" ")}. Handle ${v.contact.instagram}.`,
-    ad: `You are writing a Meta ad. The ONLY hooks allowed are "${v.offers.adHooks.join('" and "')}". No discount percentages, no "sale", no coupon codes, no Cash on Delivery, no price other than ${v.offers.priceLabel}. CTA button ${v.cta.metaAdCta}. Audience: men 18–44.`,
+    email: `You are writing an email. Sender "${m.contact.senderName}" <${m.contact.sender}>, replies to ${m.contact.replyTo}. Display type is uppercase and short. CTA: "${m.cta.primary}" or "${m.cta.chapter}". End with "${m.cta.whatsapp}"`,
+    whatsapp: `You are writing a WhatsApp message: short, warm, one clear link. Customers reach us on ${m.contact.whatsapp}.`,
+    social: `You are writing an Instagram/Facebook caption: a place-led hook, the Chapter credited like a magazine credits an outfit, then "${m.cta.primary} at travaholic.in", then ${m.hashtags.join(" ")}. Handle ${m.contact.instagram}.`,
+    ad: `You are writing a Meta ad. The ONLY hooks allowed are "${m.offers.adHooks.join('" and "')}". No discount percentages, no "sale", no coupon codes, no Cash on Delivery, no price other than ${m.offers.priceLabel}. CTA button ${m.cta.metaAdCta}. Audience: men 18–44.`,
     site: "You are writing website copy (product, journal or page text).",
     ai: "",
   };
 
   return [
-    `You write for ${v.brand} ("${v.tagline}"), premium trucker caps made in India. ${v.positioning}`,
-    `Voice: ${v.voice}`,
-    `Words: each cap design is a "${v.terms.product}", collections are the "${v.terms.collection}", customers are "${v.terms.customers.join('" / "')}". Product noun: ${v.productNoun}. Spell the brand "Travaholic".`,
-    `Do:\n${v.do.map((d) => `- ${d.replace(/\s*\[[A-Z\]\[]+\]$/, "")}`).join("\n")}`,
-    `Don't:\n${v.dont.map((d) => `- ${d.replace(/\s*\[[A-Z\]\[]+\]$/, "")}`).join("\n")}`,
-    `Current facts: ${v.offers.priceLabel} per cap. ${v.offers.buy3Get1}. ${v.offers.shipping}. ${v.offers.payment} Site travaholic.in, WhatsApp ${v.contact.whatsapp}, Instagram ${v.contact.instagram}.`,
+    `You write for ${m.brand} ("${m.tagline}"), ${m.productLine}. ${m.positioning}`,
+    `Voice: ${m.voice}`,
+    `Words: each cap design is a "${m.terms.product}", collections are the "${m.terms.collection}", customers are "${m.terms.customers.join('" / "')}". Product noun: ${m.productNoun}. Spell the brand "Travaholic".`,
+    `Do:\n${m.do.map((d) => `- ${d}`).join("\n")}`,
+    `Don't:\n${m.dont.map((d) => `- ${d}`).join("\n")}`,
+    `Current facts: ${m.offers.priceLabel} per cap. ${m.offers.buy3Get1}. ${m.offers.shipping}. ${m.offers.payment} Site travaholic.in, WhatsApp ${m.contact.whatsapp}, Instagram ${m.contact.instagram}.`,
     `Codes: WELCOMEBACK15 is email-only and time-limited; BUYNOW10 is only for the abandoned-cart nudge. Never invent a code or an offer.`,
     `Never write: Cash on Delivery, COD, travaholic.com, DevShop or Retail OS. Do not claim "express" delivery (unconfirmed; the shipping policy says 4–7 business days).`,
     kind && kind !== "ai" ? channelLine[kind] : "",
