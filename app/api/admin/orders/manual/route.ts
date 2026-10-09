@@ -82,8 +82,10 @@ export async function POST(request: Request) {
     const manualDiscount = Math.max(0, Number(manualDiscountRupees) || 0);
     const discountAmount = Math.min(subtotal, bulkDiscount + manualDiscount);
 
+    // Shipping is free on every Travaholic order (all orders are prepaid).
+    // Only a COD-advance order — which is switched off — would ever charge it.
     let shippingCharge = 0;
-    if (pincode) {
+    if (pincode && paymentType === "cod_advance") {
       const unitCount = pricedItems.reduce((sum, item) => sum + item.quantity, 0);
       const shippingResult = await getShippingRate(pincode, unitCount);
       shippingCharge = shippingResult.status === "available" ? shippingResult.rate : 0;
